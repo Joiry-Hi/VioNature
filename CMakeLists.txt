@@ -33,7 +33,13 @@ add_subdirectory(external/joltphysics-src/Build)
 # =========================================================
 # 3. 构建你的游戏
 # =========================================================
-add_executable(MyShooter src/main.cpp)
+add_executable(MyShooter
+    src/main.cpp
+    src/GameConfig.cpp
+    src/Game.cpp
+    src/PhysicsWorld.cpp
+    src/WeaponViewModel.cpp
+)
 
 # 设置头文件路径
 target_include_directories(MyShooter PRIVATE

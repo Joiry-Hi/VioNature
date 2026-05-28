@@ -1,0 +1,23 @@
+newmtl grip
+Kd 0.12 0.09 0.04
+Ka 0.03 0.02 0.01
+
+newmtl deep_gold
+Kd 0.50 0.32 0.05
+Ka 0.08 0.05 0.01
+
+newmtl gold
+Kd 0.95 0.63 0.12
+Ka 0.14 0.08 0.02
+
+newmtl bright_gold
+Kd 1.00 0.82 0.26
+Ka 0.18 0.14 0.04
+
+newmtl core
+Kd 1.00 0.95 0.46
+Ka 0.22 0.20 0.07
+
+newmtl pale_light
+Kd 1.00 0.92 0.62
+Ka 0.20 0.16 0.08

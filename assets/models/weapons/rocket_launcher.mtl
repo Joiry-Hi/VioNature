@@ -1,0 +1,19 @@
+newmtl grip
+Kd 0.10 0.10 0.11
+Ka 0.02 0.02 0.02
+
+newmtl tube
+Kd 0.22 0.32 0.27
+Ka 0.02 0.03 0.02
+
+newmtl stripe
+Kd 0.95 0.72 0.20
+Ka 0.08 0.06 0.02
+
+newmtl muzzle
+Kd 0.74 0.70 0.60
+Ka 0.06 0.05 0.04
+
+newmtl sight
+Kd 0.12 0.22 0.24
+Ka 0.02 0.04 0.05

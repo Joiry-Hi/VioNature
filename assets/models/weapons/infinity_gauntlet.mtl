@@ -1,0 +1,23 @@
+newmtl glove
+Kd 0.62 0.42 0.16
+Ka 0.06 0.04 0.02
+
+newmtl cuff
+Kd 0.34 0.22 0.10
+Ka 0.04 0.03 0.01
+
+newmtl stone_blue
+Kd 0.20 0.70 1.00
+Ka 0.04 0.10 0.14
+
+newmtl stone_purple
+Kd 0.58 0.20 1.00
+Ka 0.08 0.03 0.14
+
+newmtl stone_green
+Kd 0.20 1.00 0.48
+Ka 0.03 0.14 0.06
+
+newmtl stone_orange
+Kd 1.00 0.48 0.10
+Ka 0.14 0.06 0.02

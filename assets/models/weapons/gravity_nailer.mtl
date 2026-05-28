@@ -1,0 +1,19 @@
+newmtl grip
+Kd 0.08 0.08 0.10
+Ka 0.02 0.02 0.03
+
+newmtl body
+Kd 0.24 0.24 0.34
+Ka 0.03 0.03 0.05
+
+newmtl coil
+Kd 0.32 0.16 0.72
+Ka 0.04 0.02 0.08
+
+newmtl rail
+Kd 0.72 0.72 0.82
+Ka 0.06 0.06 0.07
+
+newmtl emitter
+Kd 0.38 0.82 1.00
+Ka 0.04 0.08 0.10
