@@ -32,7 +32,7 @@ private:
     Vector3 Right(const Camera3D& camera) const;
     Vector3 Up(const Camera3D& camera) const;
     Vector3 AnchorPosition(const Camera3D& camera) const;
-    Matrix ModelTransform(const Camera3D& camera, Vector3 position) const;
+    Matrix ModelTransform(const Camera3D& camera, Vector3 position, float scale) const;
     Vector3 TransformLocalPoint(const Camera3D& camera, Vector3 position, Vector3 localPoint) const;
 
     static constexpr int kModelCount = 8;

@@ -82,6 +82,7 @@ GameplayConfig LoadGameplayConfig(const char* path) {
     }
 
     std::unordered_map<std::string, float*> floats = {
+        {"circle_radius", &config.circleRadius},
         {"gravity", &config.gravity},
         {"space_suit_gravity_scale", &config.spaceSuitGravityScale},
         {"walk_speed", &config.walkSpeed},
@@ -89,6 +90,14 @@ GameplayConfig LoadGameplayConfig(const char* path) {
         {"ground_acceleration", &config.groundAcceleration},
         {"air_acceleration", &config.airAcceleration},
         {"jump_speed", &config.jumpSpeed},
+        {"flight_hover_strength", &config.flightHoverStrength},
+        {"flight_hover_damping", &config.flightHoverDamping},
+        {"flight_vertical_speed", &config.flightVerticalSpeed},
+        {"flight_min_altitude", &config.flightMinAltitude},
+        {"flight_max_altitude", &config.flightMaxAltitude},
+        {"skates_ground_friction", &config.skatesGroundFriction},
+        {"skates_air_control", &config.skatesAirControl},
+        {"skates_max_speed_bonus", &config.skatesMaxSpeedBonus},
         {"dagger_damage", &config.daggerDamage},
         {"scatter_damage", &config.scatterDamage},
         {"laser_base_damage", &config.laserBaseDamage},
@@ -124,7 +133,10 @@ GameplayConfig LoadGameplayConfig(const char* path) {
         {"asteroid_player_altitude", &config.asteroidPlayerAltitude},
         {"asteroid_enemy_altitude", &config.asteroidEnemyAltitude},
         {"asteroid_cleanup_distance", &config.asteroidCleanupDistance},
-        {"asteroid_platform_altitude", &config.asteroidPlatformAltitude},
+        {"hollow_world_radius", &config.hollowWorldRadius},
+        {"hollow_world_player_altitude", &config.hollowWorldPlayerAltitude},
+        {"hollow_world_enemy_altitude", &config.hollowWorldEnemyAltitude},
+        {"hollow_world_cleanup_distance", &config.hollowWorldCleanupDistance},
         {"gravity_nail_damage", &config.gravityNailDamage},
         {"gravity_well_radius", &config.gravityWellRadius},
         {"gravity_well_force", &config.gravityWellForce},
@@ -143,6 +155,13 @@ GameplayConfig LoadGameplayConfig(const char* path) {
         {"recoil_lance_damage", &config.recoilLanceDamage},
         {"recoil_lance_speed", &config.recoilLanceSpeed},
         {"recoil_lance_impulse", &config.recoilLanceImpulse},
+        {"recoil_lance_thrust_damage", &config.recoilLanceThrustDamage},
+        {"recoil_lance_thrust_force", &config.recoilLanceThrustForce},
+        {"recoil_lance_thrust_range", &config.recoilLanceThrustRange},
+        {"recoil_lance_thrust_impulse", &config.recoilLanceThrustImpulse},
+        {"recoil_lance_shockwave_damage", &config.recoilLanceShockwaveDamage},
+        {"recoil_lance_shockwave_force", &config.recoilLanceShockwaveForce},
+        {"recoil_lance_shockwave_radius", &config.recoilLanceShockwaveRadius},
         {"rift_cutter_damage", &config.riftCutterDamage},
         {"rift_cutter_range", &config.riftCutterRange},
         {"rift_cutter_width", &config.riftCutterWidth},
@@ -216,6 +235,7 @@ GameplayConfig LoadGameplayConfig(const char* path) {
         }
     }
 
+    config.circleRadius = std::max(6.0f, config.circleRadius);
     config.gravity = std::max(0.0f, config.gravity);
     config.spaceSuitGravityScale = std::max(0.0f, config.spaceSuitGravityScale);
     config.walkSpeed = std::max(0.0f, config.walkSpeed);
@@ -223,6 +243,14 @@ GameplayConfig LoadGameplayConfig(const char* path) {
     config.groundAcceleration = std::max(0.0f, config.groundAcceleration);
     config.airAcceleration = std::max(0.0f, config.airAcceleration);
     config.jumpSpeed = std::max(0.0f, config.jumpSpeed);
+    config.flightHoverStrength = std::max(0.0f, config.flightHoverStrength);
+    config.flightHoverDamping = std::max(0.0f, config.flightHoverDamping);
+    config.flightVerticalSpeed = std::max(0.0f, config.flightVerticalSpeed);
+    config.flightMinAltitude = std::max(0.0f, config.flightMinAltitude);
+    config.flightMaxAltitude = std::max(config.flightMinAltitude, config.flightMaxAltitude);
+    config.skatesGroundFriction = std::clamp(config.skatesGroundFriction, 0.0f, 1.0f);
+    config.skatesAirControl = std::clamp(config.skatesAirControl, 0.0f, 1.0f);
+    config.skatesMaxSpeedBonus = std::max(1.0f, config.skatesMaxSpeedBonus);
     config.daggerDamage = std::max(0.0f, config.daggerDamage);
     config.scatterDamage = std::max(0.0f, config.scatterDamage);
     config.laserBaseDamage = std::max(0.0f, config.laserBaseDamage);
@@ -259,7 +287,10 @@ GameplayConfig LoadGameplayConfig(const char* path) {
     config.asteroidPlayerAltitude = std::max(0.8f, config.asteroidPlayerAltitude);
     config.asteroidEnemyAltitude = std::max(0.2f, config.asteroidEnemyAltitude);
     config.asteroidCleanupDistance = std::max(config.asteroidRadius + 8.0f, config.asteroidCleanupDistance);
-    config.asteroidPlatformAltitude = std::max(0.5f, config.asteroidPlatformAltitude);
+    config.hollowWorldRadius = std::max(8.0f, config.hollowWorldRadius);
+    config.hollowWorldPlayerAltitude = std::clamp(config.hollowWorldPlayerAltitude, 0.8f, config.hollowWorldRadius - 2.0f);
+    config.hollowWorldEnemyAltitude = std::clamp(config.hollowWorldEnemyAltitude, 0.2f, config.hollowWorldRadius - 2.0f);
+    config.hollowWorldCleanupDistance = std::max(config.hollowWorldRadius + 8.0f, config.hollowWorldCleanupDistance);
     config.gravityNailDamage = std::max(0.0f, config.gravityNailDamage);
     config.gravityWellRadius = std::max(0.1f, config.gravityWellRadius);
     config.gravityWellForce = std::max(0.0f, config.gravityWellForce);
@@ -278,6 +309,13 @@ GameplayConfig LoadGameplayConfig(const char* path) {
     config.recoilLanceDamage = std::max(0.0f, config.recoilLanceDamage);
     config.recoilLanceSpeed = std::max(0.0f, config.recoilLanceSpeed);
     config.recoilLanceImpulse = std::max(0.0f, config.recoilLanceImpulse);
+    config.recoilLanceThrustDamage = std::max(0.0f, config.recoilLanceThrustDamage);
+    config.recoilLanceThrustForce = std::max(0.0f, config.recoilLanceThrustForce);
+    config.recoilLanceThrustRange = std::max(0.5f, config.recoilLanceThrustRange);
+    config.recoilLanceThrustImpulse = std::max(0.0f, config.recoilLanceThrustImpulse);
+    config.recoilLanceShockwaveDamage = std::max(0.0f, config.recoilLanceShockwaveDamage);
+    config.recoilLanceShockwaveForce = std::max(0.0f, config.recoilLanceShockwaveForce);
+    config.recoilLanceShockwaveRadius = std::max(0.1f, config.recoilLanceShockwaveRadius);
     config.riftCutterDamage = std::max(0.0f, config.riftCutterDamage);
     config.riftCutterRange = std::max(0.1f, config.riftCutterRange);
     config.riftCutterWidth = std::max(0.05f, config.riftCutterWidth);

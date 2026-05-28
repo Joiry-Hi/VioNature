@@ -5,6 +5,7 @@
 struct GameplayConfig {
     std::string gameMode = "survival";
     std::string mapType = "square_obstacle";
+    float circleRadius = 28.0f;
     float gravity = 24.0f;
     float spaceSuitGravityScale = 0.24f;
     float walkSpeed = 7.2f;
@@ -13,6 +14,14 @@ struct GameplayConfig {
     float airAcceleration = 8.0f;
     float jumpSpeed = 9.0f;
     bool invincible = false;
+    float flightHoverStrength = 18.0f;
+    float flightHoverDamping = 7.5f;
+    float flightVerticalSpeed = 7.0f;
+    float flightMinAltitude = 2.0f;
+    float flightMaxAltitude = 18.0f;
+    float skatesGroundFriction = 0.08f;
+    float skatesAirControl = 0.65f;
+    float skatesMaxSpeedBonus = 1.35f;
 
     float daggerDamage = 1.0f;
     float scatterDamage = 0.55f;
@@ -50,7 +59,10 @@ struct GameplayConfig {
     float asteroidPlayerAltitude = 2.0f;
     float asteroidEnemyAltitude = 0.8f;
     float asteroidCleanupDistance = 78.0f;
-    float asteroidPlatformAltitude = 2.2f;
+    float hollowWorldRadius = 50.0f;
+    float hollowWorldPlayerAltitude = 2.0f;
+    float hollowWorldEnemyAltitude = 0.8f;
+    float hollowWorldCleanupDistance = 200.0f;
     float gravityNailDamage = 0.8f;
     float gravityWellRadius = 5.0f;
     float gravityWellForce = 16.0f;
@@ -69,6 +81,13 @@ struct GameplayConfig {
     float recoilLanceDamage = 3.2f;
     float recoilLanceSpeed = 92.0f;
     float recoilLanceImpulse = 20.0f;
+    float recoilLanceThrustDamage = 1.65f;
+    float recoilLanceThrustForce = 24.0f;
+    float recoilLanceThrustRange = 6.8f;
+    float recoilLanceThrustImpulse = 15.0f;
+    float recoilLanceShockwaveDamage = 0.9f;
+    float recoilLanceShockwaveForce = 20.0f;
+    float recoilLanceShockwaveRadius = 5.6f;
     float riftCutterDamage = 2.2f;
     float riftCutterRange = 15.0f;
     float riftCutterWidth = 0.75f;

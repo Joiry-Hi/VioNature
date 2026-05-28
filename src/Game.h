@@ -54,6 +54,11 @@ private:
         Platform
     };
 
+    enum class RecoilLanceMode {
+        Throw,
+        Thrust
+    };
+
     enum class ProjectileKind {
         LaserShot,
         Flame,
@@ -89,7 +94,9 @@ private:
     };
 
     enum class PickupType {
-        SpaceSuit
+        SpaceSuit,
+        FlightRig,
+        Skates
     };
 
     struct Projectile {
@@ -241,7 +248,8 @@ private:
     void UpdateArenaBounds();
     void BuildMap();
     void ResolveMapCollision(Vector3 previousPosition);
-    void SpawnSpaceSuit();
+    void SpawnStartingPickups();
+    void SpawnPickup(PickupType type, int slot);
     void SpawnEnemy();
     void SpawnEnemyOfType(EnemyType type);
     bool BossAlive() const;
@@ -261,6 +269,8 @@ private:
     void FireDuelistHeatwave(Vector3 origin, Vector3 direction);
     void FireRiftCutter(Vector3 direction);
     void FireNanoPlatform(Vector3 direction);
+    void FireLanceThrust(Vector3 direction);
+    void DetonateLance(Vector3 position, ProjectileOwner owner);
     void SpawnEnemyRift(Vector3 origin, Vector3 direction);
     void SpawnGravityWell(Vector3 position, bool blackHole = false);
     void BlinkDuelist(Enemy& enemy, Vector3 awayFrom);
@@ -285,11 +295,17 @@ private:
     Vector3 PlayerUp() const;
     Vector3 WeaponMuzzlePosition() const;
     NanoPlatform MakeNanoPlatformTarget(Vector3 direction) const;
-    bool IsAsteroidMap() const;
-    Vector3 AsteroidUpAt(Vector3 position) const;
-    Vector3 AsteroidSurfacePoint(Vector3 position, float altitude) const;
-    Vector3 ProjectOnAsteroidTangent(Vector3 vector, Vector3 up) const;
-    float AsteroidEnemyAltitude(EnemyType type) const;
+    bool IsSphericalMap() const;
+    bool IsHollowWorldMap() const;
+    float SphericalRadius() const;
+    float SphericalPlayerAltitude() const;
+    float SphericalCleanupDistance() const;
+    float SphericalAltitudeAt(Vector3 position) const;
+    float SphericalSignedRadius(float altitude) const;
+    Vector3 SphericalUpAt(Vector3 position) const;
+    Vector3 SphericalSurfacePoint(Vector3 position, float altitude) const;
+    Vector3 ProjectOnSphericalTangent(Vector3 vector, Vector3 up) const;
+    float SphericalEnemyAltitude(EnemyType type) const;
     Vector3 BodyPosition(JPH::BodyID id) const;
     const char* WeaponName() const;
     const char* WeaponModeName() const;
@@ -356,13 +372,22 @@ private:
     float coyoteTimer_ = 0.0f;
     float jumpBufferTimer_ = 0.0f;
     bool hasSpaceSuit_ = false;
+    bool hasFlightRig_ = false;
+    bool hasSkates_ = false;
+    bool spaceSuitEnabled_ = false;
+    bool flightRigEnabled_ = false;
+    bool skatesEnabled_ = false;
     float gravityScale_ = 1.0f;
+    float flightTargetAltitude_ = 2.0f;
     float footstepBob_ = 0.0f;
+    float thrustControlLockTimer_ = 0.0f;
     WeaponType activeWeapon_ = WeaponType::Laser;
     FlamethrowerMode flamethrowerMode_ = FlamethrowerMode::FlameBall;
     ShotgunMode shotgunMode_ = ShotgunMode::Pellet;
     GravityNailerMode gravityNailerMode_ = GravityNailerMode::Nail;
     RiftCutterMode riftCutterMode_ = RiftCutterMode::BladeWave;
+    RecoilLanceMode recoilLanceMode_ = RecoilLanceMode::Throw;
+    float riftPlatformRangeScale_ = 1.0f;
     bool timeStopped_ = false;
     float timeStopTintTimer_ = 0.0f;
     float fireCooldown_ = 0.0f;

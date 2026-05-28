@@ -17,6 +17,7 @@ constexpr std::array<const char*, kWeaponModelCount> kWeaponModelPaths = {
     "assets/models/weapons/rift_cutter.obj",
 };
 constexpr float kWeaponScale = 0.42f;
+constexpr float kLanceScale = 0.58f;
 constexpr int kMaterialMapCount = MATERIAL_MAP_BRDF + 1;
 constexpr Vector3 kMuzzleLocal = {0.0f, 0.0f, 0.70f};
 
@@ -110,23 +111,23 @@ Vector3 WeaponViewModel::AnchorPosition(const Camera3D& camera) const {
     return position;
 }
 
-Matrix WeaponViewModel::ModelTransform(const Camera3D& camera, Vector3 position) const {
+Matrix WeaponViewModel::ModelTransform(const Camera3D& camera, Vector3 position, float scale) const {
     Vector3 forward = Forward(camera);
     Vector3 right = Right(camera);
     Vector3 up = Up(camera);
 
     Matrix transform = MatrixIdentity();
-    transform.m0 = right.x * kWeaponScale;
-    transform.m1 = right.y * kWeaponScale;
-    transform.m2 = right.z * kWeaponScale;
+    transform.m0 = right.x * scale;
+    transform.m1 = right.y * scale;
+    transform.m2 = right.z * scale;
 
-    transform.m4 = up.x * kWeaponScale;
-    transform.m5 = up.y * kWeaponScale;
-    transform.m6 = up.z * kWeaponScale;
+    transform.m4 = up.x * scale;
+    transform.m5 = up.y * scale;
+    transform.m6 = up.z * scale;
 
-    transform.m8 = forward.x * kWeaponScale;
-    transform.m9 = forward.y * kWeaponScale;
-    transform.m10 = forward.z * kWeaponScale;
+    transform.m8 = forward.x * scale;
+    transform.m9 = forward.y * scale;
+    transform.m10 = forward.z * scale;
 
     transform.m12 = position.x;
     transform.m13 = position.y;
@@ -159,7 +160,7 @@ void WeaponViewModel::Draw(const Camera3D& camera, WeaponVisualMode mode, float 
     position = Vector3Add(position, Vector3Scale(Up(camera), std::cos(sway * 0.8f) * 0.012f));
 
     Color tint = ModeTint(mode, charge);
-    Matrix transform = ModelTransform(camera, position);
+    Matrix transform = ModelTransform(camera, position, mode == WeaponVisualMode::RecoilLance ? kLanceScale : kWeaponScale);
 
     for (int i = 0; i < model.meshCount; ++i) {
         Material material = model.materials[model.meshMaterial[i]];

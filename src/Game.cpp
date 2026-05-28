@@ -59,6 +59,7 @@ Vector3 SafeNormalize(Vector3 value, Vector3 fallback) {
 
 Game::Game() {
     config_ = LoadGameplayConfig();
+    arenaRadius_ = config_.circleRadius;
 
     camera_.position = Vector3{0.0f, playerHeight_, 9.0f};
     camera_.target = Vector3{0.0f, playerHeight_, 0.0f};
@@ -66,7 +67,8 @@ Game::Game() {
     camera_.fovy = 72.0f;
     camera_.projection = CAMERA_PERSPECTIVE;
 
-    floorShape_ = new JPH::BoxShape(JPH::Vec3(arenaRadius_, 0.5f, arenaRadius_));
+    float floorHalfExtent = std::max(arenaRadius_, squareHalfExtent_);
+    floorShape_ = new JPH::BoxShape(JPH::Vec3(floorHalfExtent, 0.5f, floorHalfExtent));
     projectileShape_ = new JPH::SphereShape(0.18f);
     enemyShape_ = new JPH::SphereShape(0.65f);
     pixelTarget_ = LoadRenderTexture(pixelWidth_, pixelHeight_);
@@ -85,8 +87,8 @@ Game::~Game() {
 void Game::Reset() {
     ClearWorld();
 
-    camera_.position = IsAsteroidMap()
-        ? Vector3{0.0f, config_.asteroidRadius + config_.asteroidPlayerAltitude, 0.0f}
+    camera_.position = IsSphericalMap()
+        ? SphericalSurfacePoint(Vector3{0.0f, IsHollowWorldMap() ? -1.0f : 1.0f, 0.0f}, SphericalPlayerAltitude())
         : Vector3{0.0f, playerHeight_, 9.0f};
     yaw_ = -90.0f;
     pitch_ = 0.0f;
@@ -95,16 +97,26 @@ void Game::Reset() {
     coyoteTimer_ = 0.0f;
     jumpBufferTimer_ = 0.0f;
     hasSpaceSuit_ = false;
+    hasFlightRig_ = false;
+    hasSkates_ = false;
+    spaceSuitEnabled_ = false;
+    flightRigEnabled_ = false;
+    skatesEnabled_ = false;
     gravityScale_ = 1.0f;
+    flightTargetAltitude_ = std::clamp(
+        IsSphericalMap() ? SphericalAltitudeAt(camera_.position) : camera_.position.y,
+        config_.flightMinAltitude,
+        config_.flightMaxAltitude);
     footstepBob_ = 0.0f;
+    thrustControlLockTimer_ = 0.0f;
     asteroidReferenceForward_ = Vector3{0.0f, 0.0f, -1.0f};
-    camera_.up = IsAsteroidMap() ? AsteroidUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
+    camera_.up = IsSphericalMap() ? SphericalUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
     camera_.target = Vector3Add(camera_.position, PlayerForward());
 
     PhysicsWorld::BodyConfig floorConfig;
     floorConfig.motionType = JPH::EMotionType::Static;
     floorConfig.layer = Layers::NON_MOVING;
-    if (!IsAsteroidMap()) {
+    if (!IsSphericalMap()) {
         floorBody_ = physics_.CreateBody(
             floorShape_,
             JPH::RVec3(0.0f, -0.55f, 0.0f),
@@ -121,6 +133,8 @@ void Game::Reset() {
     shotgunMode_ = ShotgunMode::Pellet;
     gravityNailerMode_ = GravityNailerMode::Nail;
     riftCutterMode_ = RiftCutterMode::BladeWave;
+    recoilLanceMode_ = RecoilLanceMode::Throw;
+    riftPlatformRangeScale_ = 1.0f;
     timeStopped_ = false;
     timeStopTintTimer_ = 0.0f;
     fireCooldown_ = 0.0f;
@@ -146,7 +160,7 @@ void Game::Reset() {
 
     BuildMap();
 
-    SpawnSpaceSuit();
+    SpawnStartingPickups();
     if (DuelMode()) {
         SpawnEnemyOfType(EnemyType::Duelist);
         eventText_ = "DUEL";
@@ -184,6 +198,30 @@ void Game::Update(float dt) {
         Reset();
     }
 
+    if (IsKeyPressed(KEY_Z) && hasSpaceSuit_) {
+        spaceSuitEnabled_ = !spaceSuitEnabled_;
+        gravityScale_ = spaceSuitEnabled_ ? config_.spaceSuitGravityScale : 1.0f;
+        eventText_ = spaceSuitEnabled_ ? "SUIT ON" : "SUIT OFF";
+        eventTextTimer_ = 1.0f;
+    }
+    if (IsKeyPressed(KEY_X) && hasFlightRig_) {
+            flightRigEnabled_ = !flightRigEnabled_;
+            if (flightRigEnabled_) {
+                flightTargetAltitude_ = std::clamp(
+                IsSphericalMap() ? SphericalAltitudeAt(camera_.position) : camera_.position.y,
+                config_.flightMinAltitude,
+                config_.flightMaxAltitude);
+            }
+        eventText_ = flightRigEnabled_ ? "FLIGHT ON" : "FLIGHT OFF";
+        eventTextTimer_ = 1.0f;
+    }
+    if (IsKeyPressed(KEY_C) && hasSkates_) {
+        skatesEnabled_ = !skatesEnabled_;
+        eventText_ = skatesEnabled_ ? "SKATES ON" : "SKATES OFF";
+        eventTextTimer_ = 1.0f;
+    }
+
+    thrustControlLockTimer_ = std::max(0.0f, thrustControlLockTimer_ - dt);
     UpdateLook(dt);
 
     if (state_ == State::Playing) {
@@ -233,7 +271,7 @@ void Game::UpdatePlayer(float dt) {
     Vector3 previousPosition = camera_.position;
     UpdateMovement(dt);
 
-    if (IsAsteroidMap()) {
+    if (IsSphericalMap()) {
         ResolveMapCollision(previousPosition);
     } else if (IsSquareMap()) {
         float maxCoord = squareHalfExtent_ - playerRadius_;
@@ -272,17 +310,17 @@ void Game::UpdatePlayer(float dt) {
         camera_.position.y += RandomFloat(-shake, shake);
     }
 
-    camera_.up = IsAsteroidMap() ? AsteroidUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
+    camera_.up = IsSphericalMap() ? SphericalUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
     camera_.target = Vector3Add(camera_.position, PlayerForward());
 }
 
 void Game::UpdateLook(float dt) {
     Vector2 delta = GetMouseDelta();
-    if (IsAsteroidMap()) {
-        Vector3 up = AsteroidUpAt(camera_.position);
-        asteroidReferenceForward_ = ProjectOnAsteroidTangent(asteroidReferenceForward_, up);
+    if (IsSphericalMap()) {
+        Vector3 up = SphericalUpAt(camera_.position);
+        asteroidReferenceForward_ = ProjectOnSphericalTangent(asteroidReferenceForward_, up);
         if (Vector3Length(asteroidReferenceForward_) <= 0.001f) {
-            asteroidReferenceForward_ = ProjectOnAsteroidTangent(PlayerForward(), up);
+            asteroidReferenceForward_ = ProjectOnSphericalTangent(PlayerForward(), up);
         }
         if (Vector3Length(asteroidReferenceForward_) <= 0.001f) {
             asteroidReferenceForward_ = Vector3Normalize(Vector3CrossProduct(Vector3{1.0f, 0.0f, 0.0f}, up));
@@ -301,7 +339,7 @@ void Game::UpdateLook(float dt) {
 void Game::UpdateFreeCamera(float dt) {
     Vector3 forward = PlayerForward();
     Vector3 right = PlayerRight();
-    Vector3 up = IsAsteroidMap() ? AsteroidUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
+    Vector3 up = IsSphericalMap() ? SphericalUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
 
     Vector3 move = Vector3Zero();
     if (IsKeyDown(KEY_W)) {
@@ -341,16 +379,16 @@ void Game::UpdateMovement(float dt) {
     } else {
         coyoteTimer_ = std::max(0.0f, coyoteTimer_ - dt);
     }
-    if (IsKeyPressed(KEY_SPACE)) {
+    if (!flightRigEnabled_ && IsKeyPressed(KEY_SPACE)) {
         jumpBufferTimer_ = kJumpBufferTime;
     } else {
         jumpBufferTimer_ = std::max(0.0f, jumpBufferTimer_ - dt);
     }
 
-    if (IsAsteroidMap()) {
-        Vector3 up = AsteroidUpAt(camera_.position);
+    if (IsSphericalMap()) {
+        Vector3 up = SphericalUpAt(camera_.position);
         camera_.up = up;
-        asteroidReferenceForward_ = ProjectOnAsteroidTangent(asteroidReferenceForward_, up);
+        asteroidReferenceForward_ = ProjectOnSphericalTangent(asteroidReferenceForward_, up);
         Vector3 forward = asteroidReferenceForward_;
         if (Vector3Length(forward) <= 0.001f) {
             forward = Vector3Normalize(Vector3CrossProduct(Vector3{1.0f, 0.0f, 0.0f}, up));
@@ -374,37 +412,64 @@ void Game::UpdateMovement(float dt) {
             wishDirection = Vector3Subtract(wishDirection, right);
         }
         if (Vector3Length(wishDirection) > 0.001f) {
-            wishDirection = Vector3Normalize(ProjectOnAsteroidTangent(wishDirection, up));
+            wishDirection = Vector3Normalize(ProjectOnSphericalTangent(wishDirection, up));
         }
 
         bool running = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
-        float speed = running ? config_.runSpeed : config_.walkSpeed;
+        float speed = (running ? config_.runSpeed : config_.walkSpeed) * (skatesEnabled_ ? config_.skatesMaxSpeedBonus : 1.0f);
         Vector3 radialVelocity = Vector3Scale(up, Vector3DotProduct(playerVelocity_, up));
-        Vector3 tangentVelocity = ProjectOnAsteroidTangent(playerVelocity_, up);
+        Vector3 tangentVelocity = ProjectOnSphericalTangent(playerVelocity_, up);
         Vector3 targetVelocity = Vector3Scale(wishDirection, speed);
         float acceleration = grounded_ ? config_.groundAcceleration : config_.airAcceleration;
-        float blend = std::clamp(acceleration * dt, 0.0f, 1.0f);
+        if (skatesEnabled_) {
+            acceleration *= grounded_ ? config_.skatesGroundFriction : config_.skatesAirControl;
+            if (Vector3Length(wishDirection) <= 0.001f && grounded_) {
+                targetVelocity = tangentVelocity;
+            }
+        }
+        float blend = thrustControlLockTimer_ > 0.0f ? 0.0f : std::clamp(acceleration * dt, 0.0f, 1.0f);
         tangentVelocity = Vector3Add(tangentVelocity, Vector3Scale(Vector3Subtract(targetVelocity, tangentVelocity), blend));
         playerVelocity_ = Vector3Add(tangentVelocity, radialVelocity);
 
-        if (jumpBufferTimer_ > 0.0f && coyoteTimer_ > 0.0f) {
-            playerVelocity_ = Vector3Add(ProjectOnAsteroidTangent(playerVelocity_, up), Vector3Scale(up, config_.jumpSpeed));
+        if (flightRigEnabled_) {
+            if (IsKeyDown(KEY_SPACE)) {
+                flightTargetAltitude_ += config_.flightVerticalSpeed * dt;
+            }
+            if (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) {
+                flightTargetAltitude_ -= config_.flightVerticalSpeed * dt;
+            }
+            flightTargetAltitude_ = std::clamp(flightTargetAltitude_, config_.flightMinAltitude, config_.flightMaxAltitude);
+            float currentAltitude = SphericalAltitudeAt(camera_.position);
+            float altitudeError = flightTargetAltitude_ - currentAltitude;
+            float radialSpeed = Vector3DotProduct(playerVelocity_, up);
+            float altitudeSpeed = radialSpeed;
+            float radialAcceleration = altitudeError * config_.flightHoverStrength - altitudeSpeed * config_.flightHoverDamping;
+            radialVelocity = Vector3Scale(up, radialSpeed + radialAcceleration * dt);
+            playerVelocity_ = Vector3Add(ProjectOnSphericalTangent(playerVelocity_, up), radialVelocity);
+            grounded_ = false;
+            coyoteTimer_ = 0.0f;
+            jumpBufferTimer_ = 0.0f;
+        } else if (jumpBufferTimer_ > 0.0f && coyoteTimer_ > 0.0f) {
+            playerVelocity_ = Vector3Add(ProjectOnSphericalTangent(playerVelocity_, up), Vector3Scale(up, config_.jumpSpeed));
             grounded_ = false;
             coyoteTimer_ = 0.0f;
             jumpBufferTimer_ = 0.0f;
             cameraShake_ = std::min(1.0f, cameraShake_ + 0.12f);
         }
 
-        playerVelocity_ = Vector3Subtract(playerVelocity_, Vector3Scale(up, CurrentGravity() * dt));
+        if (!flightRigEnabled_) {
+            playerVelocity_ = Vector3Subtract(playerVelocity_, Vector3Scale(up, CurrentGravity() * dt));
+        }
         camera_.position = Vector3Add(camera_.position, Vector3Scale(playerVelocity_, dt));
-        up = AsteroidUpAt(camera_.position);
-        float desiredRadius = config_.asteroidRadius + config_.asteroidPlayerAltitude;
+        up = SphericalUpAt(camera_.position);
+        float desiredRadius = SphericalSignedRadius(SphericalPlayerAltitude());
         float distance = Vector3Length(camera_.position);
         float radialSpeed = Vector3DotProduct(playerVelocity_, up);
-        if (distance <= desiredRadius) {
-            camera_.position = Vector3Scale(up, desiredRadius);
+        bool touchesSurface = IsHollowWorldMap() ? distance >= desiredRadius : distance <= desiredRadius;
+        if (!flightRigEnabled_ && touchesSurface) {
+            camera_.position = SphericalSurfacePoint(camera_.position, SphericalPlayerAltitude());
             if (radialSpeed < 0.0f) {
-                playerVelocity_ = ProjectOnAsteroidTangent(playerVelocity_, up);
+                playerVelocity_ = ProjectOnSphericalTangent(playerVelocity_, up);
             }
             grounded_ = true;
             coyoteTimer_ = kCoyoteTime;
@@ -412,7 +477,7 @@ void Game::UpdateMovement(float dt) {
             grounded_ = false;
         }
 
-        float horizontalSpeed = Vector3Length(ProjectOnAsteroidTangent(playerVelocity_, up));
+        float horizontalSpeed = Vector3Length(ProjectOnSphericalTangent(playerVelocity_, up));
         footstepBob_ += horizontalSpeed * dt * (running ? 1.5f : 1.0f);
         if (grounded_ && horizontalSpeed > 0.5f) {
             camera_.position = Vector3Add(camera_.position, Vector3Scale(up, std::sin(footstepBob_ * 7.0f) * 0.035f));
@@ -451,16 +516,37 @@ void Game::UpdateMovement(float dt) {
     }
 
     bool running = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
-    float speed = running ? config_.runSpeed : config_.walkSpeed;
+    float speed = (running ? config_.runSpeed : config_.walkSpeed) * (skatesEnabled_ ? config_.skatesMaxSpeedBonus : 1.0f);
     Vector3 targetVelocity = Vector3Scale(wishDirection, speed);
     targetVelocity.y = playerVelocity_.y;
 
     float acceleration = grounded_ ? config_.groundAcceleration : config_.airAcceleration;
-    float blend = std::clamp(acceleration * dt, 0.0f, 1.0f);
+    if (skatesEnabled_) {
+        acceleration *= grounded_ ? config_.skatesGroundFriction : config_.skatesAirControl;
+        if (Vector3Length(wishDirection) <= 0.001f && grounded_) {
+            targetVelocity.x = playerVelocity_.x;
+            targetVelocity.z = playerVelocity_.z;
+        }
+    }
+    float blend = thrustControlLockTimer_ > 0.0f ? 0.0f : std::clamp(acceleration * dt, 0.0f, 1.0f);
     playerVelocity_.x = playerVelocity_.x + (targetVelocity.x - playerVelocity_.x) * blend;
     playerVelocity_.z = playerVelocity_.z + (targetVelocity.z - playerVelocity_.z) * blend;
 
-    if (jumpBufferTimer_ > 0.0f && coyoteTimer_ > 0.0f) {
+    if (flightRigEnabled_) {
+        if (IsKeyDown(KEY_SPACE)) {
+            flightTargetAltitude_ += config_.flightVerticalSpeed * dt;
+        }
+        if (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) {
+            flightTargetAltitude_ -= config_.flightVerticalSpeed * dt;
+        }
+        flightTargetAltitude_ = std::clamp(flightTargetAltitude_, config_.flightMinAltitude, config_.flightMaxAltitude);
+        float altitudeError = flightTargetAltitude_ - camera_.position.y;
+        float verticalAcceleration = altitudeError * config_.flightHoverStrength - playerVelocity_.y * config_.flightHoverDamping;
+        playerVelocity_.y += verticalAcceleration * dt;
+        grounded_ = false;
+        coyoteTimer_ = 0.0f;
+        jumpBufferTimer_ = 0.0f;
+    } else if (jumpBufferTimer_ > 0.0f && coyoteTimer_ > 0.0f) {
         playerVelocity_.y = config_.jumpSpeed;
         grounded_ = false;
         coyoteTimer_ = 0.0f;
@@ -468,11 +554,13 @@ void Game::UpdateMovement(float dt) {
         cameraShake_ = std::min(1.0f, cameraShake_ + 0.12f);
     }
 
-    playerVelocity_.y -= CurrentGravity() * dt;
+    if (!flightRigEnabled_) {
+        playerVelocity_.y -= CurrentGravity() * dt;
+    }
     camera_.position = Vector3Add(camera_.position, Vector3Scale(playerVelocity_, dt));
 
     float floorHeight = playerHeight_;
-    if (camera_.position.y <= floorHeight) {
+    if (!flightRigEnabled_ && camera_.position.y <= floorHeight) {
         camera_.position.y = floorHeight;
         playerVelocity_.y = 0.0f;
         grounded_ = true;
@@ -498,6 +586,13 @@ void Game::UpdateWeaponSwitching() {
 
     WeaponType previousWeapon = activeWeapon_;
     float wheel = GetMouseWheelMove();
+    bool wheelAdjustedPlatformRange = false;
+    if (wheel != 0.0f && activeWeapon_ == WeaponType::RiftCutter && riftCutterMode_ == RiftCutterMode::Platform) {
+        riftPlatformRangeScale_ = std::clamp(riftPlatformRangeScale_ + (wheel > 0.0f ? 0.08f : -0.08f), 0.35f, 1.85f);
+        eventText_ = TextFormat("PLATFORM %.1fm", config_.riftPlatformRange * riftPlatformRangeScale_);
+        eventTextTimer_ = 0.75f;
+        wheelAdjustedPlatformRange = true;
+    }
     if (IsKeyPressed(KEY_ONE)) {
         activeWeapon_ = WeaponType::Laser;
     } else if (IsKeyPressed(KEY_TWO)) {
@@ -514,7 +609,7 @@ void Game::UpdateWeaponSwitching() {
         activeWeapon_ = WeaponType::RecoilLance;
     } else if (IsKeyPressed(KEY_EIGHT)) {
         activeWeapon_ = WeaponType::RiftCutter;
-    } else if (wheel != 0.0f) {
+    } else if (wheel != 0.0f && !wheelAdjustedPlatformRange) {
         int index = 0;
         if (activeWeapon_ == WeaponType::Flamethrower) {
             index = 1;
@@ -564,6 +659,10 @@ void Game::UpdateWeaponSwitching() {
         } else if (activeWeapon_ == WeaponType::GravityNailer) {
             gravityNailerMode_ = gravityNailerMode_ == GravityNailerMode::Nail ? GravityNailerMode::BlackHole : GravityNailerMode::Nail;
             eventText_ = gravityNailerMode_ == GravityNailerMode::BlackHole ? "BLACK HOLE" : "GRAV NAIL";
+            eventTextTimer_ = 1.4f;
+        } else if (activeWeapon_ == WeaponType::RecoilLance) {
+            recoilLanceMode_ = recoilLanceMode_ == RecoilLanceMode::Throw ? RecoilLanceMode::Thrust : RecoilLanceMode::Throw;
+            eventText_ = recoilLanceMode_ == RecoilLanceMode::Thrust ? "SONIC THRUST" : "LANCE THROW";
             eventTextTimer_ = 1.4f;
         } else if (activeWeapon_ == WeaponType::RiftCutter) {
             riftCutterMode_ = riftCutterMode_ == RiftCutterMode::BladeWave ? RiftCutterMode::Platform : RiftCutterMode::BladeWave;
@@ -672,10 +771,16 @@ void Game::UpdateShooting(float dt) {
             cameraShake_ = std::min(1.0f, cameraShake_ + 0.28f);
         }
     } else if (activeWeapon_ == WeaponType::RecoilLance) {
-        FireProjectile(ProjectileKind::Lance, forward, config_.recoilLanceSpeed, config_.recoilLanceDamage, 1.15f, 0.18f, 0.18f, Color{210, 245, 255, 255});
-        ApplyLanceRecoil(forward);
-        fireCooldown_ = 0.86f;
-        cameraShake_ = std::min(1.0f, cameraShake_ + 0.5f);
+        if (recoilLanceMode_ == RecoilLanceMode::Thrust) {
+            FireLanceThrust(forward);
+            fireCooldown_ = 0.68f;
+            cameraShake_ = std::min(1.0f, cameraShake_ + 0.58f);
+        } else {
+            FireProjectile(ProjectileKind::Lance, forward, config_.recoilLanceSpeed, config_.recoilLanceDamage, 1.15f, 0.28f, 0.28f, Color{210, 245, 255, 255});
+            ApplyLanceRecoil(forward);
+            fireCooldown_ = 0.86f;
+            cameraShake_ = std::min(1.0f, cameraShake_ + 0.5f);
+        }
     } else if (activeWeapon_ == WeaponType::RiftCutter) {
         if (riftCutterMode_ == RiftCutterMode::Platform) {
             FireNanoPlatform(forward);
@@ -739,11 +844,11 @@ void Game::UpdateGravityWells(float dt) {
 
         if (well.blackHole && state_ == State::Playing) {
             Vector3 player = camera_.position;
-            Vector3 up = IsAsteroidMap() ? AsteroidUpAt(player) : Vector3{0.0f, 1.0f, 0.0f};
-            Vector3 capsuleBottom = IsAsteroidMap()
-                ? Vector3Subtract(player, Vector3Scale(up, config_.asteroidPlayerAltitude - playerRadius_))
+            Vector3 up = IsSphericalMap() ? SphericalUpAt(player) : Vector3{0.0f, 1.0f, 0.0f};
+            Vector3 capsuleBottom = IsSphericalMap()
+                ? Vector3Subtract(player, Vector3Scale(up, SphericalPlayerAltitude() - playerRadius_))
                 : Vector3{player.x, player.y - playerHeight_ + playerRadius_, player.z};
-            Vector3 capsuleTop = IsAsteroidMap()
+            Vector3 capsuleTop = IsSphericalMap()
                 ? Vector3Subtract(player, Vector3Scale(up, playerRadius_ * 0.35f))
                 : Vector3{player.x, player.y - playerRadius_ * 0.35f, player.z};
             if (DistancePointToSegment(well.position, capsuleBottom, capsuleTop) <= config_.blackHoleEventHorizonRadius + playerRadius_ * 0.25f) {
@@ -818,8 +923,11 @@ void Game::UpdateRifts(float dt) {
         rift.center = Vector3Add(rift.center, Vector3Scale(rift.velocity, dt));
 
         bool outsideBounds = false;
-        if (IsAsteroidMap()) {
-            outsideBounds = Vector3Length(rift.center) > config_.asteroidCleanupDistance || Vector3Length(rift.center) < config_.asteroidRadius - rift.radius;
+        if (IsSphericalMap()) {
+            float distance = Vector3Length(rift.center);
+            outsideBounds = IsHollowWorldMap()
+                ? (distance > SphericalRadius() + rift.radius || distance < std::max(1.0f, SphericalRadius() - SphericalCleanupDistance()))
+                : (distance > SphericalCleanupDistance() || distance < SphericalRadius() - rift.radius);
         } else {
             outsideBounds = IsSquareMap()
                 ? (std::abs(rift.center.x) > squareHalfExtent_ + rift.radius || std::abs(rift.center.z) > squareHalfExtent_ + rift.radius)
@@ -887,7 +995,7 @@ void Game::UpdateNanoPlatforms(float dt) {
         if (platform.delay > 0.0f) {
             platform.delay -= dt;
             if (platform.delay <= 0.0f) {
-                Vector3 burstPosition = IsAsteroidMap()
+                Vector3 burstPosition = IsSphericalMap()
                     ? platform.position
                     : Vector3{platform.position.x, platform.position.y + platform.scale.y, platform.position.z};
                 SpawnHitBurst(burstPosition, Color{255, 232, 150, 255}, 16);
@@ -898,7 +1006,7 @@ void Game::UpdateNanoPlatforms(float dt) {
 
         platform.life -= dt;
         if (platform.life <= 0.0f) {
-            Vector3 burstPosition = IsAsteroidMap()
+            Vector3 burstPosition = IsSphericalMap()
                 ? platform.position
                 : Vector3{platform.position.x, platform.position.y + platform.scale.y, platform.position.z};
             SpawnHitBurst(burstPosition, Color{255, 210, 110, 255}, 10);
@@ -916,9 +1024,9 @@ void Game::UpdateEnemies(float dt) {
     for (Enemy& enemy : enemies_) {
         Vector3 position = BodyPosition(enemy.body);
         Vector3 direction = Vector3Subtract(player, position);
-        Vector3 enemyUp = IsAsteroidMap() ? AsteroidUpAt(position) : Vector3{0.0f, 1.0f, 0.0f};
-        if (IsAsteroidMap()) {
-            direction = ProjectOnAsteroidTangent(direction, enemyUp);
+        Vector3 enemyUp = IsSphericalMap() ? SphericalUpAt(position) : Vector3{0.0f, 1.0f, 0.0f};
+        if (IsSphericalMap()) {
+            direction = ProjectOnSphericalTangent(direction, enemyUp);
         } else {
             direction.y = 0.0f;
         }
@@ -938,7 +1046,7 @@ void Game::UpdateEnemies(float dt) {
             direction = Vector3Normalize(Vector3Add(Vector3Scale(direction, 0.72f), Vector3Scale(tangent, std::sin(enemy.bobTimer * 2.8f) * 0.5f)));
         } else if (enemy.type == EnemyType::Spitter) {
             Vector3 tangent = SafeNormalize(Vector3CrossProduct(enemyUp, direction), PlayerRight());
-            float distance = IsAsteroidMap() ? Vector3Length(ProjectOnAsteroidTangent(Vector3Subtract(player, position), enemyUp)) : DistanceXZ(position, player);
+            float distance = IsSphericalMap() ? Vector3Length(ProjectOnSphericalTangent(Vector3Subtract(player, position), enemyUp)) : DistanceXZ(position, player);
             float rangeBias = distance < 10.0f ? -0.65f : 0.35f;
             direction = Vector3Normalize(Vector3Add(Vector3Scale(direction, rangeBias), Vector3Scale(tangent, 0.9f)));
             speed = enemy.speed;
@@ -962,7 +1070,7 @@ void Game::UpdateEnemies(float dt) {
             }
         } else if (enemy.type == EnemyType::Harrier) {
             Vector3 tangent = SafeNormalize(Vector3CrossProduct(enemyUp, direction), PlayerRight());
-            float distance = IsAsteroidMap() ? Vector3Length(ProjectOnAsteroidTangent(Vector3Subtract(player, position), enemyUp)) : DistanceXZ(position, player);
+            float distance = IsSphericalMap() ? Vector3Length(ProjectOnSphericalTangent(Vector3Subtract(player, position), enemyUp)) : DistanceXZ(position, player);
             float rangeBias = distance < 13.0f ? -0.45f : 0.35f;
             float sway = std::sin(enemy.bobTimer * 2.1f) * 0.35f;
             direction = Vector3Normalize(Vector3Add(Vector3Scale(direction, rangeBias), Vector3Scale(tangent, 1.0f + sway)));
@@ -980,8 +1088,8 @@ void Game::UpdateEnemies(float dt) {
                 direction = Vector3Scale(direction, 0.05f);
                 if (enemy.telegraphTimer <= 0.0f) {
                     Vector3 playerForward = PlayerForward();
-                    if (IsAsteroidMap()) {
-                        playerForward = ProjectOnAsteroidTangent(playerForward, AsteroidUpAt(camera_.position));
+                    if (IsSphericalMap()) {
+                        playerForward = ProjectOnSphericalTangent(playerForward, SphericalUpAt(camera_.position));
                     } else {
                         playerForward.y = 0.0f;
                     }
@@ -990,12 +1098,12 @@ void Game::UpdateEnemies(float dt) {
                     } else {
                         playerForward = Vector3Normalize(playerForward);
                     }
-                    Vector3 playerUp = IsAsteroidMap() ? AsteroidUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
+                    Vector3 playerUp = IsSphericalMap() ? SphericalUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
                     Vector3 playerRight = SafeNormalize(Vector3CrossProduct(playerForward, playerUp), PlayerRight());
                     float side = GetRandomValue(0, 1) == 0 ? -1.0f : 1.0f;
                     Vector3 target = Vector3Add(camera_.position, Vector3Add(Vector3Scale(playerRight, side * RandomFloat(3.2f, 5.6f)), Vector3Scale(playerForward, RandomFloat(-4.2f, 2.0f))));
-                    if (IsAsteroidMap()) {
-                        target = AsteroidSurfacePoint(target, AsteroidEnemyAltitude(enemy.type));
+                    if (IsSphericalMap()) {
+                        target = SphericalSurfacePoint(target, SphericalEnemyAltitude(enemy.type));
                     } else if (IsSquareMap()) {
                         target.y = 1.0f;
                         float limit = squareHalfExtent_ - enemy.radius - 0.8f;
@@ -1014,17 +1122,17 @@ void Game::UpdateEnemies(float dt) {
                     physics_.Bodies().SetPosition(enemy.body, ToJoltVector(target), JPH::EActivation::Activate);
                     position = target;
                     Vector3 dash = Vector3Subtract(camera_.position, target);
-                    if (IsAsteroidMap()) {
-                        Vector3 targetUp = AsteroidUpAt(target);
-                        dash = Vector3Add(ProjectOnAsteroidTangent(dash, targetUp), Vector3Scale(targetUp, 0.1f));
+                    if (IsSphericalMap()) {
+                        Vector3 targetUp = SphericalUpAt(target);
+                        dash = Vector3Add(ProjectOnSphericalTangent(dash, targetUp), Vector3Scale(targetUp, 0.1f));
                     } else {
                         dash.y = 0.1f;
                     }
                     if (Vector3Length(dash) > 0.001f) {
                         dash = Vector3Normalize(dash);
                     }
-                    Vector3 dashVelocity = IsAsteroidMap()
-                        ? Vector3Add(Vector3Scale(dash, config_.blinkerDashSpeed), Vector3Scale(AsteroidUpAt(target), 1.6f))
+                    Vector3 dashVelocity = IsSphericalMap()
+                        ? Vector3Add(Vector3Scale(dash, config_.blinkerDashSpeed), Vector3Scale(SphericalUpAt(target), 1.6f))
                         : Vector3{dash.x * config_.blinkerDashSpeed, 1.6f, dash.z * config_.blinkerDashSpeed};
                     physics_.Bodies().SetLinearVelocity(enemy.body, ToJoltVelocity(dashVelocity));
                     enemy.externalVelocity = Vector3Scale(dash, config_.blinkerDashSpeed * 0.2f);
@@ -1042,7 +1150,7 @@ void Game::UpdateEnemies(float dt) {
             }
         } else if (enemy.type == EnemyType::Boss) {
             Vector3 tangent = SafeNormalize(Vector3CrossProduct(enemyUp, direction), PlayerRight());
-            float distance = IsAsteroidMap() ? Vector3Length(ProjectOnAsteroidTangent(Vector3Subtract(player, position), enemyUp)) : DistanceXZ(position, player);
+            float distance = IsSphericalMap() ? Vector3Length(ProjectOnSphericalTangent(Vector3Subtract(player, position), enemyUp)) : DistanceXZ(position, player);
             float rangeBias = distance < 16.0f ? -0.45f : 0.35f;
             direction = Vector3Normalize(Vector3Add(Vector3Scale(direction, rangeBias), Vector3Scale(tangent, 0.85f)));
             speed = enemy.speed;
@@ -1067,10 +1175,13 @@ void Game::UpdateEnemies(float dt) {
         }
 
         Vector3 velocity = {};
-        if (IsAsteroidMap()) {
-            float targetAltitude = enemy.type == EnemyType::Harrier ? config_.harrierTargetHeight + std::sin(enemy.bobTimer * 2.6f) * 1.2f : AsteroidEnemyAltitude(enemy.type);
-            float targetDistance = config_.asteroidRadius + targetAltitude;
+        if (IsSphericalMap()) {
+            float targetAltitude = enemy.type == EnemyType::Harrier ? config_.harrierTargetHeight + std::sin(enemy.bobTimer * 2.6f) * 1.2f : SphericalEnemyAltitude(enemy.type);
+            float targetDistance = SphericalSignedRadius(targetAltitude);
             float radialCorrection = std::clamp((targetDistance - Vector3Length(position)) * 7.0f, -12.0f, 8.0f);
+            if (IsHollowWorldMap()) {
+                radialCorrection = -radialCorrection;
+            }
             if (enemy.type == EnemyType::Pouncer) {
                 JPH::Vec3 current = physics_.Bodies().GetLinearVelocity(enemy.body);
                 radialCorrection = Vector3DotProduct(ToRayVector(current), enemyUp);
@@ -1182,8 +1293,8 @@ void Game::UpdateProjectiles(float dt) {
         projectile.life -= dt;
         Vector3 position = BodyPosition(projectile.body);
 
-        if (IsAsteroidMap() && (projectile.kind == ProjectileKind::Rocket || projectile.kind == ProjectileKind::BlackHoleGrenade)) {
-            Vector3 gravity = Vector3Scale(AsteroidUpAt(position), -CurrentGravity() * (projectile.kind == ProjectileKind::BlackHoleGrenade ? 0.45f : 0.02f) * dt);
+        if (IsSphericalMap() && (projectile.kind == ProjectileKind::Rocket || projectile.kind == ProjectileKind::BlackHoleGrenade)) {
+            Vector3 gravity = Vector3Scale(SphericalUpAt(position), -CurrentGravity() * (projectile.kind == ProjectileKind::BlackHoleGrenade ? 0.45f : 0.02f) * dt);
             AddProjectileImpulse(projectile, gravity);
         }
 
@@ -1204,12 +1315,19 @@ void Game::UpdateProjectiles(float dt) {
             continue;
         }
 
-        bool detonatesOnGround = projectile.kind == ProjectileKind::Rocket || projectile.kind == ProjectileKind::GravityNail || projectile.kind == ProjectileKind::BlackHoleGrenade;
-        bool touchesGround = IsAsteroidMap() ? Vector3Length(position) <= config_.asteroidRadius + projectile.radius : position.y <= 0.22f;
-        bool hitGround = IsAsteroidMap() ? touchesGround : detonatesOnGround && touchesGround;
+        bool detonatesOnGround = projectile.kind == ProjectileKind::Rocket || projectile.kind == ProjectileKind::GravityNail || projectile.kind == ProjectileKind::BlackHoleGrenade || projectile.kind == ProjectileKind::Lance;
+        bool touchesGround = IsSphericalMap()
+            ? (IsHollowWorldMap()
+                ? Vector3Length(position) >= SphericalRadius() - projectile.radius
+                : Vector3Length(position) <= SphericalRadius() + projectile.radius)
+            : position.y <= 0.22f;
+        bool hitGround = IsSphericalMap() ? touchesGround : detonatesOnGround && touchesGround;
         bool outOfBounds = false;
-        if (IsAsteroidMap()) {
-            outOfBounds = Vector3Length(position) > config_.asteroidCleanupDistance;
+        if (IsSphericalMap()) {
+            float distance = Vector3Length(position);
+            outOfBounds = IsHollowWorldMap()
+                ? (distance > SphericalRadius() + 6.0f || distance < std::max(1.0f, SphericalRadius() - SphericalCleanupDistance()))
+                : distance > SphericalCleanupDistance();
         } else {
             outOfBounds = IsSquareMap()
                 ? (std::abs(position.x) > squareHalfExtent_ + 6.0f || std::abs(position.z) > squareHalfExtent_ + 6.0f)
@@ -1217,13 +1335,13 @@ void Game::UpdateProjectiles(float dt) {
         }
         bool expired = projectile.life <= 0.0f || outOfBounds || hitGround;
 
-        if (IsAsteroidMap() && touchesGround && projectile.kind == ProjectileKind::LaserShot) {
-            Vector3 normal = AsteroidUpAt(position);
+        if (IsSphericalMap() && touchesGround && projectile.kind == ProjectileKind::LaserShot) {
+            Vector3 normal = SphericalUpAt(position);
             Vector3 velocity = projectile.frozen ? projectile.storedVelocity : ToRayVector(physics_.Bodies().GetLinearVelocity(projectile.body));
             float inwardSpeed = Vector3DotProduct(velocity, normal);
             if (inwardSpeed < 0.0f) {
                 velocity = Vector3Subtract(velocity, Vector3Scale(normal, inwardSpeed * 2.0f));
-                Vector3 corrected = Vector3Scale(normal, config_.asteroidRadius + projectile.radius + 0.04f);
+                Vector3 corrected = SphericalSurfacePoint(position, projectile.radius + 0.04f);
                 physics_.Bodies().SetPosition(projectile.body, ToJoltVector(corrected), JPH::EActivation::Activate);
                 if (projectile.frozen) {
                     projectile.storedVelocity = velocity;
@@ -1237,11 +1355,14 @@ void Game::UpdateProjectiles(float dt) {
         if (projectile.kind == ProjectileKind::GlassShard && projectile.bouncesLeft > 0) {
             bool bounced = false;
             JPH::Vec3 velocity = physics_.Bodies().GetLinearVelocity(projectile.body);
-            if (IsAsteroidMap()) {
-                Vector3 up = AsteroidUpAt(position);
+            if (IsSphericalMap()) {
+                Vector3 up = SphericalUpAt(position);
                 Vector3 rayVelocity = ToRayVector(velocity);
                 float inwardSpeed = Vector3DotProduct(rayVelocity, up);
-                if (Vector3Length(position) <= config_.asteroidRadius + 0.28f && inwardSpeed < 0.0f) {
+                bool shardTouchesSurface = IsHollowWorldMap()
+                    ? Vector3Length(position) >= SphericalRadius() - 0.28f
+                    : Vector3Length(position) <= SphericalRadius() + 0.28f;
+                if (shardTouchesSurface && inwardSpeed < 0.0f) {
                     rayVelocity = Vector3Subtract(rayVelocity, Vector3Scale(up, inwardSpeed * 1.72f));
                     rayVelocity = Vector3Add(rayVelocity, Vector3Scale(up, 2.0f));
                     velocity = ToJoltVelocity(rayVelocity);
@@ -1251,7 +1372,7 @@ void Game::UpdateProjectiles(float dt) {
                 velocity.SetY(std::abs(velocity.GetY()) * 0.72f + 3.0f);
                 bounced = true;
             }
-            bool hitBoundary = !IsAsteroidMap() && (IsSquareMap()
+            bool hitBoundary = !IsSphericalMap() && (IsSquareMap()
                 ? (std::abs(position.x) > squareHalfExtent_ - 0.4f || std::abs(position.z) > squareHalfExtent_ - 0.4f)
                 : DistanceXZ(position, Vector3Zero()) > arenaRadius_ - 0.4f);
             if (hitBoundary) {
@@ -1297,6 +1418,12 @@ void Game::UpdateProjectiles(float dt) {
             continue;
         }
 
+        if (expired && projectile.kind == ProjectileKind::Lance) {
+            DetonateLance(position, projectile.owner);
+            DestroyProjectile(i);
+            continue;
+        }
+
         if (expired) {
             DestroyProjectile(i);
             continue;
@@ -1330,8 +1457,8 @@ void Game::UpdatePickups(float dt) {
         pickup.bobTimer += dt;
 
         bool touched = false;
-        if (IsAsteroidMap()) {
-            touched = Vector3Distance(player, pickup.position) <= pickup.radius + playerRadius_ + config_.asteroidPlayerAltitude * 0.55f;
+        if (IsSphericalMap()) {
+            touched = Vector3Distance(player, pickup.position) <= pickup.radius + playerRadius_ + SphericalPlayerAltitude() * 0.55f;
         } else {
             float verticalReach = std::abs(player.y - pickup.position.y);
             touched = DistanceXZ(player, pickup.position) <= pickup.radius + playerRadius_ && verticalReach < 1.9f;
@@ -1339,9 +1466,30 @@ void Game::UpdatePickups(float dt) {
         if (touched) {
             if (pickup.type == PickupType::SpaceSuit) {
                 hasSpaceSuit_ = true;
+                spaceSuitEnabled_ = true;
                 gravityScale_ = config_.spaceSuitGravityScale;
                 SpawnHitBurst(pickup.position, Color{130, 225, 255, 255}, 26);
                 cameraShake_ = std::min(1.0f, cameraShake_ + 0.18f);
+                eventText_ = "SPACE SUIT";
+                eventTextTimer_ = 1.4f;
+            } else if (pickup.type == PickupType::FlightRig) {
+                hasFlightRig_ = true;
+                flightRigEnabled_ = true;
+                flightTargetAltitude_ = std::clamp(
+                    IsSphericalMap() ? SphericalAltitudeAt(camera_.position) : camera_.position.y,
+                    config_.flightMinAltitude,
+                    config_.flightMaxAltitude);
+                SpawnHitBurst(pickup.position, Color{180, 245, 255, 255}, 30);
+                cameraShake_ = std::min(1.0f, cameraShake_ + 0.2f);
+                eventText_ = "FLIGHT RIG";
+                eventTextTimer_ = 1.6f;
+            } else if (pickup.type == PickupType::Skates) {
+                hasSkates_ = true;
+                skatesEnabled_ = true;
+                SpawnHitBurst(pickup.position, Color{165, 255, 185, 255}, 28);
+                cameraShake_ = std::min(1.0f, cameraShake_ + 0.16f);
+                eventText_ = "SKATES";
+                eventTextTimer_ = 1.4f;
             }
 
             pickups_[i] = pickups_.back();
@@ -1398,6 +1546,16 @@ void Game::UpdateCollisions() {
                         DestroyEnemy(enemyIndex);
                     }
                     break;
+                } else if (projectiles_[projectileIndex].kind == ProjectileKind::Lance) {
+                    enemy.health -= projectiles_[projectileIndex].damage;
+                    SpawnHitBurst(enemyPosition, Color{210, 245, 255, 255}, 10);
+                    cameraShake_ = std::min(1.0f, cameraShake_ + 0.18f);
+                    if (enemy.health <= 0.0f) {
+                        SpawnHitBurst(enemyPosition, Color{245, 255, 255, 255}, 20);
+                        score_ += enemy.scoreValue;
+                        DestroyEnemy(enemyIndex);
+                    }
+                    continue;
                 }
 
                 enemy.health -= projectiles_[projectileIndex].damage;
@@ -1429,10 +1587,13 @@ void Game::UpdateCollisions() {
 void Game::UpdateArenaBounds() {
     for (Enemy& enemy : enemies_) {
         Vector3 position = BodyPosition(enemy.body);
-        if (IsAsteroidMap()) {
+        if (IsSphericalMap()) {
             float distance = Vector3Length(position);
-            if (distance > config_.asteroidCleanupDistance || distance < config_.asteroidRadius * 0.55f) {
-                Vector3 target = AsteroidSurfacePoint(position, AsteroidEnemyAltitude(enemy.type));
+            bool outside = IsHollowWorldMap()
+                ? (distance > SphericalRadius() + 3.0f || distance < std::max(1.0f, SphericalRadius() - SphericalCleanupDistance()))
+                : (distance > SphericalCleanupDistance() || distance < SphericalRadius() * 0.55f);
+            if (outside) {
+                Vector3 target = SphericalSurfacePoint(position, SphericalEnemyAltitude(enemy.type));
                 physics_.Bodies().SetPosition(enemy.body, ToJoltVector(target), JPH::EActivation::Activate);
                 physics_.Bodies().SetLinearVelocity(enemy.body, JPH::Vec3::sZero());
                 enemy.externalVelocity = Vector3Zero();
@@ -1451,7 +1612,7 @@ void Game::UpdateArenaBounds() {
 
 void Game::BuildMap() {
     props_.clear();
-    if (IsAsteroidMap()) {
+    if (IsSphericalMap()) {
         return;
     }
 
@@ -1524,19 +1685,19 @@ void Game::BuildMap() {
 }
 
 void Game::ResolveMapCollision(Vector3 previousPosition) {
-    if (IsAsteroidMap()) {
-        Vector3 playerUp = AsteroidUpAt(camera_.position);
-        Vector3 previousUp = AsteroidUpAt(previousPosition);
+    if (IsSphericalMap()) {
+        Vector3 playerUp = SphericalUpAt(camera_.position);
+        Vector3 previousUp = SphericalUpAt(previousPosition);
         for (const NanoPlatform& platform : nanoPlatforms_) {
             if (platform.delay > 0.0f) {
                 continue;
             }
 
-            Vector3 normal = SafeNormalize(platform.normal, AsteroidUpAt(platform.position));
-            Vector3 right = SafeNormalize(ProjectOnAsteroidTangent(platform.right, normal), PlayerRight());
-            Vector3 forward = SafeNormalize(ProjectOnAsteroidTangent(platform.forward, normal), Vector3Normalize(Vector3CrossProduct(normal, right)));
-            Vector3 previousFeet = Vector3Subtract(previousPosition, Vector3Scale(previousUp, config_.asteroidPlayerAltitude));
-            Vector3 feet = Vector3Subtract(camera_.position, Vector3Scale(playerUp, config_.asteroidPlayerAltitude));
+            Vector3 normal = SafeNormalize(platform.normal, SphericalUpAt(platform.position));
+            Vector3 right = SafeNormalize(ProjectOnSphericalTangent(platform.right, normal), PlayerRight());
+            Vector3 forward = SafeNormalize(ProjectOnSphericalTangent(platform.forward, normal), Vector3Normalize(Vector3CrossProduct(normal, right)));
+            Vector3 previousFeet = Vector3Subtract(previousPosition, Vector3Scale(previousUp, SphericalPlayerAltitude()));
+            Vector3 feet = Vector3Subtract(camera_.position, Vector3Scale(playerUp, SphericalPlayerAltitude()));
             Vector3 previousOffset = Vector3Subtract(previousFeet, platform.position);
             Vector3 offset = Vector3Subtract(feet, platform.position);
             float previousPlane = Vector3DotProduct(previousOffset, normal);
@@ -1546,16 +1707,17 @@ void Game::ResolveMapCollision(Vector3 previousPosition) {
             bool inside = std::abs(localX) <= platform.scale.x * 0.5f + playerRadius_ && std::abs(localZ) <= platform.scale.z * 0.5f + playerRadius_;
             float normalSpeed = Vector3DotProduct(playerVelocity_, normal);
             if (inside && normalSpeed <= 0.0f && previousPlane >= -0.22f && plane <= 0.35f) {
-                camera_.position = Vector3Add(platform.position, Vector3Scale(normal, config_.asteroidPlayerAltitude));
+                Vector3 platformContact = Vector3Add(platform.position, Vector3Add(Vector3Scale(right, localX), Vector3Scale(forward, localZ)));
+                camera_.position = Vector3Add(platformContact, Vector3Scale(normal, SphericalPlayerAltitude()));
                 if (normalSpeed < 0.0f) {
                     playerVelocity_ = Vector3Subtract(playerVelocity_, Vector3Scale(normal, normalSpeed));
                 }
                 grounded_ = true;
                 coyoteTimer_ = 0.11f;
                 camera_.up = normal;
-                asteroidReferenceForward_ = SafeNormalize(ProjectOnAsteroidTangent(asteroidReferenceForward_, normal), platform.forward);
+                asteroidReferenceForward_ = SafeNormalize(ProjectOnSphericalTangent(asteroidReferenceForward_, normal), platform.forward);
                 if (jumpBufferTimer_ > 0.0f) {
-                    playerVelocity_ = Vector3Add(ProjectOnAsteroidTangent(playerVelocity_, normal), Vector3Scale(normal, config_.jumpSpeed));
+                    playerVelocity_ = Vector3Add(ProjectOnSphericalTangent(playerVelocity_, normal), Vector3Scale(normal, config_.jumpSpeed));
                     grounded_ = false;
                     coyoteTimer_ = 0.0f;
                     jumpBufferTimer_ = 0.0f;
@@ -1680,22 +1842,34 @@ void Game::ResolveMapCollision(Vector3 previousPosition) {
     }
 }
 
-void Game::SpawnSpaceSuit() {
+void Game::SpawnStartingPickups() {
+    SpawnPickup(PickupType::SpaceSuit, 0);
+    SpawnPickup(PickupType::FlightRig, 1);
+    SpawnPickup(PickupType::Skates, 2);
+}
+
+void Game::SpawnPickup(PickupType type, int slot) {
     Vector3 position = {};
-    if (IsAsteroidMap()) {
-        float theta = RandomFloat(0.0f, 6.2831853f);
-        float u = RandomFloat(-0.72f, 0.72f);
+    if (IsSphericalMap()) {
+        float theta = (static_cast<float>(slot) / 3.0f) * 6.2831853f + RandomFloat(-0.25f, 0.25f);
+        float u = RandomFloat(-0.42f, 0.42f);
         float root = std::sqrt(std::max(0.0f, 1.0f - u * u));
         Vector3 normal = Vector3{root * std::cos(theta), u, root * std::sin(theta)};
-        position = Vector3Scale(normal, config_.asteroidRadius + config_.asteroidPlayerAltitude * 0.8f);
+        position = SphericalSurfacePoint(normal, SphericalPlayerAltitude() * 0.8f);
     } else if (IsSquareMap()) {
-        position = Vector3{RandomFloat(-squareHalfExtent_ * 0.45f, squareHalfExtent_ * 0.45f), 1.0f, RandomFloat(-squareHalfExtent_ * 0.45f, squareHalfExtent_ * 0.45f)};
+        const Vector3 anchors[] = {
+            {-8.0f, 1.0f, 8.0f},
+            {8.0f, 1.0f, 8.0f},
+            {0.0f, 1.0f, -9.0f}
+        };
+        Vector3 anchor = anchors[std::clamp(slot, 0, 2)];
+        position = Vector3{anchor.x + RandomFloat(-1.2f, 1.2f), anchor.y, anchor.z + RandomFloat(-1.2f, 1.2f)};
     } else {
-        float angle = RandomFloat(0.0f, 6.2831853f);
-        float radius = arenaRadius_ * RandomFloat(0.32f, 0.62f);
+        float angle = (static_cast<float>(slot) / 3.0f) * 6.2831853f + RandomFloat(-0.2f, 0.2f);
+        float radius = arenaRadius_ * (0.42f + static_cast<float>(slot) * 0.08f);
         position = Vector3{std::cos(angle) * radius, 1.0f, std::sin(angle) * radius};
     }
-    pickups_.push_back(Pickup{PickupType::SpaceSuit, position, 0.85f, RandomFloat(0.0f, 6.28f)});
+    pickups_.push_back(Pickup{type, position, 0.85f, RandomFloat(0.0f, 6.28f)});
 }
 
 void Game::SpawnEnemy() {
@@ -1713,14 +1887,14 @@ void Game::SpawnEnemy() {
 
 void Game::SpawnEnemyOfType(EnemyType type) {
     Vector3 position = {};
-    if (IsAsteroidMap()) {
-        Vector3 playerUp = AsteroidUpAt(camera_.position);
-        Vector3 tangentA = SafeNormalize(ProjectOnAsteroidTangent(PlayerRight(), playerUp), Vector3{1.0f, 0.0f, 0.0f});
+    if (IsSphericalMap()) {
+        Vector3 playerUp = SphericalUpAt(camera_.position);
+        Vector3 tangentA = SafeNormalize(ProjectOnSphericalTangent(PlayerRight(), playerUp), Vector3{1.0f, 0.0f, 0.0f});
         Vector3 tangentB = SafeNormalize(Vector3CrossProduct(playerUp, tangentA), Vector3{0.0f, 0.0f, 1.0f});
         float angle = RandomFloat(0.0f, 6.2831853f);
         float arc = RandomFloat(0.45f, 1.85f);
         Vector3 direction = Vector3Add(Vector3Scale(playerUp, std::cos(arc)), Vector3Scale(Vector3Add(Vector3Scale(tangentA, std::cos(angle)), Vector3Scale(tangentB, std::sin(angle))), std::sin(arc)));
-        position = AsteroidSurfacePoint(direction, AsteroidEnemyAltitude(type));
+        position = SphericalSurfacePoint(direction, SphericalEnemyAltitude(type));
     } else if (IsSquareMap()) {
         int side = GetRandomValue(0, 3);
         float edge = squareHalfExtent_ - 1.2f;
@@ -1740,8 +1914,8 @@ void Game::SpawnEnemyOfType(EnemyType type) {
         position = Vector3{std::cos(angle) * radius, 0.8f, std::sin(angle) * radius};
     }
 
-    if (IsAsteroidMap()) {
-        position = AsteroidSurfacePoint(position, AsteroidEnemyAltitude(type));
+    if (IsSphericalMap()) {
+        position = SphericalSurfacePoint(position, SphericalEnemyAltitude(type));
     } else if (type == EnemyType::Wisp || type == EnemyType::Spitter) {
         position.y = 1.35f;
     } else if (type == EnemyType::Pouncer) {
@@ -1815,7 +1989,7 @@ void Game::SpawnEnemyOfType(EnemyType type) {
     PhysicsWorld::BodyConfig enemyConfig;
     enemyConfig.motionType = JPH::EMotionType::Dynamic;
     enemyConfig.layer = Layers::MOVING;
-    enemyConfig.gravityFactor = !IsAsteroidMap() && type == EnemyType::Pouncer ? 0.75f : 0.0f;
+    enemyConfig.gravityFactor = !IsSphericalMap() && type == EnemyType::Pouncer ? 0.75f : 0.0f;
     enemyConfig.linearDamping = 0.0f;
     enemyConfig.angularDamping = 1.0f;
     enemyConfig.friction = 0.0f;
@@ -1844,7 +2018,7 @@ void Game::FireProjectile(ProjectileKind kind, Vector3 direction, float speed, f
     projectileConfig.motionType = JPH::EMotionType::Dynamic;
     projectileConfig.layer = Layers::MOVING;
     projectileConfig.linearVelocity = timeStopped_ ? JPH::Vec3::sZero() : JPH::Vec3(intendedVelocity.x, intendedVelocity.y, intendedVelocity.z);
-    projectileConfig.gravityFactor = IsAsteroidMap() ? 0.0f : kind == ProjectileKind::Rocket ? 0.02f : kind == ProjectileKind::BlackHoleGrenade ? 0.45f : 0.0f;
+    projectileConfig.gravityFactor = IsSphericalMap() ? 0.0f : kind == ProjectileKind::Rocket ? 0.02f : kind == ProjectileKind::BlackHoleGrenade ? 0.45f : 0.0f;
     projectileConfig.linearDamping = 0.0f;
     projectileConfig.motionQuality = JPH::EMotionQuality::LinearCast;
     projectileConfig.allowSleeping = false;
@@ -1865,7 +2039,7 @@ void Game::FireEnemyProjectile(ProjectileKind kind, Vector3 position, Vector3 di
     projectileConfig.motionType = JPH::EMotionType::Dynamic;
     projectileConfig.layer = Layers::MOVING;
     projectileConfig.linearVelocity = timeStopped_ ? JPH::Vec3::sZero() : JPH::Vec3(intendedVelocity.x, intendedVelocity.y, intendedVelocity.z);
-    projectileConfig.gravityFactor = IsAsteroidMap() ? 0.0f : kind == ProjectileKind::Rocket ? 0.02f : kind == ProjectileKind::BlackHoleGrenade ? 0.45f : 0.0f;
+    projectileConfig.gravityFactor = IsSphericalMap() ? 0.0f : kind == ProjectileKind::Rocket ? 0.02f : kind == ProjectileKind::BlackHoleGrenade ? 0.45f : 0.0f;
     projectileConfig.linearDamping = 0.0f;
     projectileConfig.motionQuality = JPH::EMotionQuality::LinearCast;
     projectileConfig.allowSleeping = false;
@@ -1959,9 +2133,11 @@ void Game::SpawnEnemyNanoPlatform(Vector3 origin, Vector3 direction) {
     Vector3 target = Vector3Add(origin, Vector3Scale(forward, config_.riftPlatformRange * 0.72f));
     float halfSize = config_.riftPlatformSize * 0.36f;
     Vector3 scale = Vector3{config_.riftPlatformSize * 0.72f, config_.riftPlatformThickness, config_.riftPlatformSize * 0.72f};
-    if (IsAsteroidMap()) {
-        Vector3 normal = AsteroidUpAt(target);
-        Vector3 center = Vector3Scale(normal, config_.asteroidRadius + config_.asteroidPlatformAltitude);
+    if (IsSphericalMap()) {
+        Vector3 normal = SphericalUpAt(target);
+        float targetAltitude = std::max(SphericalPlayerAltitude(), SphericalAltitudeAt(target));
+        targetAltitude += config_.riftPlatformRange * 0.72f * 0.18f;
+        Vector3 center = SphericalSurfacePoint(target, targetAltitude);
         Vector3 platformRight = SafeNormalize(Vector3CrossProduct(forward, normal), PlayerRight());
         Vector3 platformForward = SafeNormalize(Vector3CrossProduct(normal, platformRight), PlayerForward());
         nanoPlatforms_.push_back(NanoPlatform{center, scale, normal, platformRight, platformForward, config_.riftPlatformDelay, config_.riftPlatformLifetime * 0.45f, config_.riftPlatformLifetime * 0.45f});
@@ -2021,8 +2197,8 @@ void Game::SwitchDuelistWeapon(Enemy& enemy, float distance) {
 void Game::UpdateDuelist(Enemy& enemy, Vector3 position, Vector3 direction, float dt, float& speed, bool& skipVelocity) {
     Vector3 toPlayer = Vector3Subtract(camera_.position, position);
     float distance = Vector3Length(toPlayer);
-    Vector3 localUp = IsAsteroidMap() ? AsteroidUpAt(position) : Vector3{0.0f, 1.0f, 0.0f};
-    Vector3 tangent = IsAsteroidMap() ? SafeNormalize(Vector3CrossProduct(localUp, direction), PlayerRight()) : Vector3{-direction.z, 0.0f, direction.x};
+    Vector3 localUp = IsSphericalMap() ? SphericalUpAt(position) : Vector3{0.0f, 1.0f, 0.0f};
+    Vector3 tangent = IsSphericalMap() ? SafeNormalize(Vector3CrossProduct(localUp, direction), PlayerRight()) : Vector3{-direction.z, 0.0f, direction.x};
     float rangeBias = distance < 9.0f ? -0.75f : distance > 18.0f ? 0.55f : 0.1f;
     direction = Vector3Normalize(Vector3Add(Vector3Scale(direction, rangeBias), Vector3Scale(tangent, std::sin(enemy.bobTimer * 1.7f) * 0.8f)));
     speed = enemy.speed;
@@ -2046,8 +2222,11 @@ void Game::UpdateDuelist(Enemy& enemy, Vector3 position, Vector3 direction, floa
 
     enemy.externalVelocity = Vector3Scale(enemy.externalVelocity, std::pow(0.12f, dt));
     Vector3 velocity = {};
-    if (IsAsteroidMap()) {
-        float radialCorrection = std::clamp((config_.asteroidRadius + AsteroidEnemyAltitude(EnemyType::Duelist) - Vector3Length(position)) * 7.0f, -12.0f, 8.0f);
+    if (IsSphericalMap()) {
+        float radialCorrection = std::clamp((SphericalSignedRadius(SphericalEnemyAltitude(EnemyType::Duelist)) - Vector3Length(position)) * 7.0f, -12.0f, 8.0f);
+        if (IsHollowWorldMap()) {
+            radialCorrection = -radialCorrection;
+        }
         velocity = Vector3Add(Vector3Add(Vector3Scale(direction, speed), Vector3Scale(localUp, radialCorrection)), enemy.externalVelocity);
     } else {
         velocity = Vector3{
@@ -2061,7 +2240,7 @@ void Game::UpdateDuelist(Enemy& enemy, Vector3 position, Vector3 direction, floa
 }
 
 void Game::FireDuelistWeapon(Enemy& enemy, Vector3 position, Vector3 toPlayer) {
-    Vector3 localUp = IsAsteroidMap() ? AsteroidUpAt(position) : Vector3{0.0f, 1.0f, 0.0f};
+    Vector3 localUp = IsSphericalMap() ? SphericalUpAt(position) : Vector3{0.0f, 1.0f, 0.0f};
     Vector3 origin = Vector3Add(position, Vector3Scale(localUp, enemy.radius * 0.35f));
     Vector3 target = camera_.position;
     float distanceToPlayer = Vector3Distance(origin, target);
@@ -2141,7 +2320,7 @@ void Game::FireDuelistWeapon(Enemy& enemy, Vector3 position, Vector3 toPlayer) {
         int burst = GetRandomValue(0, 99) < 26 ? 2 : 1;
         for (int i = 0; i < burst; ++i) {
             Vector3 direction = Vector3Normalize(Vector3Add(aimDirection, Vector3Add(Vector3Scale(right, RandomFloat(-0.06f, 0.06f)), Vector3Scale(up, RandomFloat(-0.035f, 0.045f)))));
-            FireEnemyProjectile(ProjectileKind::Lance, origin, direction, config_.recoilLanceSpeed * 0.82f, config_.recoilLanceDamage, 1.15f, 0.18f, 0.18f, Color{220, 245, 255, 255});
+            FireEnemyProjectile(ProjectileKind::Lance, origin, direction, config_.recoilLanceSpeed * 0.82f, config_.recoilLanceDamage, 1.15f, 0.28f, 0.28f, Color{220, 245, 255, 255});
         }
         AddEnemyImpulse(enemy, Vector3Scale(aimDirection, -config_.recoilLanceImpulse * (burst > 1 ? 0.45f : 0.32f)));
         enemy.cooldownTimer = (burst > 1 ? 1.35f : 1.05f) / rate;
@@ -2164,9 +2343,9 @@ void Game::FireDuelistWeapon(Enemy& enemy, Vector3 position, Vector3 toPlayer) {
 
 void Game::FireBossRing(Vector3 position, int count, float speedScale) {
     float spin = static_cast<float>(GetTime()) * 0.65f;
-    Vector3 up = IsAsteroidMap() ? AsteroidUpAt(position) : Vector3{0.0f, 1.0f, 0.0f};
-    Vector3 basisA = SafeNormalize(ProjectOnAsteroidTangent(camera_.position, up), Vector3{1.0f, 0.0f, 0.0f});
-    if (!IsAsteroidMap()) {
+    Vector3 up = IsSphericalMap() ? SphericalUpAt(position) : Vector3{0.0f, 1.0f, 0.0f};
+    Vector3 basisA = SafeNormalize(ProjectOnSphericalTangent(camera_.position, up), Vector3{1.0f, 0.0f, 0.0f});
+    if (!IsSphericalMap()) {
         basisA = Vector3{1.0f, 0.0f, 0.0f};
     }
     Vector3 basisB = SafeNormalize(Vector3CrossProduct(up, basisA), Vector3{0.0f, 0.0f, 1.0f});
@@ -2307,12 +2486,138 @@ void Game::FireRiftCutter(Vector3 direction) {
 void Game::FireNanoPlatform(Vector3 direction) {
     NanoPlatform platform = MakeNanoPlatformTarget(direction);
     nanoPlatforms_.push_back(platform);
-    Vector3 topCenter = IsAsteroidMap()
+    Vector3 topCenter = IsSphericalMap()
         ? platform.position
         : Vector3{platform.position.x, platform.position.y + platform.scale.y, platform.position.z};
     SpawnHitBurst(topCenter, Color{255, 238, 160, 255}, 8);
     eventText_ = "NANO PLATFORM";
     eventTextTimer_ = 0.95f;
+}
+
+void Game::FireLanceThrust(Vector3 direction) {
+    Vector3 forward = Vector3Normalize(direction);
+    Vector3 origin = WeaponMuzzlePosition();
+    float range = config_.recoilLanceThrustRange;
+    float halfAngleCos = 0.54f;
+
+    for (size_t i = 0; i < enemies_.size();) {
+        Enemy& enemy = enemies_[i];
+        Vector3 enemyPosition = BodyPosition(enemy.body);
+        Vector3 offset = Vector3Subtract(enemyPosition, origin);
+        float distance = Vector3Length(offset);
+        if (distance <= 0.05f || distance > range + enemy.radius) {
+            ++i;
+            continue;
+        }
+        Vector3 toEnemy = Vector3Scale(offset, 1.0f / distance);
+        float facing = Vector3DotProduct(forward, toEnemy);
+        if (facing < halfAngleCos) {
+            ++i;
+            continue;
+        }
+
+        float falloff = 1.0f - std::clamp(distance / std::max(0.001f, range), 0.0f, 1.0f);
+        enemy.health -= config_.recoilLanceThrustDamage * (0.35f + falloff * 0.65f);
+        float impulse = config_.recoilLanceThrustForce * (0.45f + falloff * 0.9f);
+        AddEnemyImpulse(enemy, Vector3Scale(toEnemy, impulse));
+        SpawnHitBurst(enemyPosition, Color{210, 245, 255, 255}, 8);
+        if (enemy.health <= 0.0f) {
+            score_ += enemy.scoreValue;
+            SpawnHitBurst(enemyPosition, Color{240, 255, 255, 255}, 18);
+            DestroyEnemy(i);
+            continue;
+        }
+        ++i;
+    }
+
+    Vector3 up = PlayerUp();
+    Vector3 end = Vector3Add(origin, Vector3Scale(forward, range));
+    beams_.push_back(Beam{
+        origin,
+        end,
+        0.16f,
+        0.16f,
+        range * 0.72f,
+        0.9f,
+        Color{190, 245, 255, 255}
+    });
+    shockwaves_.push_back(Shockwave{Vector3Add(origin, Vector3Scale(forward, range * 0.55f)), 0.22f, 0.22f, range * 0.55f, Color{190, 245, 255, 255}});
+    heatwaves_.push_back(HeatwavePulse{
+        origin,
+        forward,
+        0.18f,
+        0.18f,
+        range,
+        0.52f,
+        Color{170, 235, 255, 255}
+    });
+    SpawnHitBurst(Vector3Add(origin, Vector3Scale(forward, 1.25f)), Color{225, 255, 255, 255}, 14);
+    float impulse = config_.recoilLanceThrustImpulse;
+    Vector3 thrust = Vector3Scale(forward, impulse);
+    thrust = Vector3Add(thrust, Vector3Scale(up, std::max(0.0f, -Vector3DotProduct(forward, up)) * impulse * 0.28f));
+    playerVelocity_ = Vector3Add(playerVelocity_, thrust);
+    camera_.position = Vector3Add(camera_.position, Vector3Scale(forward, std::clamp(impulse * 0.055f, 0.35f, 1.25f)));
+    if (IsSphericalMap()) {
+        float surfaceRadius = SphericalSignedRadius(SphericalPlayerAltitude());
+        bool pushedIntoSurface = IsHollowWorldMap()
+            ? Vector3Length(camera_.position) > surfaceRadius
+            : Vector3Length(camera_.position) < surfaceRadius;
+        if (pushedIntoSurface) {
+            camera_.position = SphericalSurfacePoint(camera_.position, SphericalPlayerAltitude());
+        }
+        camera_.up = SphericalUpAt(camera_.position);
+    } else {
+        camera_.position.y = std::max(playerHeight_, camera_.position.y);
+    }
+    camera_.target = Vector3Add(camera_.position, PlayerForward());
+    thrustControlLockTimer_ = 0.18f;
+    grounded_ = false;
+    eventText_ = "SONIC THRUST";
+    eventTextTimer_ = 0.85f;
+}
+
+void Game::DetonateLance(Vector3 position, ProjectileOwner owner) {
+    float radius = config_.recoilLanceShockwaveRadius;
+    if (owner == ProjectileOwner::Player) {
+        for (size_t i = 0; i < enemies_.size();) {
+            Enemy& enemy = enemies_[i];
+            Vector3 enemyPosition = BodyPosition(enemy.body);
+            float distance = Vector3Distance(enemyPosition, position);
+            if (distance <= radius + enemy.radius) {
+                float falloff = 1.0f - std::clamp(distance / std::max(0.001f, radius), 0.0f, 1.0f);
+                enemy.health -= config_.recoilLanceShockwaveDamage * (0.25f + falloff * 0.75f);
+                Vector3 direction = Vector3Subtract(enemyPosition, position);
+                if (Vector3Length(direction) <= 0.001f) {
+                    direction = IsSphericalMap() ? SphericalUpAt(position) : Vector3{0.0f, 1.0f, 0.0f};
+                } else {
+                    direction = Vector3Normalize(direction);
+                }
+                AddEnemyImpulse(enemy, Vector3Scale(direction, config_.recoilLanceShockwaveForce * (0.35f + falloff * 0.85f)));
+                SpawnHitBurst(enemyPosition, Color{190, 245, 255, 255}, 7);
+                if (enemy.health <= 0.0f) {
+                    score_ += enemy.scoreValue;
+                    SpawnHitBurst(enemyPosition, Color{240, 255, 255, 255}, 18);
+                    DestroyEnemy(i);
+                    continue;
+                }
+            }
+            ++i;
+        }
+    } else if (Vector3Distance(camera_.position, position) <= radius + playerRadius_) {
+        ApplyPlayerHit(camera_.position, Color{190, 245, 255, 255});
+    }
+
+    SpawnShockwave(position, radius, Color{190, 245, 255, 255});
+    SpawnHitBurst(position, Color{220, 255, 255, 255}, 28);
+    beams_.push_back(Beam{
+        position,
+        Vector3Add(position, Vector3Scale(IsSphericalMap() ? SphericalUpAt(position) : Vector3{0.0f, 1.0f, 0.0f}, 0.01f)),
+        0.16f,
+        0.16f,
+        radius * 1.4f,
+        1.0f,
+        Color{190, 245, 255, 255}
+    });
 }
 
 void Game::SpawnEnemyRift(Vector3 origin, Vector3 direction) {
@@ -2411,7 +2716,7 @@ void Game::Blink() {
     Vector3 forward = PlayerForward();
     float travel = config_.blinkDistance;
     float maxDistance = arenaRadius_ - playerRadius_;
-    if (!IsAsteroidMap()) {
+    if (!IsSphericalMap()) {
         Vector3 flatStart = Vector3{start.x, 0.0f, start.z};
         Vector3 flatForward = Vector3{forward.x, 0.0f, forward.z};
         float a = Vector3DotProduct(flatForward, flatForward);
@@ -2429,13 +2734,16 @@ void Game::Blink() {
     }
 
     Vector3 target = Vector3Add(start, Vector3Scale(forward, travel));
-    if (IsAsteroidMap()) {
-        float minimumRadius = config_.asteroidRadius + config_.asteroidPlayerAltitude;
-        if (Vector3Length(target) < minimumRadius) {
-            target = AsteroidSurfacePoint(target, config_.asteroidPlayerAltitude);
+    if (IsSphericalMap()) {
+        float surfaceRadius = SphericalSignedRadius(SphericalPlayerAltitude());
+        bool beyondSurface = IsHollowWorldMap()
+            ? Vector3Length(target) > surfaceRadius
+            : Vector3Length(target) < surfaceRadius;
+        if (beyondSurface) {
+            target = SphericalSurfacePoint(target, SphericalPlayerAltitude());
         }
-        if (Vector3Length(target) > config_.asteroidCleanupDistance * 0.72f) {
-            target = Vector3Scale(AsteroidUpAt(target), config_.asteroidCleanupDistance * 0.72f);
+        if (!IsHollowWorldMap() && Vector3Length(target) > SphericalCleanupDistance() * 0.72f) {
+            target = SphericalSurfacePoint(target, SphericalCleanupDistance() * 0.72f - SphericalRadius());
         }
     } else {
         target.y = std::max(playerHeight_, target.y);
@@ -2449,7 +2757,7 @@ void Game::Blink() {
     }
 
     camera_.position = target;
-    camera_.up = IsAsteroidMap() ? AsteroidUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
+    camera_.up = IsSphericalMap() ? SphericalUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
     camera_.target = Vector3Add(camera_.position, PlayerForward());
     playerVelocity_ = Vector3Scale(playerVelocity_, 0.35f);
 
@@ -2474,12 +2782,12 @@ void Game::Blink() {
 void Game::BlinkDuelist(Enemy& enemy, Vector3 awayFrom) {
     Vector3 position = BodyPosition(enemy.body);
     Vector3 direction = Vector3Length(awayFrom) > 0.001f ? Vector3Normalize(awayFrom) : Vector3{1.0f, 0.0f, 0.0f};
-    if (IsAsteroidMap()) {
-        direction = SafeNormalize(ProjectOnAsteroidTangent(direction, AsteroidUpAt(position)), PlayerRight());
+    if (IsSphericalMap()) {
+        direction = SafeNormalize(ProjectOnSphericalTangent(direction, SphericalUpAt(position)), PlayerRight());
     }
     Vector3 target = Vector3Add(position, Vector3Scale(direction, 8.5f));
-    if (IsAsteroidMap()) {
-        target = AsteroidSurfacePoint(target, AsteroidEnemyAltitude(EnemyType::Duelist));
+    if (IsSphericalMap()) {
+        target = SphericalSurfacePoint(target, SphericalEnemyAltitude(EnemyType::Duelist));
     } else if (IsSquareMap()) {
         float limit = squareHalfExtent_ - enemy.radius - 1.0f;
         target.x = std::clamp(target.x, -limit, limit);
@@ -2493,7 +2801,7 @@ void Game::BlinkDuelist(Enemy& enemy, Vector3 awayFrom) {
             target.z = flat.z;
         }
     }
-    if (!IsAsteroidMap()) {
+    if (!IsSphericalMap()) {
         target.y = 1.2f;
     }
     physics_.Bodies().SetPosition(enemy.body, ToJoltVector(target), JPH::EActivation::Activate);
@@ -2577,15 +2885,15 @@ void Game::ApplyExplosionImpulse(Vector3 position, float radius, float impulse) 
 
     Vector3 direction = Vector3Subtract(player, position);
     if (Vector3Length(direction) <= 0.001f) {
-        direction = IsAsteroidMap() ? AsteroidUpAt(player) : Vector3{0.0f, 1.0f, 0.0f};
+        direction = IsSphericalMap() ? SphericalUpAt(player) : Vector3{0.0f, 1.0f, 0.0f};
     }
-    Vector3 up = IsAsteroidMap() ? AsteroidUpAt(player) : Vector3{0.0f, 1.0f, 0.0f};
+    Vector3 up = IsSphericalMap() ? SphericalUpAt(player) : Vector3{0.0f, 1.0f, 0.0f};
     direction = Vector3Add(direction, Vector3Scale(up, 0.75f));
     direction = Vector3Normalize(direction);
     float falloff = 1.0f - std::clamp(distance / std::max(0.001f, radius), 0.0f, 1.0f);
     float strength = impulse * (0.25f + falloff * 0.75f);
     playerVelocity_ = Vector3Add(playerVelocity_, Vector3Scale(direction, strength));
-    if (IsAsteroidMap()) {
+    if (IsSphericalMap()) {
         float radialSpeed = Vector3DotProduct(playerVelocity_, up);
         if (radialSpeed > 24.0f) {
             playerVelocity_ = Vector3Subtract(playerVelocity_, Vector3Scale(up, radialSpeed - 24.0f));
@@ -2597,11 +2905,11 @@ void Game::ApplyExplosionImpulse(Vector3 position, float radius, float impulse) 
 }
 
 void Game::ApplyShotgunRecoil(Vector3 direction) {
-    Vector3 up = IsAsteroidMap() ? AsteroidUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
+    Vector3 up = IsSphericalMap() ? SphericalUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
     Vector3 recoil = Vector3Scale(direction, -config_.shotgunRecoilImpulse);
     recoil = Vector3Add(recoil, Vector3Scale(up, std::max(0.0f, -Vector3DotProduct(direction, up)) * config_.shotgunRecoilVerticalBonus));
     playerVelocity_ = Vector3Add(playerVelocity_, recoil);
-    if (IsAsteroidMap()) {
+    if (IsSphericalMap()) {
         float speed = Vector3Length(playerVelocity_);
         if (speed > 36.0f) {
             playerVelocity_ = Vector3Scale(Vector3Normalize(playerVelocity_), 36.0f);
@@ -2615,11 +2923,11 @@ void Game::ApplyShotgunRecoil(Vector3 direction) {
 }
 
 void Game::ApplyLanceRecoil(Vector3 direction) {
-    Vector3 up = IsAsteroidMap() ? AsteroidUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
+    Vector3 up = IsSphericalMap() ? SphericalUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
     Vector3 recoil = Vector3Scale(direction, -config_.recoilLanceImpulse);
     recoil = Vector3Add(recoil, Vector3Scale(up, std::max(0.0f, -Vector3DotProduct(direction, up)) * config_.recoilLanceImpulse * 0.42f));
     playerVelocity_ = Vector3Add(playerVelocity_, recoil);
-    if (IsAsteroidMap()) {
+    if (IsSphericalMap()) {
         float speed = Vector3Length(playerVelocity_);
         if (speed > 42.0f) {
             playerVelocity_ = Vector3Scale(Vector3Normalize(playerVelocity_), 42.0f);
@@ -2738,11 +3046,11 @@ void Game::DestroyEnemy(size_t index) {
 Vector3 Game::PlayerForward() const {
     float yaw = yaw_ * kDegToRad;
     float pitch = pitch_ * kDegToRad;
-    if (IsAsteroidMap()) {
-        Vector3 up = AsteroidUpAt(camera_.position);
-        Vector3 reference = ProjectOnAsteroidTangent(asteroidReferenceForward_, up);
+    if (IsSphericalMap()) {
+        Vector3 up = SphericalUpAt(camera_.position);
+        Vector3 reference = ProjectOnSphericalTangent(asteroidReferenceForward_, up);
         if (Vector3Length(reference) <= 0.001f) {
-            reference = ProjectOnAsteroidTangent(Vector3{0.0f, 0.0f, -1.0f}, up);
+            reference = ProjectOnSphericalTangent(Vector3{0.0f, 0.0f, -1.0f}, up);
         }
         if (Vector3Length(reference) <= 0.001f) {
             reference = Vector3Normalize(Vector3CrossProduct(Vector3{1.0f, 0.0f, 0.0f}, up));
@@ -2759,7 +3067,7 @@ Vector3 Game::PlayerForward() const {
 }
 
 Vector3 Game::PlayerRight() const {
-    Vector3 up = IsAsteroidMap() ? AsteroidUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
+    Vector3 up = IsSphericalMap() ? SphericalUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
     Vector3 right = Vector3CrossProduct(PlayerForward(), up);
     if (Vector3Length(right) <= 0.001f) {
         right = Vector3{1.0f, 0.0f, 0.0f};
@@ -2768,8 +3076,8 @@ Vector3 Game::PlayerRight() const {
 }
 
 Vector3 Game::PlayerUp() const {
-    if (IsAsteroidMap()) {
-        return AsteroidUpAt(camera_.position);
+    if (IsSphericalMap()) {
+        return SphericalUpAt(camera_.position);
     }
     return Vector3Normalize(Vector3CrossProduct(PlayerRight(), PlayerForward()));
 }
@@ -2780,12 +3088,15 @@ Vector3 Game::WeaponMuzzlePosition() const {
 
 Game::NanoPlatform Game::MakeNanoPlatformTarget(Vector3 direction) const {
     Vector3 forward = Vector3Length(direction) > 0.001f ? Vector3Normalize(direction) : PlayerForward();
-    Vector3 target = Vector3Add(WeaponMuzzlePosition(), Vector3Scale(forward, config_.riftPlatformRange));
+    Vector3 target = Vector3Add(WeaponMuzzlePosition(), Vector3Scale(forward, config_.riftPlatformRange * riftPlatformRangeScale_));
     float halfSize = config_.riftPlatformSize * 0.5f;
 
-    if (IsAsteroidMap()) {
-        Vector3 normal = AsteroidUpAt(target);
-        Vector3 center = Vector3Scale(normal, config_.asteroidRadius + config_.asteroidPlatformAltitude);
+    if (IsSphericalMap()) {
+        Vector3 normal = SphericalUpAt(target);
+        float platformRange = config_.riftPlatformRange * riftPlatformRangeScale_;
+        float targetAltitude = std::max(SphericalPlayerAltitude(), SphericalAltitudeAt(target));
+        targetAltitude += platformRange * 0.18f;
+        Vector3 center = SphericalSurfacePoint(target, targetAltitude);
         Vector3 platformRight = Vector3CrossProduct(forward, normal);
         if (Vector3Length(platformRight) <= 0.001f) {
             platformRight = PlayerRight();
@@ -2817,26 +3128,55 @@ Game::NanoPlatform Game::MakeNanoPlatformTarget(Vector3 direction) const {
     return NanoPlatform{position, scale, Vector3{0.0f, 1.0f, 0.0f}, Vector3{1.0f, 0.0f, 0.0f}, Vector3{0.0f, 0.0f, 1.0f}, config_.riftPlatformDelay, config_.riftPlatformLifetime, config_.riftPlatformLifetime};
 }
 
-bool Game::IsAsteroidMap() const {
-    return config_.mapType == "asteroid";
+bool Game::IsSphericalMap() const {
+    return config_.mapType == "asteroid" || config_.mapType == "hollow_world";
 }
 
-Vector3 Game::AsteroidUpAt(Vector3 position) const {
+bool Game::IsHollowWorldMap() const {
+    return config_.mapType == "hollow_world";
+}
+
+float Game::SphericalRadius() const {
+    return IsHollowWorldMap() ? config_.hollowWorldRadius : config_.asteroidRadius;
+}
+
+float Game::SphericalPlayerAltitude() const {
+    return IsHollowWorldMap() ? config_.hollowWorldPlayerAltitude : config_.asteroidPlayerAltitude;
+}
+
+float Game::SphericalCleanupDistance() const {
+    return IsHollowWorldMap() ? config_.hollowWorldCleanupDistance : config_.asteroidCleanupDistance;
+}
+
+float Game::SphericalAltitudeAt(Vector3 position) const {
+    float distance = Vector3Length(position);
+    return IsHollowWorldMap() ? SphericalRadius() - distance : distance - SphericalRadius();
+}
+
+float Game::SphericalSignedRadius(float altitude) const {
+    return IsHollowWorldMap() ? SphericalRadius() - altitude : SphericalRadius() + altitude;
+}
+
+Vector3 Game::SphericalUpAt(Vector3 position) const {
     if (Vector3Length(position) <= 0.001f) {
         return Vector3{0.0f, 1.0f, 0.0f};
     }
-    return Vector3Normalize(position);
+    Vector3 outward = Vector3Normalize(position);
+    return IsHollowWorldMap() ? Vector3Scale(outward, -1.0f) : outward;
 }
 
-Vector3 Game::AsteroidSurfacePoint(Vector3 position, float altitude) const {
-    return Vector3Scale(AsteroidUpAt(position), config_.asteroidRadius + altitude);
+Vector3 Game::SphericalSurfacePoint(Vector3 position, float altitude) const {
+    Vector3 outward = Vector3Length(position) > 0.001f
+        ? Vector3Normalize(position)
+        : Vector3{0.0f, IsHollowWorldMap() ? -1.0f : 1.0f, 0.0f};
+    return Vector3Scale(outward, SphericalSignedRadius(altitude));
 }
 
-Vector3 Game::ProjectOnAsteroidTangent(Vector3 vector, Vector3 up) const {
+Vector3 Game::ProjectOnSphericalTangent(Vector3 vector, Vector3 up) const {
     return Vector3Subtract(vector, Vector3Scale(up, Vector3DotProduct(vector, up)));
 }
 
-float Game::AsteroidEnemyAltitude(EnemyType type) const {
+float Game::SphericalEnemyAltitude(EnemyType type) const {
     if (type == EnemyType::Harrier) {
         return config_.harrierTargetHeight;
     }
@@ -2855,7 +3195,7 @@ float Game::AsteroidEnemyAltitude(EnemyType type) const {
     if (type == EnemyType::Pouncer) {
         return 0.9f;
     }
-    return config_.asteroidEnemyAltitude;
+    return IsHollowWorldMap() ? config_.hollowWorldEnemyAltitude : config_.asteroidEnemyAltitude;
 }
 
 Vector3 Game::BodyPosition(JPH::BodyID id) const {
@@ -2901,6 +3241,9 @@ const char* Game::WeaponModeName() const {
     if (activeWeapon_ == WeaponType::RiftCutter) {
         return riftCutterMode_ == RiftCutterMode::Platform ? "P" : "B";
     }
+    if (activeWeapon_ == WeaponType::RecoilLance) {
+        return recoilLanceMode_ == RecoilLanceMode::Thrust ? "T" : "L";
+    }
     return "";
 }
 
@@ -2929,11 +3272,11 @@ bool Game::IsSquareMap() const {
 }
 
 bool Game::EnemyTouchesPlayer(Vector3 enemyPosition, float enemyRadius) const {
-    Vector3 up = IsAsteroidMap() ? AsteroidUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
-    Vector3 capsuleBottom = IsAsteroidMap()
-        ? Vector3Subtract(camera_.position, Vector3Scale(up, config_.asteroidPlayerAltitude - playerRadius_))
+    Vector3 up = IsSphericalMap() ? SphericalUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
+    Vector3 capsuleBottom = IsSphericalMap()
+        ? Vector3Subtract(camera_.position, Vector3Scale(up, SphericalPlayerAltitude() - playerRadius_))
         : Vector3{camera_.position.x, camera_.position.y - playerHeight_ + playerRadius_, camera_.position.z};
-    Vector3 capsuleTop = IsAsteroidMap()
+    Vector3 capsuleTop = IsSphericalMap()
         ? Vector3Subtract(camera_.position, Vector3Scale(up, playerRadius_ * 0.35f))
         : Vector3{camera_.position.x, camera_.position.y - playerRadius_ * 0.35f, camera_.position.z};
     float hitDistance = enemyRadius + playerRadius_;
@@ -2999,10 +3342,14 @@ void Game::Draw() const {
 }
 
 void Game::DrawArena() const {
-    if (IsAsteroidMap()) {
-        float radius = config_.asteroidRadius;
-        DrawSphereEx(Vector3Zero(), radius, 18, 12, Color{22, 21, 24, 255});
-        DrawSphereWires(Vector3Zero(), radius * 1.002f, 18, 12, Color{86, 82, 90, 210});
+    if (IsSphericalMap()) {
+        float radius = SphericalRadius();
+        Color fillColor = IsHollowWorldMap() ? Color{12, 13, 18, 90} : Color{22, 21, 24, 255};
+        Color wireColor = IsHollowWorldMap() ? Color{82, 95, 120, 190} : Color{86, 82, 90, 210};
+        Color latColor = IsHollowWorldMap() ? Color{38, 48, 66, 170} : Color{48, 47, 52, 180};
+        Color meridianColor = IsHollowWorldMap() ? Color{32, 42, 62, 155} : Color{42, 44, 50, 160};
+        DrawSphereEx(Vector3Zero(), radius, 18, 12, fillColor);
+        DrawSphereWires(Vector3Zero(), radius * (IsHollowWorldMap() ? 0.998f : 1.002f), 18, 12, wireColor);
 
         constexpr int kSegments = 72;
         for (int lat = -3; lat <= 3; ++lat) {
@@ -3014,7 +3361,7 @@ void Game::DrawArena() const {
                 float angle = static_cast<float>(i) / static_cast<float>(kSegments) * 6.2831853f;
                 Vector3 point = Vector3{std::cos(angle) * ringRadius, y, std::sin(angle) * ringRadius};
                 if (i > 0) {
-                    DrawLine3D(previous, point, Color{48, 47, 52, 180});
+                    DrawLine3D(previous, point, latColor);
                 }
                 previous = point;
             }
@@ -3030,7 +3377,7 @@ void Game::DrawArena() const {
                     std::cos(t) * std::sin(longitude) * radius
                 };
                 if (i > 0) {
-                    DrawLine3D(previous, point, Color{42, 44, 50, 160});
+                    DrawLine3D(previous, point, meridianColor);
                 }
                 previous = point;
             }
@@ -3071,8 +3418,8 @@ void Game::DrawArena() const {
 
 void Game::DrawProps() const {
     for (const Prop& prop : props_) {
-        if (IsAsteroidMap()) {
-            Vector3 normal = AsteroidUpAt(prop.position);
+        if (IsSphericalMap()) {
+            Vector3 normal = SphericalUpAt(prop.position);
             Vector3 center = Vector3Add(prop.position, Vector3Scale(normal, prop.scale.y * 0.35f));
             float radius = std::max(prop.scale.x, prop.scale.z);
             if (prop.shape == 1) {
@@ -3107,10 +3454,10 @@ void Game::DrawProps() const {
 }
 
 void Game::DrawNanoPlatformFrame(const NanoPlatform& platform, Color color, bool dashed) const {
-    Vector3 normal = IsAsteroidMap() ? SafeNormalize(platform.normal, AsteroidUpAt(platform.position)) : Vector3{0.0f, 1.0f, 0.0f};
-    Vector3 right = IsAsteroidMap() ? SafeNormalize(platform.right, PlayerRight()) : Vector3{1.0f, 0.0f, 0.0f};
-    Vector3 forward = IsAsteroidMap() ? SafeNormalize(platform.forward, PlayerForward()) : Vector3{0.0f, 0.0f, 1.0f};
-    Vector3 topCenter = IsAsteroidMap()
+    Vector3 normal = IsSphericalMap() ? SafeNormalize(platform.normal, SphericalUpAt(platform.position)) : Vector3{0.0f, 1.0f, 0.0f};
+    Vector3 right = IsSphericalMap() ? SafeNormalize(platform.right, PlayerRight()) : Vector3{1.0f, 0.0f, 0.0f};
+    Vector3 forward = IsSphericalMap() ? SafeNormalize(platform.forward, PlayerForward()) : Vector3{0.0f, 0.0f, 1.0f};
+    Vector3 topCenter = IsSphericalMap()
         ? Vector3Add(platform.position, Vector3Scale(normal, 0.035f))
         : Vector3{platform.position.x, platform.position.y + platform.scale.y + 0.035f, platform.position.z};
     Vector3 corners[4] = {
@@ -3158,8 +3505,8 @@ void Game::DrawNanoPlatforms() const {
 
         float alpha = platform.maxLife > 0.0f ? std::clamp(platform.life / platform.maxLife, 0.0f, 1.0f) : 0.0f;
         Color fill = FadeColor(Color{255, 218, 92, 255}, 0.35f + alpha * 0.25f);
-        if (IsAsteroidMap()) {
-            Vector3 normal = SafeNormalize(platform.normal, AsteroidUpAt(platform.position));
+        if (IsSphericalMap()) {
+            Vector3 normal = SafeNormalize(platform.normal, SphericalUpAt(platform.position));
             Vector3 right = SafeNormalize(platform.right, PlayerRight());
             Vector3 forward = SafeNormalize(platform.forward, PlayerForward());
             Vector3 top[4] = {
@@ -3283,24 +3630,32 @@ void Game::DrawEnemies() const {
 
 void Game::DrawPickups() const {
     for (const Pickup& pickup : pickups_) {
-        if (pickup.type != PickupType::SpaceSuit) {
-            continue;
-        }
-
         float bob = std::sin(pickup.bobTimer * 3.2f) * 0.12f;
         float pulse = 0.65f + std::sin(pickup.bobTimer * 5.0f) * 0.18f;
         Vector3 base = Vector3Add(pickup.position, Vector3{0.0f, bob, 0.0f});
 
-        DrawCylinder(base, 0.26f, 0.32f, 0.62f, 6, Color{210, 220, 225, 255});
-        DrawCylinderWires(base, 0.28f, 0.34f, 0.64f, 6, Color{35, 60, 70, 255});
-        DrawSphereEx(Vector3Add(base, Vector3{0.0f, 0.52f, 0.0f}), 0.24f, 6, 5, Color{170, 225, 255, 235});
-        DrawSphereWires(Vector3Add(base, Vector3{0.0f, 0.52f, 0.0f}), 0.27f, 6, 5, Color{225, 250, 255, 220});
-
-        DrawCylinder(Vector3Add(base, Vector3{-0.22f, -0.02f, -0.18f}), 0.07f, 0.07f, 0.54f, 5, Color{70, 90, 105, 255});
-        DrawCylinder(Vector3Add(base, Vector3{0.22f, -0.02f, -0.18f}), 0.07f, 0.07f, 0.54f, 5, Color{70, 90, 105, 255});
-        DrawCylinderWires(Vector3Add(base, Vector3{0.0f, -0.42f, 0.0f}), 0.56f + pulse * 0.08f, 0.56f + pulse * 0.08f, 0.02f, 24, Color{95, 210, 255, 190});
-        DrawLine3D(Vector3Add(base, Vector3{-0.58f, 0.0f, 0.0f}), Vector3Add(base, Vector3{0.58f, 0.0f, 0.0f}), Color{95, 210, 255, 150});
-        DrawLine3D(Vector3Add(base, Vector3{0.0f, 0.0f, -0.58f}), Vector3Add(base, Vector3{0.0f, 0.0f, 0.58f}), Color{95, 210, 255, 150});
+        if (pickup.type == PickupType::SpaceSuit) {
+            DrawCylinder(base, 0.26f, 0.32f, 0.62f, 6, Color{210, 220, 225, 255});
+            DrawCylinderWires(base, 0.28f, 0.34f, 0.64f, 6, Color{35, 60, 70, 255});
+            DrawSphereEx(Vector3Add(base, Vector3{0.0f, 0.52f, 0.0f}), 0.24f, 6, 5, Color{170, 225, 255, 235});
+            DrawSphereWires(Vector3Add(base, Vector3{0.0f, 0.52f, 0.0f}), 0.27f, 6, 5, Color{225, 250, 255, 220});
+            DrawCylinder(Vector3Add(base, Vector3{-0.22f, -0.02f, -0.18f}), 0.07f, 0.07f, 0.54f, 5, Color{70, 90, 105, 255});
+            DrawCylinder(Vector3Add(base, Vector3{0.22f, -0.02f, -0.18f}), 0.07f, 0.07f, 0.54f, 5, Color{70, 90, 105, 255});
+            DrawCylinderWires(Vector3Add(base, Vector3{0.0f, -0.42f, 0.0f}), 0.56f + pulse * 0.08f, 0.56f + pulse * 0.08f, 0.02f, 24, Color{95, 210, 255, 190});
+        } else if (pickup.type == PickupType::FlightRig) {
+            DrawSphereEx(base, 0.18f, 6, 5, Color{205, 250, 255, 235});
+            DrawCylinderWires(base, 0.62f + pulse * 0.1f, 0.62f + pulse * 0.1f, 0.04f, 28, Color{135, 235, 255, 210});
+            DrawCylinder(Vector3Add(base, Vector3{-0.42f, -0.12f, 0.0f}), 0.09f, 0.13f, 0.28f, 6, Color{85, 110, 120, 255});
+            DrawCylinder(Vector3Add(base, Vector3{0.42f, -0.12f, 0.0f}), 0.09f, 0.13f, 0.28f, 6, Color{85, 110, 120, 255});
+            DrawSphereEx(Vector3Add(base, Vector3{-0.42f, -0.34f, 0.0f}), 0.1f + pulse * 0.03f, 5, 4, Color{100, 235, 255, 210});
+            DrawSphereEx(Vector3Add(base, Vector3{0.42f, -0.34f, 0.0f}), 0.1f + pulse * 0.03f, 5, 4, Color{100, 235, 255, 210});
+        } else if (pickup.type == PickupType::Skates) {
+            DrawCube(Vector3Add(base, Vector3{-0.2f, 0.06f, 0.0f}), 0.18f, 0.14f, 0.58f, Color{190, 220, 205, 255});
+            DrawCube(Vector3Add(base, Vector3{0.2f, 0.06f, 0.0f}), 0.18f, 0.14f, 0.58f, Color{190, 220, 205, 255});
+            DrawLine3D(Vector3Add(base, Vector3{-0.34f, -0.13f, -0.36f}), Vector3Add(base, Vector3{-0.06f, -0.13f, 0.36f}), Color{170, 255, 190, 230});
+            DrawLine3D(Vector3Add(base, Vector3{0.06f, -0.13f, -0.36f}), Vector3Add(base, Vector3{0.34f, -0.13f, 0.36f}), Color{170, 255, 190, 230});
+            DrawCylinderWires(Vector3Add(base, Vector3{0.0f, -0.18f, 0.0f}), 0.52f + pulse * 0.08f, 0.52f + pulse * 0.08f, 0.02f, 22, Color{155, 255, 185, 190});
+        }
     }
 }
 
@@ -3340,11 +3695,12 @@ void Game::DrawProjectiles() const {
             DrawCylinderWires(position, projectile.radius * 2.15f, projectile.radius * 1.25f, 0.03f, 12, FadeColor(Color{90, 190, 255, 255}, 0.65f));
         } else if (projectile.kind == ProjectileKind::Lance) {
             Vector3 forward = Vector3Length(displayVelocity) > 0.001f ? Vector3Normalize(displayVelocity) : PlayerForward();
-            Vector3 tip = Vector3Add(position, Vector3Scale(forward, projectile.radius * 3.2f));
-            Vector3 tail = Vector3Subtract(position, Vector3Scale(forward, projectile.radius * 2.8f));
-            DrawCylinderEx(tail, tip, projectile.radius * 0.22f, projectile.radius * 0.05f, 5, projectile.color);
-            DrawSphereEx(tip, projectile.radius * 0.42f, 5, 4, Color{245, 255, 255, 240});
-            DrawLine3D(tail, Vector3Add(tail, Vector3Scale(trail, 1.7f)), FadeColor(Color{190, 240, 255, 255}, 0.85f));
+            Vector3 tip = Vector3Add(position, Vector3Scale(forward, projectile.radius * 4.4f));
+            Vector3 tail = Vector3Subtract(position, Vector3Scale(forward, projectile.radius * 3.4f));
+            DrawCylinderEx(tail, tip, projectile.radius * 0.34f, projectile.radius * 0.08f, 6, projectile.color);
+            DrawCylinderWiresEx(tail, tip, projectile.radius * 0.38f, projectile.radius * 0.1f, 6, FadeColor(Color{245, 255, 255, 255}, 0.8f));
+            DrawSphereEx(tip, projectile.radius * 0.58f, 6, 4, Color{245, 255, 255, 240});
+            DrawLine3D(tail, Vector3Add(tail, Vector3Scale(trail, 2.2f)), FadeColor(Color{190, 240, 255, 255}, 0.9f));
         } else if (projectile.kind == ProjectileKind::GlassShard) {
             Vector3 forward = Vector3Length(displayVelocity) > 0.001f ? Vector3Normalize(displayVelocity) : PlayerForward();
             Vector3 tip = Vector3Add(position, Vector3Scale(forward, projectile.radius * 1.7f));
@@ -3403,7 +3759,7 @@ void Game::DrawHeatwaves() const {
         float alpha = heatwave.maxLife > 0.0f ? heatwave.life / heatwave.maxLife : 0.0f;
         float currentRange = heatwave.range * (0.18f + age * 0.82f);
         Vector3 forward = Vector3Length(heatwave.forward) > 0.001f ? Vector3Normalize(heatwave.forward) : PlayerForward();
-        Vector3 localUp = IsAsteroidMap() ? AsteroidUpAt(heatwave.origin) : Vector3{0.0f, 1.0f, 0.0f};
+        Vector3 localUp = IsSphericalMap() ? SphericalUpAt(heatwave.origin) : Vector3{0.0f, 1.0f, 0.0f};
         Vector3 right = Vector3CrossProduct(forward, localUp);
         if (Vector3Length(right) <= 0.001f) {
             right = PlayerRight();
@@ -3514,7 +3870,7 @@ void Game::DrawGravityWells() const {
         float pulse = 0.7f + std::sin((1.0f - alpha) * 16.0f) * 0.18f;
         Color ring = FadeColor(well.blackHole ? Color{115, 55, 220, 255} : Color{150, 120, 255, 255}, alpha * 0.95f);
         Color core = well.blackHole ? BLACK : FadeColor(Color{90, 205, 255, 255}, alpha * 0.85f);
-        Vector3 wellUp = IsAsteroidMap() ? AsteroidUpAt(well.position) : Vector3{0.0f, 1.0f, 0.0f};
+        Vector3 wellUp = IsSphericalMap() ? SphericalUpAt(well.position) : Vector3{0.0f, 1.0f, 0.0f};
         Vector3 ringStart = Vector3Subtract(well.position, Vector3Scale(wellUp, 0.02f));
         Vector3 ringEnd = Vector3Add(well.position, Vector3Scale(wellUp, 0.02f));
         DrawCylinderWiresEx(ringStart, ringEnd, well.radius * pulse, well.radius * pulse, 28, ring);
@@ -3526,7 +3882,7 @@ void Game::DrawGravityWells() const {
             DrawSphereEx(well.position, 0.18f + (1.0f - alpha) * 0.06f, 6, 4, core);
         }
         int spokes = well.blackHole ? 10 : 6;
-        Vector3 basisA = SafeNormalize(ProjectOnAsteroidTangent(PlayerRight(), wellUp), Vector3{1.0f, 0.0f, 0.0f});
+        Vector3 basisA = SafeNormalize(ProjectOnSphericalTangent(PlayerRight(), wellUp), Vector3{1.0f, 0.0f, 0.0f});
         Vector3 basisB = SafeNormalize(Vector3CrossProduct(wellUp, basisA), Vector3{0.0f, 0.0f, 1.0f});
         for (int i = 0; i < spokes; ++i) {
             float angle = (static_cast<float>(i) / static_cast<float>(spokes)) * 6.2831853f + static_cast<float>(GetTime()) * (well.blackHole ? -3.4f : 1.7f);
@@ -3643,8 +3999,12 @@ void Game::DrawHud() const {
     DrawText(TextFormat("E %d", static_cast<int>(enemies_.size())), 134, 7, 8, RAYWHITE);
     const char* modeName = WeaponModeName();
     DrawText(TextFormat("W %s%s%s", WeaponName(), modeName[0] != '\0' ? ":" : "", modeName), 174, 7, 8, RAYWHITE);
-    DrawText(TextFormat("G %.2fx", gravityScale_), 250, 7, 8, hasSpaceSuit_ ? Color{120, 220, 255, 255} : RAYWHITE);
-    DrawText(timeStopped_ ? "STOP" : config_.invincible ? "GOD" : chargingLaser_ ? "LASER" : hasSpaceSuit_ ? "SUIT" : grounded_ ? "GROUND" : "AIR", 316, 7, 8, timeStopped_ ? Color{190, 160, 255, 255} : config_.invincible ? Color{255, 230, 120, 255} : chargingLaser_ ? Color{120, 220, 255, 255} : hasSpaceSuit_ ? Color{120, 220, 255, 255} : grounded_ ? Color{190, 255, 190, 255} : Color{180, 220, 255, 255});
+    Color gravityColor = spaceSuitEnabled_ ? Color{120, 220, 255, 255} : hasSpaceSuit_ ? Color{110, 125, 135, 255} : RAYWHITE;
+    DrawText(TextFormat("G %.2fx", gravityScale_), 250, 7, 8, gravityColor);
+    const bool hasInactiveGear = (hasFlightRig_ && !flightRigEnabled_) || (hasSkates_ && !skatesEnabled_) || (hasSpaceSuit_ && !spaceSuitEnabled_);
+    const char* stateText = timeStopped_ ? "STOP" : config_.invincible ? "GOD" : chargingLaser_ ? "LASER" : flightRigEnabled_ ? "FLIGHT" : skatesEnabled_ ? "SKATE" : spaceSuitEnabled_ ? "SUIT" : hasInactiveGear ? "GEAR" : grounded_ ? "GROUND" : "AIR";
+    Color stateColor = timeStopped_ ? Color{190, 160, 255, 255} : config_.invincible ? Color{255, 230, 120, 255} : chargingLaser_ ? Color{120, 220, 255, 255} : flightRigEnabled_ ? Color{160, 245, 255, 255} : skatesEnabled_ ? Color{165, 255, 185, 255} : spaceSuitEnabled_ ? Color{120, 220, 255, 255} : hasInactiveGear ? Color{145, 150, 155, 255} : grounded_ ? Color{190, 255, 190, 255} : Color{180, 220, 255, 255};
+    DrawText(stateText, 316, 7, 8, stateColor);
     DrawText(eventTextTimer_ > 0.0f ? eventText_ : WaveLabel(), 6, 29, 8, eventTextTimer_ > 0.0f ? Color{255, 220, 135, 255} : Color{180, 180, 180, 255});
     if (DuelMode() && state_ == State::Playing) {
         Color armorColor = duelArmorInvulnTimer_ > 0.0f ? Color{255, 230, 140, 255} : duelArmor_ > 0 ? Color{160, 220, 255, 255} : Color{255, 105, 95, 255};
