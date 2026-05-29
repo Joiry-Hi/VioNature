@@ -1,0 +1,7 @@
+[submodule "external/raylib-src"]
+	path = external/raylib-src
+	url = https://github.com/raysan5/raylib.git
+
+[submodule "external/joltphysics-src"]
+	path = external/joltphysics-src
+	url = https://github.com/jrouwe/JoltPhysics.git

@@ -107,7 +107,6 @@
 git clone --recurse-submodules <repo-url>
 cd VioNature
 
-# 将 external 中预置的 raylib 和 Jolt 源文件放入 external/ 目录后：
 mkdir -p build-sandbox && cd build-sandbox
 cmake .. -DCMAKE_BUILD_TYPE=Release
 cmake --build . -j $(nproc)
