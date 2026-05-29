@@ -51,3 +51,16 @@ target_include_directories(MyShooter PRIVATE
 # 注意：在 Linux 上 Jolt 可能依赖 pthread，Threads::Threads 会自动处理
 find_package(Threads REQUIRED)
 target_link_libraries(MyShooter PRIVATE raylib Jolt Threads::Threads)
+
+# =========================================================
+# 4. 模型预览工具 (ModelViewer)
+# =========================================================
+add_executable(ModelViewer
+    tools/ModelViewer.cpp
+)
+
+target_include_directories(ModelViewer PRIVATE
+    external/raylib-src/src
+)
+
+target_link_libraries(ModelViewer PRIVATE raylib Threads::Threads)

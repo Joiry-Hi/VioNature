@@ -179,6 +179,24 @@ GameplayConfig LoadGameplayConfig(const char* path) {
         {"rift_platform_thickness", &config.riftPlatformThickness},
         {"blink_distance", &config.blinkDistance},
         {"blink_clear_radius", &config.blinkClearRadius},
+        {"drone_canister_speed", &config.droneCanisterSpeed},
+        {"drone_canister_gravity", &config.droneCanisterGravity},
+        {"drone_lifetime", &config.droneLifetime},
+        {"drone_deploy_time", &config.droneDeployTime},
+        {"drone_hover_altitude", &config.droneHoverAltitude},
+        {"drone_move_speed", &config.droneMoveSpeed},
+        {"drone_bullet_damage", &config.droneBulletDamage},
+        {"drone_bullet_speed", &config.droneBulletSpeed},
+        {"drone_shoot_interval", &config.droneShootInterval},
+        {"drone_shoot_range", &config.droneShootRange},
+        {"drone_rocket_interval", &config.droneRocketInterval},
+        {"drone_rocket_range", &config.droneRocketRange},
+        {"drone_separation_radius", &config.droneSeparationRadius},
+        {"drone_separation_force", &config.droneSeparationForce},
+        {"drone_flocking_radius", &config.droneFlockingRadius},
+        {"drone_flocking_force", &config.droneFlockingForce},
+        {"drone_rally_hold_time", &config.droneRallyHoldTime},
+        {"drone_rally_marker_altitude", &config.droneRallyMarkerAltitude},
     };
 
     std::string line;
@@ -216,6 +234,11 @@ GameplayConfig LoadGameplayConfig(const char* path) {
             int parsed = 0;
             if (ParseInt(value, parsed)) {
                 config.duelPlayerArmor = parsed;
+            }
+        } else if (key == "drone_max_count") {
+            int parsed = 3;
+            if (ParseInt(value, parsed)) {
+                config.droneMaxCount = parsed;
             }
         } else if (key == "invincible") {
             bool parsed = false;
@@ -333,5 +356,24 @@ GameplayConfig LoadGameplayConfig(const char* path) {
     config.riftPlatformThickness = std::max(0.1f, config.riftPlatformThickness);
     config.blinkDistance = std::max(0.0f, config.blinkDistance);
     config.blinkClearRadius = std::max(0.1f, config.blinkClearRadius);
+    config.droneCanisterSpeed = std::max(6.0f, config.droneCanisterSpeed);
+    config.droneCanisterGravity = std::clamp(config.droneCanisterGravity, 0.0f, 1.5f);
+    config.droneMaxCount = std::max(1, config.droneMaxCount);
+    config.droneLifetime = std::max(5.0f, config.droneLifetime);
+    config.droneDeployTime = std::max(0.2f, config.droneDeployTime);
+    config.droneHoverAltitude = std::clamp(config.droneHoverAltitude, 1.0f, 20.0f);
+    config.droneMoveSpeed = std::max(1.0f, config.droneMoveSpeed);
+    config.droneBulletDamage = std::max(0.0f, config.droneBulletDamage);
+    config.droneBulletSpeed = std::max(20.0f, config.droneBulletSpeed);
+    config.droneShootInterval = std::max(0.02f, config.droneShootInterval);
+    config.droneShootRange = std::max(3.0f, config.droneShootRange);
+    config.droneRocketInterval = std::max(0.5f, config.droneRocketInterval);
+    config.droneRocketRange = std::max(5.0f, config.droneRocketRange);
+    config.droneSeparationRadius = std::max(0.5f, config.droneSeparationRadius);
+    config.droneSeparationForce = std::max(0.0f, config.droneSeparationForce);
+    config.droneFlockingRadius = std::max(1.0f, config.droneFlockingRadius);
+    config.droneFlockingForce = std::max(0.0f, config.droneFlockingForce);
+    config.droneRallyHoldTime = std::max(0.5f, config.droneRallyHoldTime);
+    config.droneRallyMarkerAltitude = std::clamp(config.droneRallyMarkerAltitude, 0.2f, 20.0f);
     return config;
 }

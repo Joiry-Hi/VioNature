@@ -107,6 +107,27 @@ struct GameplayConfig {
     float blinkClearRadius = 8.0f;
     bool timeStopEnabled = true;
     bool blinkEnabled = true;
+
+    // Drone (rocket launcher alt-fire)
+    float droneCanisterSpeed = 26.0f;
+    float droneCanisterGravity = 0.45f;
+    int droneMaxCount = 3;
+    float droneLifetime = 30.0f;
+    float droneDeployTime = 1.0f;
+    float droneHoverAltitude = 4.5f;
+    float droneMoveSpeed = 5.5f;
+    float droneBulletDamage = 0.28f;
+    float droneBulletSpeed = 65.0f;
+    float droneShootInterval = 0.08f;
+    float droneShootRange = 16.0f;
+    float droneRocketInterval = 2.2f;
+    float droneRocketRange = 28.0f;
+    float droneSeparationRadius = 4.0f;
+    float droneSeparationForce = 15.0f;
+    float droneFlockingRadius = 14.0f;
+    float droneFlockingForce = 3.5f;
+    float droneRallyHoldTime = 2.5f;
+    float droneRallyMarkerAltitude = 2.0f;
 };
 
 GameplayConfig LoadGameplayConfig(const char* path = "config/gameplay.cfg");

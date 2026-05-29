@@ -1,9 +1,11 @@
 #include "PhysicsWorld.h"
+#include <Jolt/Physics/Collision/CastResult.h>
 
 namespace BroadPhaseLayers {
     static constexpr JPH::BroadPhaseLayer NON_MOVING(0);
     static constexpr JPH::BroadPhaseLayer MOVING(1);
-    static constexpr JPH::uint NUM_LAYERS(2);
+    static constexpr JPH::BroadPhaseLayer PROJECTILE(2);
+    static constexpr JPH::uint NUM_LAYERS(3);
 }
 
 namespace {
@@ -36,9 +38,11 @@ public:
     bool ShouldCollide(JPH::ObjectLayer object1, JPH::ObjectLayer object2) const override {
         switch (object1) {
             case Layers::NON_MOVING:
-                return object2 == Layers::MOVING;
+                return object2 == Layers::MOVING || object2 == Layers::PROJECTILE;
             case Layers::MOVING:
-                return true;
+                return object2 == Layers::NON_MOVING || object2 == Layers::MOVING;
+            case Layers::PROJECTILE:
+                return object2 == Layers::NON_MOVING;
             default:
                 return false;
         }
@@ -50,6 +54,7 @@ public:
     BroadPhaseLayerInterfaceImpl() {
         objectToBroadPhase_[Layers::NON_MOVING] = BroadPhaseLayers::NON_MOVING;
         objectToBroadPhase_[Layers::MOVING] = BroadPhaseLayers::MOVING;
+        objectToBroadPhase_[Layers::PROJECTILE] = BroadPhaseLayers::PROJECTILE;
     }
 
     JPH::uint GetNumBroadPhaseLayers() const override {
@@ -78,9 +83,11 @@ public:
     bool ShouldCollide(JPH::ObjectLayer layer1, JPH::BroadPhaseLayer layer2) const override {
         switch (layer1) {
             case Layers::NON_MOVING:
-                return layer2 == BroadPhaseLayers::MOVING;
+                return layer2 == BroadPhaseLayers::MOVING || layer2 == BroadPhaseLayers::PROJECTILE;
             case Layers::MOVING:
-                return true;
+                return layer2 != BroadPhaseLayers::PROJECTILE;
+            case Layers::PROJECTILE:
+                return layer2 == BroadPhaseLayers::NON_MOVING;
             default:
                 return false;
         }
@@ -152,4 +159,28 @@ void PhysicsWorld::DestroyBody(JPH::BodyID id) {
 void PhysicsWorld::Step(float dt) {
     constexpr int collisionSteps = 1;
     physicsSystem_.Update(dt, collisionSteps, &tempAllocator_, &jobSystem_);
+}
+
+PhysicsWorld::RayCastHit PhysicsWorld::CastRay(JPH::RVec3Arg origin, JPH::Vec3Arg direction, float maxDistance) const {
+    // Direction magnitude = ray length per Jolt convention
+    JPH::Vec3 rayDir = direction;
+    float dirLen = rayDir.Length();
+    if (dirLen > 0.0001f && dirLen > maxDistance) {
+        rayDir = rayDir.Normalized() * maxDistance;
+    }
+
+    JPH::RRayCast ray{JPH::Vec3(origin), rayDir};
+    JPH::RayCastResult result;
+    JPH::SpecifiedBroadPhaseLayerFilter broadFilter(BroadPhaseLayers::NON_MOVING);
+    JPH::SpecifiedObjectLayerFilter objectFilter(Layers::NON_MOVING);
+
+    physicsSystem_.GetNarrowPhaseQuery().CastRay(ray, result, broadFilter, objectFilter);
+
+    RayCastHit hit;
+    if (!result.mBodyID.IsInvalid()) {
+        hit.hit = true;
+        hit.point = ray.GetPointOnRay(result.mFraction);
+        hit.bodyID = result.mBodyID;
+    }
+    return hit;
 }

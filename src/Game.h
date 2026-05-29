@@ -39,6 +39,11 @@ private:
         Heatwave
     };
 
+    enum class RocketLauncherMode {
+        Rocket,
+        Drone
+    };
+
     enum class ShotgunMode {
         Pellet,
         GlassShard
@@ -59,6 +64,29 @@ private:
         Thrust
     };
 
+    enum class DroneState {
+        Deploying,
+        Active
+    };
+
+    enum class RallyPhase {
+        Inactive,
+        Assembling,
+        Holding,
+        Complete
+    };
+
+    struct Drone {
+        Vector3 position = {};
+        Vector3 velocity = {};
+        float deployTimer = 1.0f;
+        float shootTimer = 0.0f;
+        float rocketTimer = 2.4f;
+        float bobTimer = 0.0f;
+        float life = 30.0f;
+        DroneState state = DroneState::Deploying;
+    };
+
     enum class ProjectileKind {
         LaserShot,
         Flame,
@@ -68,7 +96,9 @@ private:
         GravityNail,
         GlassShard,
         BlackHoleGrenade,
-        Lance
+        Lance,
+        DroneCanister,
+        DroneBullet
     };
 
     enum class ProjectileOwner {
@@ -280,6 +310,8 @@ private:
     void Blink();
     void SpawnShockwave(Vector3 position, float radius, Color color);
     void ExplodeRocket(Vector3 position, ProjectileOwner owner = ProjectileOwner::Player);
+    void FireDroneCanister();
+    void UpdateDrones(float dt);
     void ApplyExplosionImpulse(Vector3 position, float radius, float impulse);
     void ApplyShotgunRecoil(Vector3 direction);
     void ApplyLanceRecoil(Vector3 direction);
@@ -295,6 +327,7 @@ private:
     Vector3 PlayerUp() const;
     Vector3 WeaponMuzzlePosition() const;
     NanoPlatform MakeNanoPlatformTarget(Vector3 direction) const;
+    Vector3 GetFireControlAimPoint() const;
     bool IsSphericalMap() const;
     bool IsHollowWorldMap() const;
     float SphericalRadius() const;
@@ -328,6 +361,10 @@ private:
     void DrawRifts() const;
     void DrawNanoPlatforms() const;
     void DrawNanoPlatformFrame(const NanoPlatform& platform, Color color, bool dashed) const;
+    void DrawDrones() const;
+    void DrawRallyMarker() const;
+    void DrawDashedCircle3D(Vector3 center, float radius, Vector3 normal, Color color) const;
+    void DrawFireControlOverlay() const;
     void DrawParticles() const;
     void DrawWeapon() const;
     void DrawCrosshair() const;
@@ -353,6 +390,7 @@ private:
     std::vector<GravityWell> gravityWells_;
     std::vector<RiftSlash> rifts_;
     std::vector<NanoPlatform> nanoPlatforms_;
+    std::vector<Drone> drones_;
     std::vector<Prop> props_;
     std::vector<Pickup> pickups_;
 
@@ -377,12 +415,14 @@ private:
     bool spaceSuitEnabled_ = false;
     bool flightRigEnabled_ = false;
     bool skatesEnabled_ = false;
+    bool hideUI_ = false;
     float gravityScale_ = 1.0f;
     float flightTargetAltitude_ = 2.0f;
     float footstepBob_ = 0.0f;
     float thrustControlLockTimer_ = 0.0f;
     WeaponType activeWeapon_ = WeaponType::Laser;
     FlamethrowerMode flamethrowerMode_ = FlamethrowerMode::FlameBall;
+    RocketLauncherMode rocketLauncherMode_ = RocketLauncherMode::Rocket;
     ShotgunMode shotgunMode_ = ShotgunMode::Pellet;
     GravityNailerMode gravityNailerMode_ = GravityNailerMode::Nail;
     RiftCutterMode riftCutterMode_ = RiftCutterMode::BladeWave;
@@ -394,6 +434,10 @@ private:
     bool chargingLaser_ = false;
     float laserCharge_ = 0.0f;
     float rightMouseHeld_ = 0.0f;
+    bool fireControlActive_ = false;
+    RallyPhase rallyPhase_ = RallyPhase::Inactive;
+    Vector3 rallyPoint_ = {};
+    float rallyHoldTimer_ = 0.0f;
     float spawnTimer_ = 0.0f;
     float spawnInterval_ = 2.0f;
     int waveIndex_ = 1;

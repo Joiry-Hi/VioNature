@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "raymath.h"
+#include <rlgl.h>
 
 namespace {
 constexpr float kFixedFrame = 1.0f / 60.0f;
@@ -102,6 +103,7 @@ void Game::Reset() {
     spaceSuitEnabled_ = false;
     flightRigEnabled_ = false;
     skatesEnabled_ = false;
+    hideUI_ = false;
     gravityScale_ = 1.0f;
     flightTargetAltitude_ = std::clamp(
         IsSphericalMap() ? SphericalAltitudeAt(camera_.position) : camera_.position.y,
@@ -130,6 +132,12 @@ void Game::Reset() {
     state_ = State::Playing;
     activeWeapon_ = WeaponType::Laser;
     flamethrowerMode_ = FlamethrowerMode::FlameBall;
+    rocketLauncherMode_ = RocketLauncherMode::Rocket;
+    fireControlActive_ = false;
+    rallyPhase_ = RallyPhase::Inactive;
+    rallyPoint_ = {};
+    rallyHoldTimer_ = 0.0f;
+    drones_.clear();
     shotgunMode_ = ShotgunMode::Pellet;
     gravityNailerMode_ = GravityNailerMode::Nail;
     riftCutterMode_ = RiftCutterMode::BladeWave;
@@ -220,6 +228,11 @@ void Game::Update(float dt) {
         eventText_ = skatesEnabled_ ? "SKATES ON" : "SKATES OFF";
         eventTextTimer_ = 1.0f;
     }
+    if (IsKeyPressed(KEY_P)) {
+        hideUI_ = !hideUI_;
+        eventText_ = hideUI_ ? "HUD OFF" : "HUD ON";
+        eventTextTimer_ = 1.0f;
+    }
 
     thrustControlLockTimer_ = std::max(0.0f, thrustControlLockTimer_ - dt);
     UpdateLook(dt);
@@ -246,6 +259,7 @@ void Game::Update(float dt) {
         }
         if (!timeStopped_) {
             UpdateEnemies(dt);
+            UpdateDrones(dt);
             UpdateProjectiles(dt);
             UpdateCollisions();
         }
@@ -582,6 +596,12 @@ void Game::UpdateWeaponSwitching() {
     }
     if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
         rightMouseHeld_ += GetFrameTime();
+        if (activeWeapon_ == WeaponType::RocketLauncher && rightMouseHeld_ > 0.22f && state_ == State::Playing) {
+            fireControlActive_ = true;
+        }
+    }
+    if (IsMouseButtonReleased(MOUSE_BUTTON_RIGHT)) {
+        fireControlActive_ = false;
     }
 
     WeaponType previousWeapon = activeWeapon_;
@@ -664,6 +684,10 @@ void Game::UpdateWeaponSwitching() {
             recoilLanceMode_ = recoilLanceMode_ == RecoilLanceMode::Throw ? RecoilLanceMode::Thrust : RecoilLanceMode::Throw;
             eventText_ = recoilLanceMode_ == RecoilLanceMode::Thrust ? "SONIC THRUST" : "LANCE THROW";
             eventTextTimer_ = 1.4f;
+        } else if (activeWeapon_ == WeaponType::RocketLauncher) {
+            rocketLauncherMode_ = rocketLauncherMode_ == RocketLauncherMode::Rocket ? RocketLauncherMode::Drone : RocketLauncherMode::Rocket;
+            eventText_ = rocketLauncherMode_ == RocketLauncherMode::Drone ? "DRONE" : "ROCKET";
+            eventTextTimer_ = 1.4f;
         } else if (activeWeapon_ == WeaponType::RiftCutter) {
             riftCutterMode_ = riftCutterMode_ == RiftCutterMode::BladeWave ? RiftCutterMode::Platform : RiftCutterMode::BladeWave;
             eventText_ = riftCutterMode_ == RiftCutterMode::Platform ? "NANO PLATFORM" : "BLADE WAVE";
@@ -680,6 +704,18 @@ void Game::UpdateWeaponSwitching() {
 
 void Game::UpdateShooting(float dt) {
     fireCooldown_ = std::max(0.0f, fireCooldown_ - dt);
+
+    if (fireControlActive_) {
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            rallyPoint_ = GetFireControlAimPoint();
+            rallyPhase_ = RallyPhase::Assembling;
+            rallyHoldTimer_ = config_.droneRallyHoldTime;
+            fireControlActive_ = false;
+            eventText_ = "RALLY SET";
+            eventTextTimer_ = 1.4f;
+        }
+        return;
+    }
 
     if (activeWeapon_ == WeaponType::InfinityGauntlet) {
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && config_.timeStopEnabled) {
@@ -735,9 +771,15 @@ void Game::UpdateShooting(float dt) {
             cameraShake_ = std::min(1.0f, cameraShake_ + 0.045f);
         }
     } else if (activeWeapon_ == WeaponType::RocketLauncher) {
-        FireProjectile(ProjectileKind::Rocket, forward, 34.0f, config_.rocketImpactDamage, 2.8f, 0.34f, 0.34f, Color{230, 235, 210, 255});
-        fireCooldown_ = 0.82f;
-        cameraShake_ = std::min(1.0f, cameraShake_ + 0.45f);
+        if (rocketLauncherMode_ == RocketLauncherMode::Drone) {
+            FireDroneCanister();
+            fireCooldown_ = 1.8f;
+            cameraShake_ = std::min(1.0f, cameraShake_ + 0.25f);
+        } else {
+            FireProjectile(ProjectileKind::Rocket, forward, 34.0f, config_.rocketImpactDamage, 2.8f, 0.34f, 0.34f, Color{230, 235, 210, 255});
+            fireCooldown_ = 0.82f;
+            cameraShake_ = std::min(1.0f, cameraShake_ + 0.45f);
+        }
     } else if (activeWeapon_ == WeaponType::Shotgun) {
         if (shotgunMode_ == ShotgunMode::GlassShard) {
             for (int i = 0; i < 5; ++i) {
@@ -1315,7 +1357,7 @@ void Game::UpdateProjectiles(float dt) {
             continue;
         }
 
-        bool detonatesOnGround = projectile.kind == ProjectileKind::Rocket || projectile.kind == ProjectileKind::GravityNail || projectile.kind == ProjectileKind::BlackHoleGrenade || projectile.kind == ProjectileKind::Lance;
+        bool detonatesOnGround = projectile.kind == ProjectileKind::Rocket || projectile.kind == ProjectileKind::GravityNail || projectile.kind == ProjectileKind::BlackHoleGrenade || projectile.kind == ProjectileKind::Lance || projectile.kind == ProjectileKind::DroneCanister;
         bool touchesGround = IsSphericalMap()
             ? (IsHollowWorldMap()
                 ? Vector3Length(position) >= SphericalRadius() - projectile.radius
@@ -1424,6 +1466,19 @@ void Game::UpdateProjectiles(float dt) {
             continue;
         }
 
+        if (expired && projectile.kind == ProjectileKind::DroneCanister) {
+            drones_.push_back(Drone{position, Vector3Zero(), config_.droneDeployTime, 0.0f, config_.droneRocketInterval, RandomFloat(0.0f, 6.28f), config_.droneLifetime, DroneState::Deploying});
+            SpawnHitBurst(position, Color{200, 210, 220, 255}, 22);
+            SpawnShockwave(position, 1.8f, Color{140, 155, 170, 255});
+            DestroyProjectile(i);
+            continue;
+        }
+
+        if (projectile.kind == ProjectileKind::DroneBullet && (projectile.life <= 0.0f || outOfBounds || touchesGround)) {
+            DestroyProjectile(i);
+            continue;
+        }
+
         if (expired) {
             DestroyProjectile(i);
             continue;
@@ -1501,6 +1556,312 @@ void Game::UpdatePickups(float dt) {
     }
 }
 
+void Game::UpdateDrones(float dt) {
+    const int droneCount = static_cast<int>(drones_.size());
+
+    // ── Collect active drone positions for flocking ──────────────────
+    struct DroneData {
+        Vector3 position;
+        Vector3 velocity;
+    };
+    std::vector<DroneData> activeData(droneCount);
+    std::vector<int> activeIndices;
+    for (int i = 0; i < droneCount; ++i) {
+        if (drones_[i].state == DroneState::Active) {
+            activeData[i] = {drones_[i].position, drones_[i].velocity};
+            activeIndices.push_back(i);
+        }
+    }
+    const int activeCount = static_cast<int>(activeIndices.size());
+
+    // ── Flocking forces (boids) ──────────────────────────────────────
+    // Pre-compute per-drone flocking acceleration
+    std::vector<Vector3> flockAccel(droneCount, Vector3Zero());
+
+    for (int ai = 0; ai < activeCount; ++ai) {
+        int i = activeIndices[ai];
+        Vector3 sep = Vector3Zero();
+        Vector3 coh = Vector3Zero();
+        Vector3 ali = Vector3Zero();
+        int sepCount = 0, cohCount = 0, aliCount = 0;
+
+        for (int aj = 0; aj < activeCount; ++aj) {
+            if (aj == ai) continue;
+            int j = activeIndices[aj];
+            Vector3 toOther = Vector3Subtract(drones_[j].position, drones_[i].position);
+            float dist = Vector3Length(toOther);
+
+            // Separation: push away from nearby drones
+            if (dist < config_.droneSeparationRadius && dist > 0.001f) {
+                Vector3 pushDir = Vector3Scale(Vector3Normalize(toOther), -1.0f);
+                float weight = 1.0f - (dist / config_.droneSeparationRadius);  // stronger at close range
+                sep = Vector3Add(sep, Vector3Scale(pushDir, weight));
+                sepCount++;
+            }
+
+            // Cohesion + Alignment: only if within flocking radius
+            if (dist < config_.droneFlockingRadius) {
+                coh = Vector3Add(coh, drones_[j].position);
+                ali = Vector3Add(ali, drones_[j].velocity);
+                cohCount++;
+                aliCount++;
+            }
+        }
+
+        Vector3 force = Vector3Zero();
+
+        // Separation
+        if (sepCount > 0) {
+            force = Vector3Add(force, Vector3Scale(sep, config_.droneSeparationForce));
+        }
+
+        // Cohesion: steer toward rally point (if active) or average position of flockmates
+        if (rallyPhase_ == RallyPhase::Assembling || rallyPhase_ == RallyPhase::Holding) {
+            Vector3 toRally = Vector3Subtract(rallyPoint_, drones_[i].position);
+            float rallyDist = Vector3Length(toRally);
+            if (rallyDist > 0.001f) {
+                force = Vector3Add(force,
+                    Vector3Scale(Vector3Normalize(toRally), config_.droneFlockingForce * 2.0f * std::min(rallyDist / config_.droneFlockingRadius, 1.0f)));
+            }
+        } else if (cohCount > 0) {
+            Vector3 avgPos = Vector3Scale(coh, 1.0f / static_cast<float>(cohCount));
+            Vector3 toCenter = Vector3Subtract(avgPos, drones_[i].position);
+            float toCenterLen = Vector3Length(toCenter);
+            if (toCenterLen > 0.001f) {
+                force = Vector3Add(force,
+                    Vector3Scale(Vector3Normalize(toCenter), config_.droneFlockingForce * std::min(toCenterLen / config_.droneFlockingRadius, 1.0f)));
+            }
+        }
+
+        // Alignment: match velocity of flockmates
+        if (aliCount > 0) {
+            Vector3 avgVel = Vector3Scale(ali, 1.0f / static_cast<float>(aliCount));
+            Vector3 velDiff = Vector3Subtract(avgVel, drones_[i].velocity);
+            force = Vector3Add(force, Vector3Scale(velDiff, config_.droneFlockingForce * 0.5f));
+        }
+
+        // Project force to horizontal plane (or tangent on spherical maps)
+        Vector3 up = IsSphericalMap() ? SphericalUpAt(drones_[i].position) : Vector3{0.0f, 1.0f, 0.0f};
+        Vector3 horizForce = IsSphericalMap()
+            ? ProjectOnSphericalTangent(force, up)
+            : Vector3{force.x, 0.0f, force.z};
+        flockAccel[i] = horizForce;
+    }
+
+    // ── Update each drone ────────────────────────────────────────────
+    for (size_t i = 0; i < drones_.size();) {
+        Drone& drone = drones_[i];
+        drone.life -= dt;
+
+        if (drone.life <= 0.0f) {
+            SpawnHitBurst(drone.position, Color{160, 170, 185, 255}, 22);
+            drones_[i] = drones_.back();
+            drones_.pop_back();
+            continue;
+        }
+
+        if (drone.state == DroneState::Deploying) {
+            drone.deployTimer -= dt;
+            if (drone.deployTimer <= 0.0f) {
+                drone.state = DroneState::Active;
+                SpawnHitBurst(drone.position, Color{200, 220, 240, 255}, 20);
+                SpawnShockwave(drone.position, 2.0f, Color{170, 185, 200, 255});
+            }
+            ++i;
+            continue;
+        }
+
+        // Active state
+        drone.bobTimer += dt;
+        Vector3 up = IsSphericalMap() ? SphericalUpAt(drone.position) : Vector3{0.0f, 1.0f, 0.0f};
+
+        // Find nearest enemy
+        Vector3 targetPos = drone.position;
+        float nearestDist = 1000.0f;
+        bool hasTarget = false;
+        for (const Enemy& enemy : enemies_) {
+            Vector3 enemyPos = BodyPosition(enemy.body);
+            float dist = Vector3Distance(drone.position, enemyPos);
+            if (dist < nearestDist) {
+                nearestDist = dist;
+                targetPos = enemyPos;
+                hasTarget = true;
+            }
+        }
+
+        // Build desired horizontal velocity (rally-aware)
+        Vector3 desiredVel = {};
+
+        if (rallyPhase_ == RallyPhase::Assembling) {
+            Vector3 toRally = Vector3Subtract(rallyPoint_, drone.position);
+            Vector3 rallyDir = IsSphericalMap()
+                ? ProjectOnSphericalTangent(toRally, up)
+                : Vector3{toRally.x, 0.0f, toRally.z};
+            float rallyDist = Vector3Length(rallyDir);
+            if (rallyDist > 0.3f) {
+                rallyDir = Vector3Normalize(rallyDir);
+                desiredVel = Vector3Scale(rallyDir, config_.droneMoveSpeed);
+            }
+        } else if (rallyPhase_ == RallyPhase::Holding) {
+            // Mild rally-point attraction for holding, flocking does the rest
+            Vector3 toRally = Vector3Subtract(rallyPoint_, drone.position);
+            Vector3 rallyDir = IsSphericalMap()
+                ? ProjectOnSphericalTangent(toRally, up)
+                : Vector3{toRally.x, 0.0f, toRally.z};
+            float rallyDist = Vector3Length(rallyDir);
+            if (rallyDist > 0.3f) {
+                rallyDir = Vector3Normalize(rallyDir);
+                desiredVel = Vector3Scale(rallyDir, config_.droneMoveSpeed * std::min(rallyDist / config_.droneFlockingRadius, 1.0f));
+            }
+        } else if (hasTarget) {
+            Vector3 toTarget = Vector3Subtract(targetPos, drone.position);
+            Vector3 pursuitDir = IsSphericalMap()
+                ? ProjectOnSphericalTangent(toTarget, up)
+                : Vector3{toTarget.x, 0.0f, toTarget.z};
+            if (Vector3Length(pursuitDir) > 0.001f) {
+                pursuitDir = Vector3Normalize(pursuitDir);
+            }
+            desiredVel = Vector3Scale(pursuitDir, config_.droneMoveSpeed);
+        }
+
+        // Blend desired velocity with flocking acceleration
+        Vector3 horizVel = IsSphericalMap()
+            ? ProjectOnSphericalTangent(drone.velocity, up)
+            : Vector3{drone.velocity.x, 0.0f, drone.velocity.z};
+
+        float blend = std::clamp(3.5f * dt, 0.0f, 1.0f);
+        Vector3 steerTarget = Vector3Add(desiredVel, Vector3Scale(flockAccel[i], 0.6f));
+        horizVel = Vector3Add(horizVel,
+            Vector3Scale(Vector3Subtract(steerTarget, horizVel), blend));
+
+        // Clamp horizontal speed
+        float maxSpeed = config_.droneMoveSpeed * 1.5f;
+        float hSpeed = Vector3Length(horizVel);
+        if (hSpeed > maxSpeed) {
+            horizVel = Vector3Scale(horizVel, maxSpeed / hSpeed);
+        }
+
+        // Hover altitude
+        float targetAltitude = config_.droneHoverAltitude;
+        float currentAlt = IsSphericalMap() ? SphericalAltitudeAt(drone.position) : drone.position.y;
+        float altError = targetAltitude - currentAlt;
+        float verticalSpeed = Vector3DotProduct(drone.velocity, up);
+        float verticalAccel = altError * 12.0f - verticalSpeed * 5.0f;
+        float newVerticalSpeed = verticalSpeed + verticalAccel * dt;
+
+        drone.velocity = Vector3Add(horizVel, Vector3Scale(up, newVerticalSpeed));
+
+        drone.position = Vector3Add(drone.position, Vector3Scale(drone.velocity, dt));
+
+        // Keep in bounds
+        if (IsSphericalMap()) {
+            drone.position = SphericalSurfacePoint(drone.position, config_.droneHoverAltitude);
+            drone.velocity = ProjectOnSphericalTangent(drone.velocity, SphericalUpAt(drone.position));
+        } else if (IsSquareMap()) {
+            float limit = squareHalfExtent_ - 1.5f;
+            drone.position.x = std::clamp(drone.position.x, -limit, limit);
+            drone.position.z = std::clamp(drone.position.z, -limit, limit);
+            drone.position.y = std::clamp(drone.position.y, 1.2f, 16.0f);
+        } else {
+            Vector3 flat = Vector3{drone.position.x, 0.0f, drone.position.z};
+            float limit = arenaRadius_ - 1.5f;
+            if (Vector3Length(flat) > limit) {
+                flat = Vector3Scale(Vector3Normalize(flat), limit);
+                drone.position.x = flat.x;
+                drone.position.z = flat.z;
+            }
+            drone.position.y = std::clamp(drone.position.y, 1.2f, 16.0f);
+        }
+
+        // Machine gun (disabled while assembling)
+        drone.shootTimer -= dt;
+        if (rallyPhase_ != RallyPhase::Assembling && hasTarget && nearestDist < config_.droneShootRange && drone.shootTimer <= 0.0f) {
+            Vector3 toEnemy = Vector3Normalize(Vector3Subtract(targetPos, drone.position));
+            Vector3 r = SafeNormalize(Vector3CrossProduct(toEnemy, up), Vector3{1.0f, 0.0f, 0.0f});
+            Vector3 u = up;
+            Vector3 aimDir = Vector3Normalize(Vector3Add(toEnemy,
+                Vector3Add(Vector3Scale(r, RandomFloat(-0.07f, 0.07f)),
+                           Vector3Scale(u, RandomFloat(-0.05f, 0.05f)))));
+
+            Vector3 spawnPos = Vector3Add(drone.position, Vector3Scale(up, 0.2f));
+            Vector3 intendedVel = Vector3Scale(aimDir, config_.droneBulletSpeed);
+
+            PhysicsWorld::BodyConfig bulletConfig;
+            bulletConfig.motionType = JPH::EMotionType::Dynamic;
+            bulletConfig.layer = Layers::PROJECTILE;
+            bulletConfig.linearVelocity = JPH::Vec3(intendedVel.x, intendedVel.y, intendedVel.z);
+            bulletConfig.gravityFactor = 0.0f;
+            bulletConfig.linearDamping = 0.0f;
+            bulletConfig.motionQuality = JPH::EMotionQuality::LinearCast;
+            bulletConfig.allowSleeping = false;
+
+            JPH::BodyID bulletBody = physics_.CreateBody(projectileShape_, ToJoltVector(spawnPos), JPH::Quat::sIdentity(), bulletConfig);
+            projectiles_.push_back(Projectile{bulletBody, ProjectileKind::DroneBullet, 1.2f, 1.2f, config_.droneBulletDamage, 0.06f, 0.06f, Color{255, 240, 140, 255}, 0, intendedVel, ProjectileOwner::Player, false});
+
+            drone.shootTimer = config_.droneShootInterval;
+        }
+
+        // Rockets (disabled while assembling)
+        drone.rocketTimer -= dt;
+        if (rallyPhase_ != RallyPhase::Assembling && hasTarget && nearestDist < config_.droneRocketRange && drone.rocketTimer <= 0.0f) {
+            Vector3 toEnemy = Vector3Normalize(Vector3Subtract(targetPos, drone.position));
+            Vector3 spawnPos = Vector3Add(drone.position, Vector3Scale(up, 0.35f));
+            float rocketSpeed = 24.0f;
+            Vector3 rocketVel = Vector3Scale(toEnemy, rocketSpeed);
+
+            PhysicsWorld::BodyConfig rocketConfig;
+            rocketConfig.motionType = JPH::EMotionType::Dynamic;
+            rocketConfig.layer = Layers::PROJECTILE;
+            rocketConfig.linearVelocity = JPH::Vec3(rocketVel.x, rocketVel.y, rocketVel.z);
+            rocketConfig.gravityFactor = IsSphericalMap() ? 0.0f : 0.02f;
+            rocketConfig.linearDamping = 0.0f;
+            rocketConfig.motionQuality = JPH::EMotionQuality::LinearCast;
+            rocketConfig.allowSleeping = false;
+
+            JPH::BodyID rocketBody = physics_.CreateBody(projectileShape_, ToJoltVector(spawnPos), JPH::Quat::sIdentity(), rocketConfig);
+            projectiles_.push_back(Projectile{rocketBody, ProjectileKind::Rocket, 2.8f, 2.8f, config_.rocketImpactDamage, 0.34f, 0.34f, Color{230, 235, 210, 255}, 0, rocketVel, ProjectileOwner::Player, false});
+
+            drone.rocketTimer = config_.droneRocketInterval + RandomFloat(-0.3f, 0.3f);
+            SpawnHitBurst(spawnPos, Color{255, 180, 60, 255}, 8);
+        }
+
+        ++i;
+    }
+
+    // ── Rally phase transitions ──────────────────────────────────────
+    if (rallyPhase_ == RallyPhase::Assembling) {
+        bool allAtRally = true;
+        int activeCount = 0;
+        for (const Drone& d : drones_) {
+            if (d.state != DroneState::Active) continue;
+            activeCount++;
+            float dist = Vector3Distance(d.position, rallyPoint_);
+            if (dist > config_.droneFlockingRadius * 1.3f) {
+                allAtRally = false;
+                break;
+            }
+        }
+        if (activeCount > 0 && allAtRally) {
+            rallyPhase_ = RallyPhase::Holding;
+            eventText_ = "RALLY: HOLDING";
+            eventTextTimer_ = 1.4f;
+        }
+    }
+
+    if (rallyPhase_ == RallyPhase::Holding) {
+        rallyHoldTimer_ -= dt;
+        if (rallyHoldTimer_ <= 0.0f) {
+            rallyPhase_ = RallyPhase::Complete;
+            eventText_ = "RALLY COMPLETE";
+            eventTextTimer_ = 1.8f;
+        }
+    }
+
+    if (rallyPhase_ == RallyPhase::Complete) {
+        rallyPhase_ = RallyPhase::Inactive;
+    }
+}
+
 void Game::UpdateCollisions() {
     for (size_t projectileIndex = 0; projectileIndex < projectiles_.size();) {
         bool projectileDestroyed = false;
@@ -1510,13 +1871,16 @@ void Game::UpdateCollisions() {
         }
 
         Vector3 projectilePosition = BodyPosition(projectiles_[projectileIndex].body);
+        Vector3 projectileVelocity = ToRayVector(physics_.Bodies().GetLinearVelocity(projectiles_[projectileIndex].body));
+        Vector3 previousPosition = Vector3Subtract(projectilePosition, Vector3Scale(projectileVelocity, kFixedFrame));
 
         for (size_t enemyIndex = 0; enemyIndex < enemies_.size(); ++enemyIndex) {
             Enemy& enemy = enemies_[enemyIndex];
             Vector3 enemyPosition = BodyPosition(enemy.body);
             float hitDistance = enemy.radius + projectiles_[projectileIndex].radius;
 
-            if (Vector3Distance(projectilePosition, enemyPosition) <= hitDistance) {
+            if (Vector3Distance(projectilePosition, enemyPosition) <= hitDistance
+                || DistancePointToSegment(enemyPosition, previousPosition, projectilePosition) <= hitDistance) {
                 if (projectiles_[projectileIndex].kind == ProjectileKind::Rocket) {
                     ExplodeRocket(projectilePosition, projectiles_[projectileIndex].owner);
                     DestroyProjectile(projectileIndex);
@@ -2016,7 +2380,7 @@ void Game::FireProjectile(ProjectileKind kind, Vector3 direction, float speed, f
 
     PhysicsWorld::BodyConfig projectileConfig;
     projectileConfig.motionType = JPH::EMotionType::Dynamic;
-    projectileConfig.layer = Layers::MOVING;
+    projectileConfig.layer = Layers::PROJECTILE;
     projectileConfig.linearVelocity = timeStopped_ ? JPH::Vec3::sZero() : JPH::Vec3(intendedVelocity.x, intendedVelocity.y, intendedVelocity.z);
     projectileConfig.gravityFactor = IsSphericalMap() ? 0.0f : kind == ProjectileKind::Rocket ? 0.02f : kind == ProjectileKind::BlackHoleGrenade ? 0.45f : 0.0f;
     projectileConfig.linearDamping = 0.0f;
@@ -2037,7 +2401,7 @@ void Game::FireEnemyProjectile(ProjectileKind kind, Vector3 position, Vector3 di
 
     PhysicsWorld::BodyConfig projectileConfig;
     projectileConfig.motionType = JPH::EMotionType::Dynamic;
-    projectileConfig.layer = Layers::MOVING;
+    projectileConfig.layer = Layers::PROJECTILE;
     projectileConfig.linearVelocity = timeStopped_ ? JPH::Vec3::sZero() : JPH::Vec3(intendedVelocity.x, intendedVelocity.y, intendedVelocity.z);
     projectileConfig.gravityFactor = IsSphericalMap() ? 0.0f : kind == ProjectileKind::Rocket ? 0.02f : kind == ProjectileKind::BlackHoleGrenade ? 0.45f : 0.0f;
     projectileConfig.linearDamping = 0.0f;
@@ -2090,7 +2454,7 @@ void Game::FireEnemyShot(Vector3 position, Vector3 direction) {
     Vector3 intendedVelocity = Vector3Scale(direction, config_.enemyShotSpeed);
     PhysicsWorld::BodyConfig projectileConfig;
     projectileConfig.motionType = JPH::EMotionType::Dynamic;
-    projectileConfig.layer = Layers::MOVING;
+    projectileConfig.layer = Layers::PROJECTILE;
     projectileConfig.linearVelocity = timeStopped_ ? JPH::Vec3::sZero() : JPH::Vec3(intendedVelocity.x, intendedVelocity.y, intendedVelocity.z);
     projectileConfig.gravityFactor = 0.0f;
     projectileConfig.linearDamping = 0.0f;
@@ -2356,7 +2720,7 @@ void Game::FireBossRing(Vector3 position, int count, float speedScale) {
 
         PhysicsWorld::BodyConfig projectileConfig;
         projectileConfig.motionType = JPH::EMotionType::Dynamic;
-        projectileConfig.layer = Layers::MOVING;
+        projectileConfig.layer = Layers::PROJECTILE;
         projectileConfig.linearVelocity = timeStopped_ ? JPH::Vec3::sZero() : JPH::Vec3(intendedVelocity.x, intendedVelocity.y, intendedVelocity.z);
         projectileConfig.gravityFactor = 0.0f;
         projectileConfig.linearDamping = 0.0f;
@@ -2815,6 +3179,38 @@ void Game::SpawnShockwave(Vector3 position, float radius, Color color) {
     shockwaves_.push_back(Shockwave{position, 0.34f, 0.34f, radius, color});
 }
 
+void Game::FireDroneCanister() {
+    if (static_cast<int>(drones_.size()) >= config_.droneMaxCount) {
+        eventText_ = "DRONE MAX";
+        eventTextTimer_ = 1.2f;
+        return;
+    }
+
+    // Fires directly forward like the black hole grenade — gravity does the arc.
+    Vector3 forward = PlayerForward();
+    Vector3 spawn = WeaponMuzzlePosition();
+    float speed = config_.droneCanisterSpeed;
+    Vector3 intendedVelocity = Vector3{forward.x * speed, forward.y * speed, forward.z * speed};
+
+    PhysicsWorld::BodyConfig projectileConfig;
+    projectileConfig.motionType = JPH::EMotionType::Dynamic;
+    projectileConfig.layer = Layers::PROJECTILE;
+    projectileConfig.linearVelocity = JPH::Vec3(intendedVelocity.x, intendedVelocity.y, intendedVelocity.z);
+    projectileConfig.gravityFactor = IsSphericalMap() ? 0.0f : config_.droneCanisterGravity;
+    projectileConfig.linearDamping = 0.0f;
+    projectileConfig.motionQuality = JPH::EMotionQuality::LinearCast;
+    projectileConfig.allowSleeping = false;
+
+    JPH::BodyID body = physics_.CreateBody(
+        projectileShape_,
+        ToJoltVector(spawn),
+        JPH::Quat::sIdentity(),
+        projectileConfig);
+
+    projectiles_.push_back(Projectile{body, ProjectileKind::DroneCanister, 4.0f, 4.0f, 0.0f, 0.35f, 0.35f, Color{140, 155, 170, 255}, 0, intendedVelocity, ProjectileOwner::Player, false});
+    SpawnHitBurst(spawn, Color{180, 190, 200, 255}, 6);
+}
+
 void Game::ExplodeRocket(Vector3 position, ProjectileOwner owner) {
     float radius = config_.rocketExplosionRadius;
     if (owner == ProjectileOwner::Player) {
@@ -3128,6 +3524,65 @@ Game::NanoPlatform Game::MakeNanoPlatformTarget(Vector3 direction) const {
     return NanoPlatform{position, scale, Vector3{0.0f, 1.0f, 0.0f}, Vector3{1.0f, 0.0f, 0.0f}, Vector3{0.0f, 0.0f, 1.0f}, config_.riftPlatformDelay, config_.riftPlatformLifetime, config_.riftPlatformLifetime};
 }
 
+Vector3 Game::GetFireControlAimPoint() const {
+    Vector3 origin = camera_.position;
+    Vector3 forward = Vector3Length(PlayerForward()) > 0.001f ? Vector3Normalize(PlayerForward()) : Vector3{0.0f, 0.0f, -1.0f};
+    float altitude = config_.droneRallyMarkerAltitude;
+
+    if (IsSphericalMap()) {
+        float radius = SphericalRadius();
+        float targetR = IsHollowWorldMap() ? (radius - altitude) : (radius + altitude);
+
+        float a = Vector3DotProduct(forward, forward);
+        float b = 2.0f * Vector3DotProduct(origin, forward);
+        float c = Vector3DotProduct(origin, origin) - targetR * targetR;
+        float det = b * b - 4.0f * a * c;
+
+        if (det >= 0.0f && a > 0.0001f) {
+            float sqrtDet = std::sqrt(det);
+            float t0 = (-b - sqrtDet) / (2.0f * a);
+            float t1 = (-b + sqrtDet) / (2.0f * a);
+            float t = (t0 > 0.0f) ? t0 : ((t1 > 0.0f) ? t1 : -1.0f);
+            if (t > 0.0f) {
+                Vector3 hitPoint = Vector3Add(origin, Vector3Scale(forward, t));
+                return SphericalSurfacePoint(hitPoint, altitude);
+            }
+        }
+        return SphericalSurfacePoint(Vector3Add(origin, Vector3Scale(forward, 20.0f)), altitude);
+    }
+
+    // Flat maps: ray-plane intersection at y = altitude
+    if (std::abs(forward.y) > 0.0001f) {
+        float t = (altitude - origin.y) / forward.y;
+        if (t > 0.0f) {
+            Vector3 point = Vector3Add(origin, Vector3Scale(forward, t));
+            if (IsSquareMap()) {
+                float limit = squareHalfExtent_ - 1.0f;
+                point.x = std::clamp(point.x, -limit, limit);
+                point.z = std::clamp(point.z, -limit, limit);
+            } else {
+                Vector3 flat = Vector3{point.x, 0.0f, point.z};
+                float limit = arenaRadius_ - 1.5f;
+                if (Vector3Length(flat) > limit) {
+                    flat = Vector3Scale(Vector3Normalize(flat), limit);
+                    point.x = flat.x;
+                    point.z = flat.z;
+                }
+            }
+            point.y = altitude;
+            return point;
+        }
+    }
+    Vector3 fallback = Vector3Add(origin, Vector3Scale(forward, 20.0f));
+    fallback.y = altitude;
+    if (IsSquareMap()) {
+        float limit = squareHalfExtent_ - 1.0f;
+        fallback.x = std::clamp(fallback.x, -limit, limit);
+        fallback.z = std::clamp(fallback.z, -limit, limit);
+    }
+    return fallback;
+}
+
 bool Game::IsSphericalMap() const {
     return config_.mapType == "asteroid" || config_.mapType == "hollow_world";
 }
@@ -3229,6 +3684,9 @@ const char* Game::WeaponModeName() const {
     if (activeWeapon_ == WeaponType::Flamethrower) {
         return flamethrowerMode_ == FlamethrowerMode::Heatwave ? "H" : "F";
     }
+    if (activeWeapon_ == WeaponType::RocketLauncher) {
+        return rocketLauncherMode_ == RocketLauncherMode::Drone ? "D" : "";
+    }
     if (activeWeapon_ == WeaponType::Shotgun) {
         return shotgunMode_ == ShotgunMode::GlassShard ? "G" : "P";
     }
@@ -3310,6 +3768,7 @@ void Game::Draw() const {
     DrawArena();
     DrawProps();
     DrawNanoPlatforms();
+    DrawDrones();
     DrawEnemies();
     DrawPickups();
     DrawProjectiles();
@@ -3319,11 +3778,44 @@ void Game::Draw() const {
     DrawGravityWells();
     DrawRifts();
     DrawParticles();
-    DrawWeapon();
+    DrawRallyMarker();
+    if (!fireControlActive_ && !hideUI_) DrawWeapon();
     EndMode3D();
 
-    DrawCrosshair();
-    DrawHud();
+    // Second 3D pass: X-ray octahedron markers visible through obstacles
+    if (fireControlActive_) {
+        BeginMode3D(camera_);
+        rlDisableDepthTest();
+        Color markerColor = Color{80, 235, 150, 190};
+        for (const Enemy& enemy : enemies_) {
+            Vector3 pos = BodyPosition(enemy.body);
+            float s = enemy.radius * 1.6f;
+            Vector3 vx = {s, 0, 0}, nvx = {-s, 0, 0};
+            Vector3 vy = {0, s, 0}, nvy = {0, -s, 0};
+            Vector3 vz = {0, 0, s}, nvz = {0, 0, -s};
+            // Octahedron: 12 edges, each vertex connects to all except its opposite
+            auto p = [&](Vector3 v) { return Vector3Add(pos, v); };
+            DrawLine3D(p(vx), p(vy), markerColor);
+            DrawLine3D(p(vx), p(nvy), markerColor);
+            DrawLine3D(p(vx), p(vz), markerColor);
+            DrawLine3D(p(vx), p(nvz), markerColor);
+            DrawLine3D(p(nvx), p(vy), markerColor);
+            DrawLine3D(p(nvx), p(nvy), markerColor);
+            DrawLine3D(p(nvx), p(vz), markerColor);
+            DrawLine3D(p(nvx), p(nvz), markerColor);
+            DrawLine3D(p(vy), p(vz), markerColor);
+            DrawLine3D(p(vy), p(nvz), markerColor);
+            DrawLine3D(p(nvy), p(vz), markerColor);
+            DrawLine3D(p(nvy), p(nvz), markerColor);
+        }
+        rlEnableDepthTest();
+        EndMode3D();
+
+        DrawFireControlOverlay();
+    } else {
+        if (!hideUI_) DrawCrosshair();
+        if (!hideUI_) DrawHud();
+    }
 
     EndTextureMode();
 
@@ -3711,6 +4203,12 @@ void Game::DrawProjectiles() const {
         } else if (projectile.kind == ProjectileKind::Pellet) {
             DrawLine3D(position, Vector3Add(position, trail), FadeColor(projectile.color, 0.65f));
             DrawSphereEx(position, projectile.radius, 4, 3, projectile.color);
+        } else if (projectile.kind == ProjectileKind::DroneCanister) {
+            DrawCylinder(position, projectile.radius * 1.25f, projectile.radius * 1.7f, projectile.radius * 2.0f, 8, projectile.color);
+            DrawCylinderWires(position, projectile.radius * 1.3f, projectile.radius * 1.75f, projectile.radius * 2.0f, 8, Color{100, 110, 125, 255});
+        } else if (projectile.kind == ProjectileKind::DroneBullet) {
+            DrawCube(position, projectile.radius * 3.2f, projectile.radius * 0.8f, projectile.radius * 0.8f, projectile.color);
+            DrawLine3D(position, Vector3Add(position, trail), FadeColor(Color{255, 250, 200, 255}, 0.7f));
         } else {
             DrawLine3D(position, Vector3Add(position, trail), FadeColor(projectile.color, 0.7f));
             DrawSphereEx(position, projectile.radius, 5, 4, projectile.color);
@@ -3940,6 +4438,189 @@ void Game::DrawRifts() const {
 
         Vector3 centerGlow = Vector3Add(rift.center, Vector3Scale(up, rift.radius * 0.25f * scale));
         DrawSphereEx(centerGlow, 0.08f + birth * 0.06f, 6, 4, FadeColor(Color{255, 245, 190, 255}, alpha * 0.7f));
+    }
+}
+
+void Game::DrawDrones() const {
+    for (const Drone& drone : drones_) {
+        Vector3 up = IsSphericalMap() ? SphericalUpAt(drone.position) : Vector3{0.0f, 1.0f, 0.0f};
+        Vector3 forward = IsSphericalMap()
+            ? SafeNormalize(ProjectOnSphericalTangent(Vector3{0.0f, 0.0f, -1.0f}, up), Vector3{1.0f, 0.0f, 0.0f})
+            : Vector3{0.0f, 0.0f, -1.0f};
+        if (Vector3Length(forward) <= 0.001f) forward = Vector3{1.0f, 0.0f, 0.0f};
+        forward = Vector3Normalize(forward);
+        Vector3 right = Vector3Normalize(Vector3CrossProduct(forward, up));
+
+        if (drone.state == DroneState::Deploying) {
+            float pulse = (1.0f - drone.deployTimer);
+            float alpha = 0.45f + 0.55f * std::abs(std::sin(pulse * 10.0f));
+            DrawCube(drone.position, 0.55f, 0.4f, 0.55f, FadeColor(Color{145, 160, 175, 255}, alpha));
+            DrawCubeWires(drone.position, 0.55f, 0.4f, 0.55f, FadeColor(Color{200, 210, 220, 255}, alpha * 0.7f));
+            continue;
+        }
+
+        // Center body
+        Color bodyColor = Color{78, 88, 98, 255};
+        Color armColor = Color{100, 110, 120, 255};
+        Color rotorColor = Color{175, 185, 195, 255};
+        DrawCube(Vector3Add(drone.position, Vector3Scale(up, 0.08f)), 0.5f, 0.22f, 0.5f, bodyColor);
+
+        // 4 arms and rotors
+        float armLen = 0.55f;
+        float rotorR = 0.32f;
+        float spin = drone.bobTimer * 14.0f;
+        float armAngles[4] = {0.785398f, 2.356194f, -2.356194f, -0.785398f};
+
+        for (int j = 0; j < 4; ++j) {
+            float a = armAngles[j];
+            Vector3 rotorCenter = Vector3Add(drone.position,
+                Vector3Add(Vector3Scale(right, std::cos(a) * armLen),
+                           Vector3Scale(forward, std::sin(a) * armLen)));
+            // Arm
+            DrawCylinderEx(rotorCenter,
+                Vector3Add(rotorCenter, Vector3Scale(up, 0.05f)),
+                0.04f, 0.04f, 6, armColor);
+            DrawLine3D(Vector3Add(drone.position, Vector3Scale(up, 0.05f)), rotorCenter, armColor);
+
+            // Spinning rotor disc
+            DrawCylinder(rotorCenter, rotorR, rotorR, 0.04f, 8, rotorColor);
+            // Rotor spin lines
+            float r1 = spin + static_cast<float>(j) * 1.57f;
+            DrawLine3D(
+                Vector3Add(rotorCenter, Vector3Add(Vector3Scale(right, std::cos(r1) * rotorR * 0.8f), Vector3Scale(forward, std::sin(r1) * rotorR * 0.8f))),
+                Vector3Add(rotorCenter, Vector3Add(Vector3Scale(right, -std::cos(r1) * rotorR * 0.8f), Vector3Scale(forward, -std::sin(r1) * rotorR * 0.8f))),
+                FadeColor(rotorColor, 0.6f));
+        }
+    }
+}
+
+void Game::DrawDashedCircle3D(Vector3 center, float radius, Vector3 normal, Color color) const {
+    Vector3 u, v;
+    if (std::abs(normal.x) < 0.9f) {
+        u = Vector3Normalize(Vector3CrossProduct(normal, Vector3{1.0f, 0.0f, 0.0f}));
+    } else {
+        u = Vector3Normalize(Vector3CrossProduct(normal, Vector3{0.0f, 1.0f, 0.0f}));
+    }
+    v = Vector3Normalize(Vector3CrossProduct(normal, u));
+
+    constexpr int kSegments = 36;
+    for (int i = 0; i < kSegments; i += 2) {
+        float a1 = static_cast<float>(i) / kSegments * 2.0f * PI;
+        float a2 = static_cast<float>(i + 1) / kSegments * 2.0f * PI;
+        Vector3 p1 = Vector3Add(center, Vector3Add(Vector3Scale(u, std::cos(a1) * radius), Vector3Scale(v, std::sin(a1) * radius)));
+        Vector3 p2 = Vector3Add(center, Vector3Add(Vector3Scale(u, std::cos(a2) * radius), Vector3Scale(v, std::sin(a2) * radius)));
+        DrawLine3D(p1, p2, color);
+    }
+}
+
+void Game::DrawRallyMarker() const {
+    Color markerColor = Color{255, 210, 80, 230};
+    Color lineColor = FadeColor(markerColor, 0.75f);
+    float radius = 1.8f;
+    float markerAltitude = 0.35f;
+
+    if (rallyPhase_ != RallyPhase::Inactive) {
+        // Draw rally point as a solid marker
+        Vector3 rallyNormal = IsSphericalMap() ? SphericalUpAt(rallyPoint_) : Vector3{0.0f, 1.0f, 0.0f};
+        Vector3 elevatedRally = Vector3Add(rallyPoint_, Vector3Scale(rallyNormal, markerAltitude));
+        DrawDashedCircle3D(elevatedRally, radius, rallyNormal, lineColor);
+        DrawDashedCircle3D(elevatedRally, radius * 0.42f, rallyNormal, FadeColor(lineColor, 0.7f));
+        // Cross lines
+        Vector3 u, v;
+        if (std::abs(rallyNormal.x) < 0.9f) {
+            u = Vector3Normalize(Vector3CrossProduct(rallyNormal, Vector3{1.0f, 0.0f, 0.0f}));
+        } else {
+            u = Vector3Normalize(Vector3CrossProduct(rallyNormal, Vector3{0.0f, 1.0f, 0.0f}));
+        }
+        v = Vector3Normalize(Vector3CrossProduct(rallyNormal, u));
+        DrawLine3D(Vector3Add(elevatedRally, Vector3Scale(u, -radius)), Vector3Add(elevatedRally, Vector3Scale(u, radius)), FadeColor(markerColor, 0.5f));
+        DrawLine3D(Vector3Add(elevatedRally, Vector3Scale(v, -radius)), Vector3Add(elevatedRally, Vector3Scale(v, radius)), FadeColor(markerColor, 0.5f));
+        // Vertical stalk
+        DrawLine3D(rallyPoint_, elevatedRally, FadeColor(markerColor, 0.45f));
+    } else if (fireControlActive_) {
+        // Preview marker at aim point
+        Vector3 aimPoint = GetFireControlAimPoint();
+        Vector3 aimNormal = IsSphericalMap() ? SphericalUpAt(aimPoint) : Vector3{0.0f, 1.0f, 0.0f};
+        Vector3 elevatedAim = Vector3Add(aimPoint, Vector3Scale(aimNormal, markerAltitude));
+        float pulse = 0.62f + std::sin(static_cast<float>(GetTime()) * 10.0f) * 0.16f;
+        Color previewColor = FadeColor(markerColor, pulse);
+        DrawDashedCircle3D(elevatedAim, radius, aimNormal, previewColor);
+        DrawLine3D(aimPoint, elevatedAim, FadeColor(previewColor, 0.6f));
+    }
+}
+
+void Game::DrawFireControlOverlay() const {
+    int w = pixelWidth_;
+    int h = pixelHeight_;
+    int cx = w / 2;
+    int cy = h / 2;
+
+    Color tacGreen = Color{100, 220, 160, 255};
+    Color tacDim = Color{110, 140, 125, 200};
+    Color tacBright = Color{190, 240, 215, 240};
+
+    // ── Top command bar ──────────────────────────────────────────────
+    DrawText("DRONE COMMAND", 6, 4, 8, tacGreen);
+    DrawLine(0, 17, w, 17, FadeColor(tacGreen, 0.30f));
+
+    // ── Info panel (top-left, below title bar) ───────────────────────
+    int activeDrones = 0;
+    for (const Drone& d : drones_) {
+        if (d.state == DroneState::Active) activeDrones++;
+    }
+    int enemyCount = static_cast<int>(enemies_.size());
+
+    DrawText(TextFormat("DRONES    %d/%d", activeDrones, config_.droneMaxCount), 6, 22, 7, tacBright);
+    DrawText(TextFormat("HOSTILES  %d", enemyCount), 6, 32, 7, tacBright);
+
+    Vector3 aimPoint = GetFireControlAimPoint();
+    float dist = Vector3Distance(camera_.position, aimPoint);
+    DrawText(TextFormat("RANGE     %.1f m", dist), 6, 42, 7, tacBright);
+
+    // Mode indicator
+    const char* modeLabel = (rocketLauncherMode_ == RocketLauncherMode::Drone) ? "MODE: DRONE" : "MODE: ROCKET";
+    DrawText(modeLabel, 6, 54, 7, tacDim);
+
+    // ── Corner decorations ───────────────────────────────────────────
+    int cornerLen = 14;
+    Color cornerColor = FadeColor(tacGreen, 0.40f);
+    // Top-left
+    DrawLine(0, 0, cornerLen, 0, cornerColor);
+    DrawLine(0, 0, 0, cornerLen, cornerColor);
+    // Top-right
+    DrawLine(w, 0, w - cornerLen, 0, cornerColor);
+    DrawLine(w, 0, w, cornerLen, cornerColor);
+    // Bottom-left
+    DrawLine(0, h, cornerLen, h, cornerColor);
+    DrawLine(0, h, 0, h - cornerLen, cornerColor);
+    // Bottom-right
+    DrawLine(w, h, w - cornerLen, h, cornerColor);
+    DrawLine(w, h, w, h - cornerLen, cornerColor);
+
+    // ── Crosshair ────────────────────────────────────────────────────
+    int chLen = 14;
+    int chGap = 4;
+    DrawLine(cx - chLen, cy, cx - chGap, cy, tacGreen);
+    DrawLine(cx + chGap, cy, cx + chLen, cy, tacGreen);
+    DrawLine(cx, cy - chLen, cx, cy - chGap, tacGreen);
+    DrawLine(cx, cy + chGap, cx, cy + chLen, tacGreen);
+    DrawCircle(cx, cy, 1.5f, tacGreen);
+
+    // ── Bottom status bar ────────────────────────────────────────────
+    DrawLine(0, h - 17, w, h - 17, FadeColor(tacGreen, 0.25f));
+
+    if (rallyPhase_ != RallyPhase::Inactive) {
+        const char* phaseStr = rallyPhase_ == RallyPhase::Assembling ? "RALLY: ASSEMBLING" :
+                               rallyPhase_ == RallyPhase::Holding    ? "RALLY: HOLDING" : "RALLY: COMPLETE";
+        Color rallyColor = Color{255, 210, 80, 240};
+        DrawText(phaseStr, 6, h - 30, 8, rallyColor);
+        if (rallyPhase_ == RallyPhase::Holding) {
+            DrawText(TextFormat("HOLD  %.1fs", rallyHoldTimer_), 6, h - 14, 7, tacDim);
+        } else {
+            DrawText("LEFT-CLICK TO REASSIGN", 6, h - 14, 7, tacDim);
+        }
+    } else {
+        DrawText("LEFT-CLICK TO SET RALLY POINT", 6, h - 14, 7, tacDim);
     }
 }
 

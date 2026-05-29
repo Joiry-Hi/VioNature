@@ -12,6 +12,7 @@
 #include <Jolt/Physics/Body/MotionQuality.h>
 #include <Jolt/Physics/Body/MotionType.h>
 #include <Jolt/Physics/Collision/ObjectLayer.h>
+#include <Jolt/Physics/Collision/RayCast.h>
 #include <Jolt/Physics/Collision/Shape/Shape.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/RegisterTypes.h>
@@ -19,7 +20,8 @@
 namespace Layers {
     static constexpr JPH::ObjectLayer NON_MOVING = 0;
     static constexpr JPH::ObjectLayer MOVING = 1;
-    static constexpr JPH::ObjectLayer NUM_LAYERS = 2;
+    static constexpr JPH::ObjectLayer PROJECTILE = 2;
+    static constexpr JPH::ObjectLayer NUM_LAYERS = 3;
 }
 
 class PhysicsWorld {
@@ -55,6 +57,14 @@ public:
 
     void DestroyBody(JPH::BodyID id);
     void Step(float dt);
+
+    struct RayCastHit {
+        bool hit = false;
+        JPH::RVec3 point = JPH::RVec3::sZero();
+        JPH::BodyID bodyID;
+    };
+
+    RayCastHit CastRay(JPH::RVec3Arg origin, JPH::Vec3Arg direction, float maxDistance = 1000.0f) const;
 
 private:
     class Runtime;
