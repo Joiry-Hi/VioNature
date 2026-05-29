@@ -75,6 +75,9 @@ Game::Game() {
     pixelTarget_ = LoadRenderTexture(pixelWidth_, pixelHeight_);
     SetTextureFilter(pixelTarget_.texture, TEXTURE_FILTER_POINT);
 
+    bethlehemModel_ = LoadModel("assets/models/bosses/star_of_bethlehem.obj");
+    bethlehemModelLoaded_ = IsModelValid(bethlehemModel_);
+
     Reset();
 }
 
@@ -82,6 +85,10 @@ Game::~Game() {
     ClearWorld();
     if (pixelTarget_.id != 0) {
         UnloadRenderTexture(pixelTarget_);
+    }
+    if (bethlehemModelLoaded_) {
+        UnloadModel(bethlehemModel_);
+        bethlehemModelLoaded_ = false;
     }
 }
 
@@ -158,6 +165,9 @@ void Game::Reset() {
     spitterAmbushDone_ = false;
     pouncerRushDone_ = false;
     bossSpawned_ = false;
+    bethlehemSpawned_ = false;
+    bethlehem_ = {};
+    bethlehem_.laserPhase = BethlehemLaserPhase::Inactive;
     duelWon_ = false;
     nextMixedEventTime_ = 104.0f;
     duelArmor_ = DuelMode() ? config_.duelPlayerArmor : 0;
@@ -260,6 +270,7 @@ void Game::Update(float dt) {
         if (!timeStopped_) {
             UpdateEnemies(dt);
             UpdateDrones(dt);
+            UpdateBethlehem(dt);
             UpdateProjectiles(dt);
             UpdateCollisions();
         }
@@ -1264,12 +1275,12 @@ void Game::UpdateWaveDirector(float dt) {
 
     spawnInterval_ = waveIndex_ == 1 ? 1.85f : waveIndex_ == 2 ? 1.45f : waveIndex_ == 3 ? 1.05f : 0.72f;
     spawnTimer_ -= dt;
-    if (spawnTimer_ <= 0.0f) {
+    if (!config_.bossRushMode && spawnTimer_ <= 0.0f) {
         SpawnEnemy();
         spawnTimer_ = spawnInterval_;
     }
 
-    if (!wispSurgeDone_ && survivalTime_ >= 25.0f) {
+    if (!config_.bossRushMode && !wispSurgeDone_ && survivalTime_ >= 25.0f) {
         for (int i = 0; i < 5; ++i) {
             SpawnEnemyOfType(EnemyType::Wisp);
         }
@@ -1278,7 +1289,7 @@ void Game::UpdateWaveDirector(float dt) {
         wispSurgeDone_ = true;
     }
 
-    if (!spitterAmbushDone_ && survivalTime_ >= 52.0f) {
+    if (!config_.bossRushMode && !spitterAmbushDone_ && survivalTime_ >= 52.0f) {
         for (int i = 0; i < 3; ++i) {
             SpawnEnemyOfType(EnemyType::Spitter);
         }
@@ -1287,7 +1298,7 @@ void Game::UpdateWaveDirector(float dt) {
         spitterAmbushDone_ = true;
     }
 
-    if (!pouncerRushDone_ && survivalTime_ >= 82.0f) {
+    if (!config_.bossRushMode && !pouncerRushDone_ && survivalTime_ >= 82.0f) {
         for (int i = 0; i < 4; ++i) {
             SpawnEnemyOfType(EnemyType::Pouncer);
         }
@@ -1298,15 +1309,24 @@ void Game::UpdateWaveDirector(float dt) {
 
     if (!bossSpawned_ && survivalTime_ >= config_.bossSpawnTime) {
         SpawnEnemyOfType(EnemyType::Boss);
-        for (int i = 0; i < 3; ++i) {
-            SpawnEnemyOfType(i % 2 == 0 ? EnemyType::Wisp : EnemyType::Spitter);
+        if (!config_.bossRushMode) {
+            for (int i = 0; i < 3; ++i) {
+                SpawnEnemyOfType(i % 2 == 0 ? EnemyType::Wisp : EnemyType::Spitter);
+            }
         }
         eventText_ = "GEOMETRY LORD";
         eventTextTimer_ = 4.0f;
         bossSpawned_ = true;
     }
 
-    if (waveIndex_ >= 4 && survivalTime_ >= nextMixedEventTime_) {
+    if (!bethlehemSpawned_ && survivalTime_ >= config_.bethlehemSpawnTime) {
+        SpawnBethlehem();
+        eventText_ = "STAR OF BETHLEHEM";
+        eventTextTimer_ = 4.0f;
+        bethlehemSpawned_ = true;
+    }
+
+    if (!config_.bossRushMode && waveIndex_ >= 4 && survivalTime_ >= nextMixedEventTime_) {
         int eventRoll = GetRandomValue(0, 99);
         if (eventRoll < 34) {
             for (int i = 0; i < 3; ++i) {
@@ -1946,6 +1966,25 @@ void Game::UpdateCollisions() {
             ++projectileIndex;
         }
     }
+
+    // Player projectiles vs Bethlehem boss (no physics body)
+    if (bethlehem_.active) {
+        for (size_t pi = 0; pi < projectiles_.size();) {
+            if (projectiles_[pi].owner != ProjectileOwner::Player) { ++pi; continue; }
+            Vector3 pp = BodyPosition(projectiles_[pi].body);
+            float hitDist = projectiles_[pi].radius + 3.0f;
+            if (Vector3Distance(pp, bethlehem_.position) <= hitDist) {
+                bethlehem_.health -= projectiles_[pi].damage;
+                SpawnHitBurst(pp, Color{255, 210, 100, 255}, 8);
+                DestroyProjectile(pi);
+                if (bethlehem_.health <= 0.0f) {
+                    DestroyBethlehem();
+                }
+            } else {
+                ++pi;
+            }
+        }
+    }
 }
 
 void Game::UpdateArenaBounds() {
@@ -2418,7 +2457,7 @@ void Game::FireLaser(float charge) {
     Vector3 start = WeaponMuzzlePosition();
     Vector3 end = Vector3Add(start, Vector3Scale(forward, 62.0f));
     float damage = config_.laserBaseDamage + normalizedCharge * config_.laserChargeDamage;
-    float beamRadius = 0.35f + normalizedCharge * 0.45f;
+    float beamRadius = config_.laserBeamRadius + normalizedCharge * 0.45f;
 
     float beamLife = 0.16f + normalizedCharge * 0.1f;
     beams_.push_back(Beam{
@@ -3439,6 +3478,140 @@ void Game::DestroyEnemy(size_t index) {
     }
 }
 
+void Game::SpawnBethlehem() {
+    bethlehem_.active = true;
+    bethlehem_.health = config_.bethlehemHealth;
+    bethlehem_.maxHealth = config_.bethlehemHealth;
+    bethlehem_.attackTimer = 1.5f;
+    bethlehem_.phaseTimer = 0.0f;
+    bethlehem_.laserPhase = BethlehemLaserPhase::Inactive;
+    bethlehem_.orbitAngle = 0.0f;
+
+    if (IsSphericalMap()) {
+        if (IsHollowWorldMap()) {
+            bethlehem_.position = Vector3{0.0f, 0.0f, 0.0f};
+        } else {
+            float r = config_.bethlehemOrbitRadius;
+            bethlehem_.position = SphericalSurfacePoint(Vector3{r, 0.0f, 0.0f}, config_.bethlehemOrbitAltitude);
+        }
+    } else {
+        bethlehem_.position = Vector3{0.0f, config_.bethlehemOrbitAltitude, 0.0f};
+    }
+    bethlehem_.laserDirection = Vector3{0.0f, -1.0f, 0.0f};
+}
+
+void Game::DestroyBethlehem() {
+    if (!bethlehem_.active) return;
+    bethlehem_.active = false;
+    bethlehem_.laserPhase = BethlehemLaserPhase::Inactive;
+    SpawnShockwave(bethlehem_.position, 14.0f, Color{255, 180, 60, 255});
+    SpawnHitBurst(bethlehem_.position, Color{255, 220, 140, 255}, 110);
+    eventText_ = "STAR FALLEN";
+    eventTextTimer_ = 4.0f;
+    cameraShake_ = 1.0f;
+    score_ += 1000;
+}
+
+void Game::UpdateBethlehem(float dt) {
+    if (!bethlehem_.active) return;
+
+    // Position
+    Vector3 playerPos = camera_.position;
+    if (IsSphericalMap()) {
+        if (IsHollowWorldMap()) {
+            bethlehem_.position = Vector3{0.0f, 0.0f, 0.0f};
+        } else {
+            float angularSpeed = (2.0f * PI) / config_.bethlehemOrbitPeriod;
+            bethlehem_.orbitAngle += dt * angularSpeed;
+            Vector3 orbitPos = {config_.bethlehemOrbitRadius * std::cos(bethlehem_.orbitAngle), 0.0f, config_.bethlehemOrbitRadius * std::sin(bethlehem_.orbitAngle)};
+            bethlehem_.position = SphericalSurfacePoint(orbitPos, config_.bethlehemOrbitAltitude);
+        }
+    } else {
+        bethlehem_.position = Vector3{0.0f, config_.bethlehemOrbitAltitude, 0.0f};
+    }
+
+    // Laser state machine
+    bethlehem_.attackTimer -= dt;
+    bethlehem_.phaseTimer += dt;
+
+    if (bethlehem_.laserPhase == BethlehemLaserPhase::Inactive) {
+        if (bethlehem_.attackTimer <= 0.0f) {
+            bethlehem_.laserPhase = BethlehemLaserPhase::Warning;
+            bethlehem_.phaseTimer = 0.0f;
+            Vector3 toPlayer = Vector3Subtract(playerPos, bethlehem_.position);
+            bethlehem_.laserDirection = Vector3Length(toPlayer) > 0.001f ? Vector3Normalize(toPlayer) : Vector3{0.0f, -1.0f, 0.0f};
+        }
+    } else if (bethlehem_.laserPhase == BethlehemLaserPhase::Warning) {
+        Vector3 toPlayer = Vector3Normalize(Vector3Subtract(playerPos, bethlehem_.position));
+        float dot = Vector3DotProduct(bethlehem_.laserDirection, toPlayer);
+        float angleBetween = std::acos(std::clamp(dot, -1.0f, 1.0f));
+        float maxRotate = config_.bethlehemLaserRotateSpeed * dt;
+        float rotateAmount = std::min(angleBetween, maxRotate);
+        if (rotateAmount > 0.0001f) {
+            Vector3 axis = Vector3CrossProduct(bethlehem_.laserDirection, toPlayer);
+            if (Vector3Length(axis) > 0.0001f) {
+                axis = Vector3Normalize(axis);
+                bethlehem_.laserDirection = Vector3Normalize(RotateAroundAxis(bethlehem_.laserDirection, axis, rotateAmount));
+            }
+        }
+        if (bethlehem_.phaseTimer >= config_.bethlehemLaserWarningDuration) {
+            bethlehem_.laserPhase = BethlehemLaserPhase::Damaging;
+            bethlehem_.phaseTimer = 0.0f;
+        }
+    } else if (bethlehem_.laserPhase == BethlehemLaserPhase::Damaging) {
+        // Continue tracking player during damaging phase
+        Vector3 toPlayer = Vector3Normalize(Vector3Subtract(playerPos, bethlehem_.position));
+        float dot = Vector3DotProduct(bethlehem_.laserDirection, toPlayer);
+        float angleBetween = std::acos(std::clamp(dot, -1.0f, 1.0f));
+        float maxRotate = config_.bethlehemLaserRotateSpeed * dt;
+        float rotateAmount = std::min(angleBetween, maxRotate);
+        if (rotateAmount > 0.0001f) {
+            Vector3 axis = Vector3CrossProduct(bethlehem_.laserDirection, toPlayer);
+            if (Vector3Length(axis) > 0.0001f) {
+                axis = Vector3Normalize(axis);
+                bethlehem_.laserDirection = Vector3Normalize(RotateAroundAxis(bethlehem_.laserDirection, axis, rotateAmount));
+            }
+        }
+        Vector3 beamStart = bethlehem_.position;
+        Vector3 beamEnd = Vector3Add(beamStart, Vector3Scale(bethlehem_.laserDirection, config_.bethlehemLaserRange));
+        float dist = DistancePointToSegment(playerPos, beamStart, beamEnd);
+        if (dist <= config_.bethlehemLaserRadius + playerRadius_) {
+            ApplyPlayerHit(playerPos, Color{255, 160, 40, 255}, "STAR BURNT");
+        }
+        if (bethlehem_.phaseTimer >= config_.bethlehemLaserDuration) {
+            bethlehem_.laserPhase = BethlehemLaserPhase::Inactive;
+            bethlehem_.attackTimer = config_.bethlehemLaserCooldown;
+            bethlehem_.phaseTimer = 0.0f;
+        }
+    }
+}
+
+void Game::DrawBethlehem() const {
+    if (!bethlehem_.active) return;
+
+    if (bethlehemModelLoaded_) {
+        DrawModel(bethlehemModel_, bethlehem_.position, 1.0f, WHITE);
+    } else {
+        DrawSphereEx(bethlehem_.position, 2.5f, 12, 10, Color{255, 210, 100, 255});
+        DrawSphereWires(bethlehem_.position, 2.8f, 14, 12, Color{255, 180, 50, 220});
+    }
+
+    if (bethlehem_.laserPhase == BethlehemLaserPhase::Inactive) return;
+
+    Vector3 beamStart = bethlehem_.position;
+    Vector3 beamEnd = Vector3Add(beamStart, Vector3Scale(bethlehem_.laserDirection, config_.bethlehemLaserRange));
+    float r = config_.bethlehemLaserRadius;
+
+    if (bethlehem_.laserPhase == BethlehemLaserPhase::Warning) {
+        DrawCylinderEx(beamStart, beamEnd, r, r, 8, FadeColor(Color{255, 200, 80, 255}, 0.22f));
+        DrawCylinderWiresEx(beamStart, beamEnd, r * 1.05f, r * 1.05f, 8, FadeColor(Color{255, 230, 160, 255}, 0.32f));
+    } else {
+        DrawCylinderEx(beamStart, beamEnd, r, r, 8, FadeColor(Color{255, 130, 30, 255}, 0.68f));
+        DrawCylinderWiresEx(beamStart, beamEnd, r * 1.06f, r * 1.06f, 8, FadeColor(Color{255, 200, 90, 255}, 0.80f));
+        DrawCylinderEx(beamStart, beamEnd, r * 0.38f, r * 0.38f, 6, FadeColor(Color{255, 255, 200, 255}, 0.92f));
+    }
+}
+
 Vector3 Game::PlayerForward() const {
     float yaw = yaw_ * kDegToRad;
     float pitch = pitch_ * kDegToRad;
@@ -3770,6 +3943,7 @@ void Game::Draw() const {
     DrawNanoPlatforms();
     DrawDrones();
     DrawEnemies();
+    DrawBethlehem();
     DrawPickups();
     DrawProjectiles();
     DrawBeams();
@@ -4693,6 +4867,20 @@ void Game::DrawHud() const {
     }
     const char* fpsText = TextFormat("FPS %d", GetFPS());
     DrawText(fpsText, pixelWidth_ - MeasureText(fpsText, 8) - 6, 7, 8, Color{170, 230, 170, 255});
+
+    if (bethlehem_.active) {
+        float bh = bethlehem_.maxHealth > 0.0f ? std::clamp(bethlehem_.health / bethlehem_.maxHealth, 0.0f, 1.0f) : 0.0f;
+        int barX = 76, barY = 29, barW = 270;
+        bool hasBossOrDuelist = false;
+        for (const Enemy& enemy : enemies_) {
+            if (enemy.type == EnemyType::Boss || enemy.type == EnemyType::Duelist) { hasBossOrDuelist = true; break; }
+        }
+        if (hasBossOrDuelist) barY = 46;
+        DrawRectangle(barX, barY, barW, 6, Color{18, 10, 5, 220});
+        DrawRectangle(barX, barY, static_cast<int>(barW * bh), 6, Color{255, 190, 60, 255});
+        DrawRectangleLines(barX, barY, barW, 6, Color{255, 220, 140, 210});
+        DrawText("STAR OF BETHLEHEM", barX, barY + 9, 8, Color{255, 225, 150, 255});
+    }
 
     for (const Enemy& enemy : enemies_) {
         if (enemy.type != EnemyType::Boss && enemy.type != EnemyType::Duelist) {

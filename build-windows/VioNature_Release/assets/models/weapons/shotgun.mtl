@@ -1,0 +1,19 @@
+newmtl grip
+Kd 0.11 0.08 0.06
+Ka 0.02 0.02 0.01
+
+newmtl receiver
+Kd 0.28 0.30 0.29
+Ka 0.03 0.03 0.03
+
+newmtl barrel
+Kd 0.70 0.68 0.58
+Ka 0.06 0.05 0.04
+
+newmtl pump
+Kd 0.40 0.24 0.14
+Ka 0.04 0.02 0.01
+
+newmtl bead
+Kd 1.00 0.82 0.32
+Ka 0.08 0.06 0.02

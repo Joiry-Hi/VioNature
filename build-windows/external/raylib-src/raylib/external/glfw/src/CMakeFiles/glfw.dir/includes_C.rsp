@@ -1,0 +1,1 @@
+-I"/mnt/Data/Projects/VioNature/external/raylib-src/src/external/glfw/include" -I"/mnt/Data/Projects/VioNature/external/raylib-src/src/external/glfw/src" -I"/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src"

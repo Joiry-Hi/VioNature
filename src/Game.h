@@ -255,6 +255,20 @@ private:
         float maxLife = 0.0f;
     };
 
+    enum class BethlehemLaserPhase { Inactive, Warning, Damaging };
+
+    struct BethlehemBoss {
+        Vector3 position = {};
+        Vector3 laserDirection = {};
+        float orbitAngle = 0.0f;
+        float health = 0.0f;
+        float maxHealth = 0.0f;
+        float attackTimer = 0.0f;
+        float phaseTimer = 0.0f;
+        BethlehemLaserPhase laserPhase = BethlehemLaserPhase::Inactive;
+        bool active = false;
+    };
+
     void Reset();
     void ClearWorld();
     void UpdatePlayer(float dt);
@@ -328,6 +342,11 @@ private:
     Vector3 WeaponMuzzlePosition() const;
     NanoPlatform MakeNanoPlatformTarget(Vector3 direction) const;
     Vector3 GetFireControlAimPoint() const;
+    void UpdateBethlehem(float dt);
+    void DrawBethlehem() const;
+    void SpawnBethlehem();
+    void DestroyBethlehem();
+    bool BethlehemAlive() const { return bethlehem_.active; }
     bool IsSphericalMap() const;
     bool IsHollowWorldMap() const;
     float SphericalRadius() const;
@@ -447,6 +466,10 @@ private:
     bool spitterAmbushDone_ = false;
     bool pouncerRushDone_ = false;
     bool bossSpawned_ = false;
+    bool bethlehemSpawned_ = false;
+    BethlehemBoss bethlehem_;
+    Model bethlehemModel_;
+    bool bethlehemModelLoaded_ = false;
     bool duelWon_ = false;
     float nextMixedEventTime_ = 104.0f;
     int duelArmor_ = 0;

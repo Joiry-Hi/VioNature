@@ -1,0 +1,29 @@
+external/joltphysics-src/Build/CMakeFiles/Jolt.dir/__/Jolt/Physics/Vehicle/VehicleDifferential.cpp.obj: \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Jolt/Physics/Vehicle/VehicleDifferential.cpp \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Physics/Vehicle/VehicleDifferential.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/ObjectStream/SerializableObject.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/ObjectStream/ObjectStream.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/Reference.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/Atomics.h \
+ /usr/lib/gcc/x86_64-w64-mingw32/13-win32/include/c++/atomic \
+ /usr/lib/gcc/x86_64-w64-mingw32/13-win32/include/c++/bits/atomic_base.h \
+ /usr/lib/gcc/x86_64-w64-mingw32/13-win32/include/c++/x86_64-w64-mingw32/bits/c++config.h \
+ /usr/lib/gcc/x86_64-w64-mingw32/13-win32/include/c++/new \
+ /usr/lib/gcc/x86_64-w64-mingw32/13-win32/include/stdint.h \
+ /usr/lib/gcc/x86_64-w64-mingw32/13-win32/include/c++/bits/atomic_lockfree_defines.h \
+ /usr/lib/gcc/x86_64-w64-mingw32/13-win32/include/c++/bits/move.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/RTTI.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/ObjectStream/SerializableAttribute.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/ObjectStream/ObjectStreamTypes.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/NonCopyable.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/StreamIn.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/StreamOut.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/ObjectStream/TypeDeclarations.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/Color.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Geometry/AABox.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Geometry/Triangle.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Geometry/IndexedTriangle.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Geometry/Plane.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/ObjectStream/SerializableAttributeTyped.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/ObjectStream/GetPrimitiveTypeOfType.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/ObjectStream/SerializableAttributeEnum.h

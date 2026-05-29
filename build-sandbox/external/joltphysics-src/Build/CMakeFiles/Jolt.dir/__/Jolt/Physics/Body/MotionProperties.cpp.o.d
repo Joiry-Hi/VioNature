@@ -1,0 +1,34 @@
+external/joltphysics-src/Build/CMakeFiles/Jolt.dir/__/Jolt/Physics/Body/MotionProperties.cpp.o: \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Jolt/Physics/Body/MotionProperties.cpp \
+ /usr/include/stdc-predef.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Physics/Body/MotionProperties.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Geometry/Sphere.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Geometry/AABox.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Geometry/Triangle.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Geometry/IndexedTriangle.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Geometry/Plane.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Physics/Body/AllowedDOFs.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Physics/Body/MotionQuality.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Physics/Body/BodyAccess.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Physics/Body/MotionType.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Physics/Body/BodyType.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Physics/Body/MassProperties.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/ObjectStream/SerializableObject.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/ObjectStream/ObjectStream.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/Reference.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/Atomics.h \
+ /usr/include/c++/13/atomic /usr/include/c++/13/bits/atomic_base.h \
+ /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h \
+ /usr/include/c++/13/new \
+ /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h \
+ /usr/include/c++/13/bits/atomic_lockfree_defines.h \
+ /usr/include/c++/13/bits/move.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/RTTI.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/ObjectStream/SerializableAttribute.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/ObjectStream/ObjectStreamTypes.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/NonCopyable.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Physics/DeterminismLog.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Physics/Body/MotionProperties.inl \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Physics/StateRecorder.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/StreamIn.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/StreamOut.h

@@ -102,6 +102,7 @@ GameplayConfig LoadGameplayConfig(const char* path) {
         {"scatter_damage", &config.scatterDamage},
         {"laser_base_damage", &config.laserBaseDamage},
         {"laser_charge_damage", &config.laserChargeDamage},
+        {"laser_beam_radius", &config.laserBeamRadius},
         {"flame_damage", &config.flameDamage},
         {"rocket_impact_damage", &config.rocketImpactDamage},
         {"rocket_explosion_damage", &config.rocketExplosionDamage},
@@ -197,6 +198,18 @@ GameplayConfig LoadGameplayConfig(const char* path) {
         {"drone_flocking_force", &config.droneFlockingForce},
         {"drone_rally_hold_time", &config.droneRallyHoldTime},
         {"drone_rally_marker_altitude", &config.droneRallyMarkerAltitude},
+        {"bethlehem_spawn_time", &config.bethlehemSpawnTime},
+        {"bethlehem_health", &config.bethlehemHealth},
+        {"bethlehem_orbit_radius", &config.bethlehemOrbitRadius},
+        {"bethlehem_orbit_period", &config.bethlehemOrbitPeriod},
+        {"bethlehem_orbit_altitude", &config.bethlehemOrbitAltitude},
+        {"bethlehem_laser_warning_duration", &config.bethlehemLaserWarningDuration},
+        {"bethlehem_laser_duration", &config.bethlehemLaserDuration},
+        {"bethlehem_laser_cooldown", &config.bethlehemLaserCooldown},
+        {"bethlehem_laser_radius", &config.bethlehemLaserRadius},
+        {"bethlehem_laser_range", &config.bethlehemLaserRange},
+        {"bethlehem_laser_damage", &config.bethlehemLaserDamage},
+        {"bethlehem_laser_rotate_speed", &config.bethlehemLaserRotateSpeed},
     };
 
     std::string line;
@@ -255,6 +268,11 @@ GameplayConfig LoadGameplayConfig(const char* path) {
             if (ParseBool(value, parsed)) {
                 config.blinkEnabled = parsed;
             }
+        } else if (key == "boss_rush_mode") {
+            bool parsed = false;
+            if (ParseBool(value, parsed)) {
+                config.bossRushMode = parsed;
+            }
         }
     }
 
@@ -278,6 +296,7 @@ GameplayConfig LoadGameplayConfig(const char* path) {
     config.scatterDamage = std::max(0.0f, config.scatterDamage);
     config.laserBaseDamage = std::max(0.0f, config.laserBaseDamage);
     config.laserChargeDamage = std::max(0.0f, config.laserChargeDamage);
+    config.laserBeamRadius = std::max(0.05f, config.laserBeamRadius);
     config.flameDamage = std::max(0.0f, config.flameDamage);
     config.rocketImpactDamage = std::max(0.0f, config.rocketImpactDamage);
     config.rocketExplosionDamage = std::max(0.0f, config.rocketExplosionDamage);
@@ -375,5 +394,17 @@ GameplayConfig LoadGameplayConfig(const char* path) {
     config.droneFlockingForce = std::max(0.0f, config.droneFlockingForce);
     config.droneRallyHoldTime = std::max(0.5f, config.droneRallyHoldTime);
     config.droneRallyMarkerAltitude = std::clamp(config.droneRallyMarkerAltitude, 0.2f, 20.0f);
+    config.bethlehemSpawnTime = std::max(5.0f, config.bethlehemSpawnTime);
+    config.bethlehemHealth = std::max(1.0f, config.bethlehemHealth);
+    config.bethlehemOrbitRadius = std::max(config.asteroidRadius + 2.0f, config.bethlehemOrbitRadius);
+    config.bethlehemOrbitPeriod = std::max(1.0f, config.bethlehemOrbitPeriod);
+    config.bethlehemOrbitAltitude = std::max(0.5f, config.bethlehemOrbitAltitude);
+    config.bethlehemLaserWarningDuration = std::max(0.5f, config.bethlehemLaserWarningDuration);
+    config.bethlehemLaserDuration = std::max(0.5f, config.bethlehemLaserDuration);
+    config.bethlehemLaserCooldown = std::max(0.5f, config.bethlehemLaserCooldown);
+    config.bethlehemLaserRadius = std::max(0.2f, config.bethlehemLaserRadius);
+    config.bethlehemLaserRange = std::max(2.0f, config.bethlehemLaserRange);
+    config.bethlehemLaserDamage = std::max(0.0f, config.bethlehemLaserDamage);
+    config.bethlehemLaserRotateSpeed = std::max(0.0f, config.bethlehemLaserRotateSpeed);
     return config;
 }

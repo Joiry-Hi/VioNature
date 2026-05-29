@@ -27,6 +27,7 @@ struct GameplayConfig {
     float scatterDamage = 0.55f;
     float laserBaseDamage = 1.6f;
     float laserChargeDamage = 5.0f;
+    float laserBeamRadius = 0.35f;
     float flameDamage = 0.38f;
     float rocketImpactDamage = 1.2f;
     float rocketExplosionDamage = 4.0f;
@@ -107,6 +108,7 @@ struct GameplayConfig {
     float blinkClearRadius = 8.0f;
     bool timeStopEnabled = true;
     bool blinkEnabled = true;
+    bool bossRushMode = false;
 
     // Drone (rocket launcher alt-fire)
     float droneCanisterSpeed = 26.0f;
@@ -128,6 +130,20 @@ struct GameplayConfig {
     float droneFlockingForce = 3.5f;
     float droneRallyHoldTime = 2.5f;
     float droneRallyMarkerAltitude = 2.0f;
+
+    // Star of Bethlehem boss
+    float bethlehemSpawnTime = 180.0f;
+    float bethlehemHealth = 120.0f;
+    float bethlehemOrbitRadius = 62.0f;
+    float bethlehemOrbitPeriod = 28.0f;
+    float bethlehemOrbitAltitude = 12.0f;
+    float bethlehemLaserWarningDuration = 2.2f;
+    float bethlehemLaserDuration = 3.5f;
+    float bethlehemLaserCooldown = 6.0f;
+    float bethlehemLaserRadius = 1.5f;
+    float bethlehemLaserRange = 80.0f;
+    float bethlehemLaserDamage = 2.5f;
+    float bethlehemLaserRotateSpeed = 0.45f;
 };
 
 GameplayConfig LoadGameplayConfig(const char* path = "config/gameplay.cfg");

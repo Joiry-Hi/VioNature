@@ -1,0 +1,20 @@
+external/joltphysics-src/Build/CMakeFiles/Jolt.dir/__/Jolt/Core/Factory.cpp.o: \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Jolt/Core/Factory.cpp \
+ /usr/include/stdc-predef.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/Factory.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/RTTI.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/Reference.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/Atomics.h \
+ /usr/include/c++/13/atomic /usr/include/c++/13/bits/atomic_base.h \
+ /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h \
+ /usr/include/c++/13/new \
+ /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h \
+ /usr/include/c++/13/bits/atomic_lockfree_defines.h \
+ /usr/include/c++/13/bits/move.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/ObjectStream/SerializableAttribute.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/ObjectStream/ObjectStreamTypes.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/UnorderedMap.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/HashTable.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Math/BVec16.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Math/BVec16.inl \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/UnorderedMapFwd.h

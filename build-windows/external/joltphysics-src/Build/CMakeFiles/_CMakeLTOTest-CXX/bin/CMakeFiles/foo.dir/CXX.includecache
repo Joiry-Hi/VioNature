@@ -1,0 +1,10 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/mnt/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/src/foo.cpp
+

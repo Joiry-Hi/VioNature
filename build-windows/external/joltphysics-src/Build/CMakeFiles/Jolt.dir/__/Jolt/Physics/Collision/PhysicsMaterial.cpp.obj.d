@@ -1,0 +1,31 @@
+external/joltphysics-src/Build/CMakeFiles/Jolt.dir/__/Jolt/Physics/Collision/PhysicsMaterial.cpp.obj: \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Jolt/Physics/Collision/PhysicsMaterial.cpp \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Physics/Collision/PhysicsMaterial.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/Reference.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/Atomics.h \
+ /usr/lib/gcc/x86_64-w64-mingw32/13-win32/include/c++/atomic \
+ /usr/lib/gcc/x86_64-w64-mingw32/13-win32/include/c++/bits/atomic_base.h \
+ /usr/lib/gcc/x86_64-w64-mingw32/13-win32/include/c++/x86_64-w64-mingw32/bits/c++config.h \
+ /usr/lib/gcc/x86_64-w64-mingw32/13-win32/include/c++/new \
+ /usr/lib/gcc/x86_64-w64-mingw32/13-win32/include/stdint.h \
+ /usr/lib/gcc/x86_64-w64-mingw32/13-win32/include/c++/bits/atomic_lockfree_defines.h \
+ /usr/lib/gcc/x86_64-w64-mingw32/13-win32/include/c++/bits/move.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/Color.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/Result.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/ObjectStream/SerializableObject.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/ObjectStream/ObjectStream.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/RTTI.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/ObjectStream/SerializableAttribute.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/ObjectStream/ObjectStreamTypes.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/NonCopyable.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Physics/Collision/PhysicsMaterialSimple.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/StreamUtils.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/StreamIn.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/StreamOut.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/ObjectToIDMap.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/UnorderedMapFwd.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/UnorderedMap.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/HashTable.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Math/BVec16.h \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Math/BVec16.inl \
+ /mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../Jolt/Core/Factory.h

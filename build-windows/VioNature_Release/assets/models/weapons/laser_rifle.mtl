@@ -1,0 +1,15 @@
+newmtl grip
+Kd 0.10 0.10 0.11
+Ka 0.02 0.02 0.02
+
+newmtl body
+Kd 0.36 0.34 0.30
+Ka 0.04 0.04 0.04
+
+newmtl barrel
+Kd 0.72 0.70 0.60
+Ka 0.06 0.06 0.05
+
+newmtl emitter
+Kd 0.18 0.82 1.00
+Ka 0.02 0.10 0.12

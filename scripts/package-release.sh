@@ -68,9 +68,13 @@ copy_dll libwinpthread-1.dll
 echo "  Copying assets..."
 cp -r "$ROOT/assets/." "$OUTPUT_DIR/assets/"
 
-# Config
+# Config (use annotated Chinese version as default in release)
 echo "  Copying config..."
-cp "$ROOT/config/gameplay.cfg" "$OUTPUT_DIR/config/"
+cp "$ROOT/config/gameplay_annotated.cfg" "$OUTPUT_DIR/config/gameplay.cfg"
+
+# Docs
+echo "  Copying docs..."
+cp "$ROOT/GAMEPLAY_GUIDE.md" "$OUTPUT_DIR/"
 
 # Step 4: Zip
 echo ""
