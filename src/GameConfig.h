@@ -155,6 +155,12 @@ struct GameplayConfig {
     float bethlehemLaserRange = 80.0f;
     float bethlehemLaserDamage = 2.5f;
     float bethlehemLaserRotateSpeed = 0.45f;
+    // Training dummies (tutorial mode only)
+    float dummyHealth = 80.0f;
+    int dummyMaxCount = 6;
+    float dummySpawnInterval = 4.5f;
+    float dummyBossSpawnTime = 8.0f;
+    float dummyBethlehemSpawnTime = 25.0f;
 };
 
 GameplayConfig LoadGameplayConfig(const char* path = "config/gameplay.cfg");

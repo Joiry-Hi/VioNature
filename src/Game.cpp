@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 
 #include "raymath.h"
 #include <rlgl.h>
@@ -56,6 +57,33 @@ Vector3 SafeNormalize(Vector3 value, Vector3 fallback) {
     }
     return Vector3Normalize(value);
 }
+
+// Codepoints needed for Chinese tutorial text + ASCII printable
+static const int cjkCodepoints[] = {
+    32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
+    48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63,
+    64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79,
+    80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95,
+    96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111,
+    112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 8212,
+    19977, 19979, 19981, 20013, 20024, 20041, 20063, 20107, 20113, 20132, 20154, 20179, 20214, 20260, 20301, 20302,
+    20445, 20572, 20809, 20837, 20840, 20851, 20914, 20915, 20923, 20934, 20987, 20992, 20999, 21033, 21046, 21106,
+    21147, 21152, 21160, 21319, 21322, 21442, 21449, 21453, 21457, 21462, 21463, 21487, 21488, 21491, 21512, 21516,
+    21518, 21943, 22120, 22270, 22320, 22330, 22352, 22806, 22826, 22871, 23384, 23398, 23450, 23475, 23545, 23556,
+    23576, 24038, 24039, 24050, 24149, 24179, 24230, 24320, 24335, 24341, 24377, 24418, 24452, 24471, 24748, 25112,
+    25163, 25216, 25226, 25237, 25307, 25342, 25345, 25351, 25353, 25381, 25442, 25506, 25511, 25512, 25527, 25552,
+    25705, 25758, 25830, 25932, 25945, 25955, 25968, 25972, 26007, 26080, 26102, 26381, 26426, 26432, 26463, 26495,
+    26497, 26538, 26684, 27169, 27493, 27494, 27573, 27874, 27934, 27979, 28010, 28369, 28378, 28608, 28779, 28856,
+    28857, 28909, 28976, 29190, 29255, 29301, 29615, 29616, 29627, 29699, 29827, 29983, 29992, 30001, 30028, 30340,
+    30596, 30636, 30683, 30862, 31034, 31163, 31186, 31227, 31354, 31359, 31435, 31449, 31561, 31570, 31661, 31859,
+    32034, 32435, 32447, 32469, 32493, 32511, 32534, 32622, 32626, 32773, 32960, 33050, 33080, 33192, 33258, 33267,
+    33719, 33988, 34013, 34255, 34892, 35010, 35013, 35270, 35282, 35299, 35774, 35797, 35825, 35843, 36148, 36229,
+    36291, 36305, 36317, 36339, 36718, 36753, 36827, 36828, 36830, 36861, 36879, 36880, 36895, 37096, 37325, 37327,
+    38025, 38035, 38142, 38181, 38190, 38271, 38378, 38388, 38477, 38480, 38544, 38553, 38598, 38647, 38704, 38738,
+    38754, 38899, 39069, 39118, 39134, 39640, 40060, 40657,
+};
+static constexpr int cjkCodepointCount = sizeof(cjkCodepoints) / sizeof(cjkCodepoints[0]);
+
 }
 
 Game::Game() {
@@ -78,6 +106,22 @@ Game::Game() {
     bethlehemModel_ = LoadModel("assets/models/bosses/star_of_bethlehem.obj");
     bethlehemModelLoaded_ = IsModelValid(bethlehemModel_);
 
+    // Load CJK font for Chinese tutorial text
+    const char* cjkFontPaths[] = {
+        "assets/fonts/simhei.ttf",
+        "C:/Windows/Fonts/simhei.ttf",
+        "/usr/share/fonts/windows-fonts/simhei.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSansSC-VF.ttf",
+    };
+    for (const char* path : cjkFontPaths) {
+        cjkFont_ = LoadFontEx(path, 48, const_cast<int*>(cjkCodepoints), cjkCodepointCount);
+        if (cjkFont_.glyphCount > 0) {
+            cjkFontLoaded_ = true;
+            SetTextureFilter(cjkFont_.texture, TEXTURE_FILTER_POINT);
+            break;
+        }
+    }
+
     Reset();
 }
 
@@ -89,6 +133,10 @@ Game::~Game() {
     if (bethlehemModelLoaded_) {
         UnloadModel(bethlehemModel_);
         bethlehemModelLoaded_ = false;
+    }
+    if (cjkFontLoaded_) {
+        UnloadFont(cjkFont_);
+        cjkFontLoaded_ = false;
     }
 }
 
@@ -168,6 +216,15 @@ void Game::Reset() {
     pouncerRushDone_ = false;
     bossSpawned_ = false;
     bethlehemSpawned_ = false;
+    for (int i = 0; i < 8; ++i) weaponTipShown_[i] = false;
+    tutorialTip_[0] = '\0';
+    tutorialTipTimer_ = 0.0f;
+    tutorialTipDuration_ = 0.0f;
+    tutorialHintTimer_ = 8.0f;
+    tutorialHintIndex_ = 0;
+    configReminderTimer_ = 90.0f;
+    configReminderIndex_ = 0;
+    for (int i = 0; i < 3; ++i) pickupTipShown_[i] = false;
     bethlehem_ = {};
     bethlehem_.laserPhase = BethlehemLaserPhase::Inactive;
     duelWon_ = false;
@@ -181,6 +238,14 @@ void Game::Reset() {
     BuildMap();
 
     SpawnStartingPickups();
+    if (TutorialMode()) {
+        ShowTutorialTip("Welcome to tutorial!\nYou can change the game mode in gameplay.cfg.");
+        tutorialTipTimer_ = 8.0f;
+        tutorialTipDuration_ = 8.0f;
+        tutorialHintTimer_ = 0.3f;
+        eventText_ = "TUTORIAL | No enemies | Test all weapons";
+        eventTextTimer_ = 5.0f;
+    }
     if (DuelMode()) {
         SpawnEnemyOfType(EnemyType::Duelist);
         eventText_ = "DUEL";
@@ -209,6 +274,7 @@ void Game::ClearWorld() {
     physics_.DestroyBody(floorBody_);
     floorBody_ = JPH::BodyID();
     particles_.clear();
+    damageNumbers_.clear();
     props_.clear();
     pickups_.clear();
 }
@@ -245,6 +311,9 @@ void Game::Update(float dt) {
         eventText_ = hideUI_ ? "HUD OFF" : "HUD ON";
         eventTextTimer_ = 1.0f;
     }
+    if (IsKeyPressed(KEY_K)) {
+        showKeybindOverlay_ = !showKeybindOverlay_;
+    }
 
     thrustControlLockTimer_ = std::max(0.0f, thrustControlLockTimer_ - dt);
     UpdateLook(dt);
@@ -266,7 +335,7 @@ void Game::Update(float dt) {
             UpdateRifts(dt);
             UpdateNanoPlatforms(dt);
         }
-        if (!timeStopped_ && !DuelMode()) {
+        if (!timeStopped_ && !DuelMode() && !TutorialMode()) {
             UpdateWaveDirector(dt);
         }
         if (!timeStopped_) {
@@ -288,7 +357,93 @@ void Game::Update(float dt) {
     }
 
     UpdateParticles(dt);
+    for (size_t i = 0; i < damageNumbers_.size();) {
+        DamageNumber& dn = damageNumbers_[i];
+        dn.life -= dt;
+        dn.screenYOffset += dt * 35.0f;
+        if (physics_.Bodies().IsAdded(dn.enemyBody)) {
+            Vector3 pos = BodyPosition(dn.enemyBody);
+            Vector3 up = IsSphericalMap() ? SphericalUpAt(pos) : Vector3{0.0f, 1.0f, 0.0f};
+            dn.worldPosition = Vector3Add(pos, Vector3Scale(up, dn.heightOffset));
+        }
+        if (dn.life <= 0.0f) {
+            damageNumbers_[i] = damageNumbers_.back();
+            damageNumbers_.pop_back();
+            continue;
+        }
+        ++i;
+    }
     eventTextTimer_ = std::max(0.0f, eventTextTimer_ - dt);
+    tutorialTipTimer_ = std::max(0.0f, tutorialTipTimer_ - dt);
+
+    if (TutorialMode() && state_ == State::Playing) {
+        // Periodic combat & movement tips (bottom center, cycles every 18s)
+        if (tutorialTipTimer_ <= 0.0f) {
+            tutorialHintTimer_ = std::max(0.0f, tutorialHintTimer_ - dt);
+            if (tutorialHintTimer_ <= 0.0f) {
+                const char* combatTips[] = {
+                    "战斗技巧: 火箭跳\n对脚下发射火箭,利用爆炸冲量获得额外高度",
+                    "战斗技巧: 空中位移链\n火箭跳->霰弹反冲->长矛反冲,三段超远位移",
+                    "战斗技巧: 刀波钓鱼\n发射刀波后闪现换位,引诱追逐的敌人撞入刀波",
+                    "战斗技巧: 时停连招\n时停->贴脸全部火箭->黑洞手雷->解冻瞬间爆发",
+                    "战斗技巧: 无人机交叉火力\n不同位置部署无人机,长按右键设集合点",
+                    "战斗技巧: 角动量保持\n球形地图切线速度不受重力,环绕加速",
+                };
+                const char* movementTips[] = {
+                    "移动提示: Shift加速跑动\n空中也保持加速度(Quake风格空中控制)",
+                    "移动提示: 太空服(蓝)拾取后按Z开关\n低重力0.24x,可高跳远跃",
+                    "移动提示: 飞行装置(青)拾取后按X悬停\n空格升高 / Ctrl降低,悬停瞄准",
+                    "移动提示: 滑板(绿)拾取后按C切换滑行\n极低摩擦,保持高动量滑动",
+                };
+                const char* welcomeTip = "教学模式 | P键隐藏HUD | 自由探索8把武器\n编辑 gameplay.cfg 自定义80+可调参数";
+                const char* allTips[] = {
+                    welcomeTip,
+                    combatTips[0], movementTips[0], combatTips[1], movementTips[1],
+                    combatTips[2], movementTips[2], combatTips[3], movementTips[3],
+                    combatTips[4], combatTips[5],
+                };
+                constexpr int totalTips = sizeof(allTips) / sizeof(allTips[0]);
+                ShowTutorialTip(allTips[tutorialHintIndex_ % totalTips]);
+                tutorialHintIndex_ = (tutorialHintIndex_ + 1) % totalTips;
+                tutorialHintTimer_ = 1.0f;
+            }
+        }
+
+        // Config file editing reminders (top-left gold eventText, every 90s)
+        configReminderTimer_ = std::max(0.0f, configReminderTimer_ - dt);
+        if (configReminderTimer_ <= 0.0f && eventTextTimer_ <= 0.0f) {
+            const char* configReminders[] = {
+                "TIP: Edit gameplay.cfg to tune 80+ params",
+                "TIP: game_mode = survival | duel | tutorial",
+                "TIP: map_type = circle | square | asteroid | hollow_world",
+            };
+            eventText_ = configReminders[configReminderIndex_ % 3];
+            eventTextTimer_ = 5.0f;
+            configReminderIndex_ = (configReminderIndex_ + 1) % 3;
+            configReminderTimer_ = 90.0f;
+        }
+
+        // Spawn training dummies
+        spawnTimer_ -= dt;
+        if (spawnTimer_ <= 0.0f) {
+            int dummyCount = 0, dummyBossCount = 0;
+            for (const Enemy& e : enemies_) {
+                if (e.type == EnemyType::Dummy) ++dummyCount;
+                if (e.type == EnemyType::DummyBoss) ++dummyBossCount;
+            }
+            if (dummyCount < config_.dummyMaxCount) {
+                SpawnEnemyOfType(EnemyType::Dummy);
+            }
+            if (dummyBossCount < 1 && survivalTime_ >= config_.dummyBossSpawnTime) {
+                SpawnEnemyOfType(EnemyType::DummyBoss);
+            }
+            spawnTimer_ = config_.dummySpawnInterval;
+        }
+        if (!bethlehemSpawned_ && survivalTime_ >= config_.dummyBethlehemSpawnTime) {
+            SpawnBethlehem();
+            bethlehemSpawned_ = true;
+        }
+    }
     timeStopTintTimer_ = std::max(0.0f, timeStopTintTimer_ - dt);
     duelArmorInvulnTimer_ = std::max(0.0f, duelArmorInvulnTimer_ - dt);
     cameraShake_ = std::max(0.0f, cameraShake_ - dt * 5.0f);
@@ -719,6 +874,23 @@ void Game::UpdateWeaponSwitching() {
         chargingLaser_ = false;
         laserCharge_ = 0.0f;
         fireCooldown_ = std::min(fireCooldown_, 0.12f);
+        if (TutorialMode()) {
+            int idx = static_cast<int>(activeWeapon_);
+            if (idx < 8) {
+                const char* tips[] = {
+                    "激光步枪\n左键高速连射  |  右键+左键蓄力穿透光束",
+                    "火焰喷射器\n左键火球(半径膨胀)  |  右键热浪冲击波(锥形推飞弹幕)",
+                    "火箭筒\n左键火箭(火箭跳)  |  右键无人机仓  |  长按右键指挥界面",
+                    "霰弹枪\n左键散射弹丸(后坐力位移)  |  右键玻璃碎片尘云(持续伤害)",
+                    "重力钉枪\n左键重力钉牵引力场  |  右键黑洞手雷(事件视界秒杀)",
+                    "无限手套\n右键切换:时停(TS)/闪现(B)  |  闪现时滚轮调距离",
+                    "反冲长矛\n左键投掷穿透+反冲位移  |  右键音速推进(锥形+后坐力)",
+                    "纳米铸造器\n左键纳米刀波(50伤/秒)  |  右键纳米平台(可站立)  |  滚轮调距离",
+                };
+                ShowTutorialTip(tips[idx]);
+                tutorialHintTimer_ = 0.3f;
+            }
+        }
     }
 }
 
@@ -936,6 +1108,9 @@ void Game::UpdateGravityWells(float dt) {
                 float falloff = 1.0f - distance / well.radius;
                 float strength = well.force * (0.35f + falloff * 0.65f);
                 enemy.health -= well.damagePerSecond * dt * (0.25f + falloff * 0.75f);
+                if (enemy.type == EnemyType::Dummy || enemy.type == EnemyType::DummyBoss) {
+                    RecordDummyDamage(enemy, well.damagePerSecond * dt * (0.25f + falloff * 0.75f));
+                }
                 AddEnemyImpulse(enemy, Vector3{direction.x * strength * dt, direction.y * strength * 0.45f * dt, direction.z * strength * dt});
                 if (enemy.health <= 0.0f) {
                     score_ += enemy.scoreValue;
@@ -1030,6 +1205,9 @@ void Game::UpdateRifts(float dt) {
                 Vector3 enemyPosition = BodyPosition(enemy.body);
                 if (insideRift(enemyPosition, enemy.radius)) {
                     enemy.health -= rift.damagePerSecond * dt;
+                    if (enemy.type == EnemyType::Dummy || enemy.type == EnemyType::DummyBoss) {
+                        RecordDummyDamage(enemy, rift.damagePerSecond * dt);
+                    }
                     Vector3 offset = Vector3Subtract(enemyPosition, rift.center);
                     float horizontal = Vector3DotProduct(offset, rift.right);
                     float vertical = Vector3DotProduct(offset, rift.up);
@@ -1232,6 +1410,19 @@ void Game::UpdateEnemies(float dt) {
             }
         } else if (enemy.type == EnemyType::Duelist) {
             UpdateDuelist(enemy, position, direction, dt, speed, skipVelocity);
+        } else if (enemy.type == EnemyType::Dummy) {
+            // Reuses generic approach movement (falls through below)
+        } else if (enemy.type == EnemyType::DummyBoss) {
+            // Reuse Boss strafe movement, no attacks
+            Vector3 tangent = SafeNormalize(Vector3CrossProduct(enemyUp, direction), PlayerRight());
+            float dist = IsSphericalMap()
+                ? Vector3Length(ProjectOnSphericalTangent(Vector3Subtract(player, position), enemyUp))
+                : DistanceXZ(position, player);
+            float rangeBias = dist < 16.0f ? -0.45f : 0.35f;
+            direction = Vector3Normalize(Vector3Add(
+                Vector3Scale(direction, rangeBias),
+                Vector3Scale(tangent, 0.85f)));
+            speed = enemy.speed;
         }
 
         if (skipVelocity) {
@@ -1268,7 +1459,9 @@ void Game::UpdateEnemies(float dt) {
         enemy.externalVelocity = Vector3Scale(enemy.externalVelocity, std::pow(0.12f, dt));
         physics_.Bodies().SetLinearVelocity(enemy.body, ToJoltVelocity(velocity));
 
-        if (EnemyTouchesPlayer(position, enemy.radius)) {
+        if (EnemyTouchesPlayer(position, enemy.radius)
+            && enemy.type != EnemyType::Dummy
+            && enemy.type != EnemyType::DummyBoss) {
             ApplyPlayerHit(player, Color{255, 35, 25, 255});
         }
     }
@@ -1595,6 +1788,10 @@ void Game::UpdatePickups(float dt) {
                 cameraShake_ = std::min(1.0f, cameraShake_ + 0.18f);
                 eventText_ = "SPACE SUIT";
                 eventTextTimer_ = 1.4f;
+                if (TutorialMode() && !pickupTipShown_[0]) {
+                    pickupTipShown_[0] = true;
+                    ShowTutorialTip("已拾取太空服!\n按Z键开关低重力 (重力降至0.24x, 可高跳远跃)");
+                }
             } else if (pickup.type == PickupType::FlightRig) {
                 hasFlightRig_ = true;
                 flightRigEnabled_ = true;
@@ -1606,6 +1803,10 @@ void Game::UpdatePickups(float dt) {
                 cameraShake_ = std::min(1.0f, cameraShake_ + 0.2f);
                 eventText_ = "FLIGHT RIG";
                 eventTextTimer_ = 1.6f;
+                if (TutorialMode() && !pickupTipShown_[1]) {
+                    pickupTipShown_[1] = true;
+                    ShowTutorialTip("已拾取飞行装置!\n按X键开关飞行 (空格升高, Ctrl降低, 悬停瞄准)");
+                }
             } else if (pickup.type == PickupType::Skates) {
                 hasSkates_ = true;
                 skatesEnabled_ = true;
@@ -1613,6 +1814,10 @@ void Game::UpdatePickups(float dt) {
                 cameraShake_ = std::min(1.0f, cameraShake_ + 0.16f);
                 eventText_ = "SKATES";
                 eventTextTimer_ = 1.4f;
+                if (TutorialMode() && !pickupTipShown_[2]) {
+                    pickupTipShown_[2] = true;
+                    ShowTutorialTip("已拾取滑板!\n按C键开关滑板 (极低地面摩擦, 保持高动量滑行)");
+                }
             }
 
             pickups_[i] = pickups_.back();
@@ -1949,6 +2154,9 @@ void Game::UpdateCollisions() {
 
             if (Vector3Distance(projectilePosition, enemyPosition) <= hitDistance
                 || DistancePointToSegment(enemyPosition, previousPosition, projectilePosition) <= hitDistance) {
+                if (projectiles_[projectileIndex].kind == ProjectileKind::Flame && projectiles_[projectileIndex].lastHitEnemy == enemy.body) {
+                    continue;
+                }
                 if (projectiles_[projectileIndex].kind == ProjectileKind::Rocket) {
                     ExplodeRocket(projectilePosition, projectiles_[projectileIndex].owner);
                     DestroyProjectile(projectileIndex);
@@ -1956,6 +2164,9 @@ void Game::UpdateCollisions() {
                     break;
                 } else if (projectiles_[projectileIndex].kind == ProjectileKind::GravityNail) {
                     enemy.health -= projectiles_[projectileIndex].damage;
+                    if (enemy.type == EnemyType::Dummy || enemy.type == EnemyType::DummyBoss) {
+                        RecordDummyDamage(enemy, projectiles_[projectileIndex].damage);
+                    }
                     SpawnGravityWell(enemyPosition);
                     DestroyProjectile(projectileIndex);
                     projectileDestroyed = true;
@@ -1968,6 +2179,9 @@ void Game::UpdateCollisions() {
                     break;
                 } else if (projectiles_[projectileIndex].kind == ProjectileKind::BlackHoleGrenade) {
                     enemy.health -= projectiles_[projectileIndex].damage;
+                    if (enemy.type == EnemyType::Dummy || enemy.type == EnemyType::DummyBoss) {
+                        RecordDummyDamage(enemy, projectiles_[projectileIndex].damage);
+                    }
                     SpawnGravityWell(projectilePosition, true);
                     DestroyProjectile(projectileIndex);
                     projectileDestroyed = true;
@@ -1980,6 +2194,9 @@ void Game::UpdateCollisions() {
                     break;
                 } else if (projectiles_[projectileIndex].kind == ProjectileKind::Lance) {
                     enemy.health -= projectiles_[projectileIndex].damage;
+                    if (enemy.type == EnemyType::Dummy || enemy.type == EnemyType::DummyBoss) {
+                        RecordDummyDamage(enemy, projectiles_[projectileIndex].damage);
+                    }
                     SpawnHitBurst(enemyPosition, Color{210, 245, 255, 255}, 10);
                     cameraShake_ = std::min(1.0f, cameraShake_ + 0.18f);
                     if (enemy.health <= 0.0f) {
@@ -1991,14 +2208,18 @@ void Game::UpdateCollisions() {
                 }
 
                 enemy.health -= projectiles_[projectileIndex].damage;
+                if (enemy.type == EnemyType::Dummy || enemy.type == EnemyType::DummyBoss) {
+                    RecordDummyDamage(enemy, projectiles_[projectileIndex].damage);
+                }
                 if (projectiles_[projectileIndex].kind == ProjectileKind::Flame) {
                     SpawnHitBurst(projectilePosition, Color{255, 135, 28, 255}, 4);
+                    projectiles_[projectileIndex].lastHitEnemy = enemy.body;
                 } else {
                     SpawnHitBurst(enemyPosition, enemy.color, 10);
+                    DestroyProjectile(projectileIndex);
+                    projectileDestroyed = true;
+                    cameraShake_ = std::min(1.0f, cameraShake_ + 0.3f);
                 }
-                DestroyProjectile(projectileIndex);
-                projectileDestroyed = true;
-                cameraShake_ = std::min(1.0f, cameraShake_ + 0.3f);
 
                 if (enemy.health <= 0.0f) {
                     SpawnHitBurst(enemyPosition, Color{255, 255, 255, 255}, 20);
@@ -2006,7 +2227,9 @@ void Game::UpdateCollisions() {
                     DestroyEnemy(enemyIndex);
                 }
 
-                break;
+                if (projectiles_[projectileIndex].kind != ProjectileKind::Flame) {
+                    break;
+                }
             }
         }
 
@@ -2379,6 +2602,10 @@ void Game::SpawnEnemyOfType(EnemyType type) {
         position.y = 2.2f;
     } else if (type == EnemyType::Duelist) {
         position.y = 1.2f;
+    } else if (type == EnemyType::Dummy) {
+        position.y = 0.8f;
+    } else if (type == EnemyType::DummyBoss) {
+        position.y = 2.2f;
     }
 
     float enemyRadius = 0.65f;
@@ -2435,6 +2662,18 @@ void Game::SpawnEnemyOfType(EnemyType type) {
         speed = 4.9f;
         scoreValue = 900;
         color = Color{255, 225, 135, 255};
+    } else if (type == EnemyType::Dummy) {
+        enemyRadius = 0.65f;
+        health = config_.dummyHealth;
+        speed = RandomFloat(1.0f, 2.0f);
+        scoreValue = 0;
+        color = Color{120, 120, 130, 255};
+    } else if (type == EnemyType::DummyBoss) {
+        enemyRadius = 2.4f;
+        health = config_.bossHealth;
+        speed = 2.3f;
+        scoreValue = 0;
+        color = Color{110, 110, 125, 255};
     }
 
     PhysicsWorld::BodyConfig enemyConfig;
@@ -2626,6 +2865,33 @@ bool Game::BossAlive() const {
 
 bool Game::DuelMode() const {
     return config_.gameMode == "duel";
+}
+
+bool Game::TutorialMode() const {
+    return config_.gameMode == "tutorial";
+}
+
+void Game::RecordDummyDamage(const Enemy& enemy, float damage) {
+    for (DamageNumber& dn : damageNumbers_) {
+        if (dn.life > 0.0f && dn.enemyBody == enemy.body) {
+            dn.value += damage;
+            dn.life = dn.maxLife;
+            dn.screenYOffset = 0.0f;
+            return;
+        }
+    }
+    Vector3 pos = BodyPosition(enemy.body);
+    Vector3 up = IsSphericalMap() ? SphericalUpAt(pos) : Vector3{0.0f, 1.0f, 0.0f};
+    float hOff = enemy.radius + 0.8f;
+    Vector3 spawnPos = Vector3Add(pos, Vector3Scale(up, hOff));
+    damageNumbers_.push_back(DamageNumber{enemy.body, spawnPos, damage, 1.2f, 1.2f, 0.0f, hOff});
+}
+
+void Game::ShowTutorialTip(const char* text) {
+    strncpy(tutorialTip_, text, sizeof(tutorialTip_) - 1);
+    tutorialTip_[sizeof(tutorialTip_) - 1] = '\0';
+    tutorialTipTimer_ = 5.0f;
+    tutorialTipDuration_ = 5.0f;
 }
 
 bool Game::DuelWon() const {
@@ -2840,6 +3106,9 @@ void Game::FireHeatwave(Vector3 direction) {
 
         float falloff = 1.0f - distance / range;
         enemy.health -= config_.heatwaveDamage * (0.35f + falloff * 0.65f);
+        if (enemy.type == EnemyType::Dummy || enemy.type == EnemyType::DummyBoss) {
+            RecordDummyDamage(enemy, config_.heatwaveDamage * (0.35f + falloff * 0.65f));
+        }
         float impulse = config_.heatwaveForce * (0.45f + falloff * 0.9f);
         AddEnemyImpulse(enemy, Vector3{toEnemy.x * impulse, 0.35f + 1.15f * falloff, toEnemy.z * impulse});
         SpawnHitBurst(enemyPosition, Color{255, 155, 75, 255}, 5);
@@ -2966,6 +3235,9 @@ void Game::FireLanceThrust(Vector3 direction) {
 
         float falloff = 1.0f - std::clamp(distance / std::max(0.001f, range), 0.0f, 1.0f);
         enemy.health -= config_.recoilLanceThrustDamage * (0.35f + falloff * 0.65f);
+        if (enemy.type == EnemyType::Dummy || enemy.type == EnemyType::DummyBoss) {
+            RecordDummyDamage(enemy, config_.recoilLanceThrustDamage * (0.35f + falloff * 0.65f));
+        }
         float impulse = config_.recoilLanceThrustForce * (0.45f + falloff * 0.9f);
         AddEnemyImpulse(enemy, Vector3Scale(toEnemy, impulse));
         SpawnHitBurst(enemyPosition, Color{210, 245, 255, 255}, 8);
@@ -3034,6 +3306,9 @@ void Game::DetonateLance(Vector3 position, ProjectileOwner owner) {
             if (distance <= radius + enemy.radius) {
                 float falloff = 1.0f - std::clamp(distance / std::max(0.001f, radius), 0.0f, 1.0f);
                 enemy.health -= config_.recoilLanceShockwaveDamage * (0.25f + falloff * 0.75f);
+                if (enemy.type == EnemyType::Dummy || enemy.type == EnemyType::DummyBoss) {
+                    RecordDummyDamage(enemy, config_.recoilLanceShockwaveDamage * (0.25f + falloff * 0.75f));
+                }
                 Vector3 direction = Vector3Subtract(enemyPosition, position);
                 if (Vector3Length(direction) <= 0.001f) {
                     direction = IsSphericalMap() ? SphericalUpAt(position) : Vector3{0.0f, 1.0f, 0.0f};
@@ -3304,6 +3579,9 @@ void Game::ExplodeRocket(Vector3 position, ProjectileOwner owner) {
             if (distance <= radius + enemies_[i].radius) {
                 float falloff = 1.0f - std::clamp(distance / std::max(0.001f, radius), 0.0f, 1.0f);
                 enemies_[i].health -= config_.rocketExplosionDamage * (0.35f + falloff * 0.65f);
+                if (enemies_[i].type == EnemyType::Dummy || enemies_[i].type == EnemyType::DummyBoss) {
+                    RecordDummyDamage(enemies_[i], config_.rocketExplosionDamage * (0.35f + falloff * 0.65f));
+                }
                 SpawnHitBurst(enemyPosition, Color{255, 150, 45, 255}, 14);
                 if (enemies_[i].health <= 0.0f) {
                     score_ += enemies_[i].scoreValue;
@@ -3575,6 +3853,9 @@ void Game::UpdateBethlehem(float dt) {
         bethlehem_.position = Vector3{0.0f, config_.bethlehemOrbitAltitude, 0.0f};
     }
 
+    // In tutorial mode, keep orbital movement but skip laser attacks
+    if (TutorialMode()) return;
+
     // Laser state machine
     bethlehem_.attackTimer -= dt;
     bethlehem_.phaseTimer += dt;
@@ -3635,10 +3916,13 @@ void Game::DrawBethlehem() const {
     if (!bethlehem_.active) return;
 
     if (bethlehemModelLoaded_) {
-        DrawModel(bethlehemModel_, bethlehem_.position, 1.0f, WHITE);
+        DrawModel(bethlehemModel_, bethlehem_.position, 1.0f,
+            TutorialMode() ? Color{140, 140, 155, 255} : WHITE);
     } else {
-        DrawSphereEx(bethlehem_.position, 2.5f, 12, 10, Color{255, 210, 100, 255});
-        DrawSphereWires(bethlehem_.position, 2.8f, 14, 12, Color{255, 180, 50, 220});
+        Color mainColor = TutorialMode() ? Color{140, 140, 155, 255} : Color{255, 210, 100, 255};
+        Color wireColor = TutorialMode() ? Color{120, 120, 135, 220} : Color{255, 180, 50, 220};
+        DrawSphereEx(bethlehem_.position, 2.5f, 12, 10, mainColor);
+        DrawSphereWires(bethlehem_.position, 2.8f, 14, 12, wireColor);
     }
 
     if (bethlehem_.laserPhase == BethlehemLaserPhase::Inactive) return;
@@ -3856,7 +4140,7 @@ float Game::SphericalEnemyAltitude(EnemyType type) const {
     if (type == EnemyType::Wisp || type == EnemyType::Spitter) {
         return 1.35f;
     }
-    if (type == EnemyType::Boss) {
+    if (type == EnemyType::Boss || type == EnemyType::DummyBoss) {
         return 2.2f;
     }
     if (type == EnemyType::Duelist) {
@@ -4331,6 +4615,25 @@ void Game::DrawEnemies() const {
             Color weaponColor = enemy.weaponSlot == 2 ? Color{255, 145, 80, 255} : enemy.weaponSlot == 4 ? Color{150, 115, 255, 255} : enemy.weaponSlot == 7 ? Color{255, 220, 95, 255} : Color{155, 235, 255, 255};
             DrawSphereEx(focus, enemy.radius * 0.18f, 5, 4, weaponColor);
             DrawLine3D(position, focus, FadeColor(weaponColor, 0.85f));
+        } else if (enemy.type == EnemyType::Dummy) {
+            DrawSphereEx(position, enemy.radius, 7, 6, enemy.color);
+            DrawSphereWires(position, enemy.radius * 1.05f, 7, 6, Color{80, 80, 95, 255});
+            float crossLen = enemy.radius * 1.35f;
+            Color crossColor = Color{170, 170, 185, 180};
+            DrawLine3D(Vector3Add(position, Vector3{-crossLen, 0.0f, 0.0f}), Vector3Add(position, Vector3{crossLen, 0.0f, 0.0f}), crossColor);
+            DrawLine3D(Vector3Add(position, Vector3{0.0f, -crossLen, 0.0f}), Vector3Add(position, Vector3{0.0f, crossLen, 0.0f}), crossColor);
+            DrawLine3D(Vector3Add(position, Vector3{0.0f, 0.0f, -crossLen}), Vector3Add(position, Vector3{0.0f, 0.0f, crossLen}), crossColor);
+        } else if (enemy.type == EnemyType::DummyBoss) {
+            DrawCube(position, enemy.radius * 1.55f, enemy.radius * 1.15f, enemy.radius * 1.55f, enemy.color);
+            DrawCubeWires(position, enemy.radius * 1.75f, enemy.radius * 1.3f, enemy.radius * 1.75f, Color{55, 55, 70, 255});
+            DrawSphereEx(Vector3Add(position, Vector3{0.0f, enemy.radius * 0.85f, 0.0f}), enemy.radius * 0.72f, 8, 6, Color{160, 160, 175, 245});
+            DrawSphereWires(position, enemy.radius * (1.35f + std::sin(enemy.bobTimer * 3.0f) * 0.08f), 12, 8, Color{180, 180, 195, 220});
+            for (int i = 0; i < 6; ++i) {
+                float angle = static_cast<float>(i) / 6.0f * 6.2831853f + enemy.bobTimer * 0.7f;
+                Vector3 spike = Vector3Add(position, Vector3{std::cos(angle) * enemy.radius * 1.35f, enemy.radius * 0.35f + std::sin(angle * 2.0f) * 0.35f, std::sin(angle) * enemy.radius * 1.35f});
+                DrawLine3D(position, spike, Color{200, 200, 215, 255});
+                DrawSphereEx(spike, enemy.radius * 0.13f, 5, 4, Color{170, 170, 190, 230});
+            }
         } else {
             DrawSphereEx(position, enemy.radius, 7, 6, enemy.color);
             DrawSphereWires(position, enemy.radius * 1.05f, 7, 6, Color{30, 0, 0, 255});
@@ -4933,6 +5236,25 @@ void Game::DrawCrosshair() const {
 }
 
 void Game::DrawHud() const {
+    for (const DamageNumber& dn : damageNumbers_) {
+        Vector2 screen = GetWorldToScreenEx(dn.worldPosition, camera_, pixelWidth_, pixelHeight_);
+        int sx = static_cast<int>(screen.x), sy = static_cast<int>(screen.y);
+        if (sx > -30 && sx < pixelWidth_ + 30 && sy > -30 && sy < pixelHeight_ + 30) {
+            const char* text = TextFormat("%.0f", dn.value);
+            float dist = Vector3Distance(camera_.position, dn.worldPosition);
+            float fontSize = std::clamp(48.0f / (dist * 0.4f + 1.0f), 7.0f, 14.0f);
+            int fs = static_cast<int>(fontSize);
+            float alpha = dn.maxLife > 0.0f ? dn.life / dn.maxLife : 0.0f;
+            Color c = Color{255, 255, 255, static_cast<unsigned char>(255.0f * alpha)};
+            Color shadow = Color{0, 0, 0, static_cast<unsigned char>(200.0f * alpha)};
+            int tw = MeasureText(text, fs);
+            int drawY = sy - static_cast<int>(dn.screenYOffset);
+            DrawText(text, sx - tw / 2 + 1, drawY + 1, fs, shadow);
+            DrawText(text, sx - tw / 2 - 1, drawY - 1, fs, shadow);
+            DrawText(text, sx - tw / 2, drawY, fs, c);
+        }
+    }
+
     DrawRectangle(0, 0, pixelWidth_, 22, Color{0, 0, 0, 150});
     DrawText(TextFormat("TIME %.1f", survivalTime_), 6, 7, 8, RAYWHITE);
     DrawText(TextFormat("SCORE %d", score_), 72, 7, 8, RAYWHITE);
@@ -4945,7 +5267,8 @@ void Game::DrawHud() const {
     const char* stateText = timeStopped_ ? "STOP" : config_.invincible ? "GOD" : chargingLaser_ ? "LASER" : flightRigEnabled_ ? "FLIGHT" : skatesEnabled_ ? "SKATE" : spaceSuitEnabled_ ? "SUIT" : hasInactiveGear ? "GEAR" : grounded_ ? "GROUND" : "AIR";
     Color stateColor = timeStopped_ ? Color{190, 160, 255, 255} : config_.invincible ? Color{255, 230, 120, 255} : chargingLaser_ ? Color{120, 220, 255, 255} : flightRigEnabled_ ? Color{160, 245, 255, 255} : skatesEnabled_ ? Color{165, 255, 185, 255} : spaceSuitEnabled_ ? Color{120, 220, 255, 255} : hasInactiveGear ? Color{145, 150, 155, 255} : grounded_ ? Color{190, 255, 190, 255} : Color{180, 220, 255, 255};
     DrawText(stateText, 316, 7, 8, stateColor);
-    DrawText(eventTextTimer_ > 0.0f ? eventText_ : WaveLabel(), 6, 29, 8, eventTextTimer_ > 0.0f ? Color{255, 220, 135, 255} : Color{180, 180, 180, 255});
+    DrawText(eventTextTimer_ > 0.0f ? eventText_ : WaveLabel(), 6, 29, 8,
+        eventTextTimer_ > 0.0f ? Color{255, 220, 135, 255} : Color{180, 180, 180, 255});
     if (DuelMode() && state_ == State::Playing) {
         Color armorColor = duelArmorInvulnTimer_ > 0.0f ? Color{255, 230, 140, 255} : duelArmor_ > 0 ? Color{160, 220, 255, 255} : Color{255, 105, 95, 255};
         DrawText(TextFormat("ARMOR %d", duelArmor_), 6, 39, 8, armorColor);
@@ -4962,17 +5285,22 @@ void Game::DrawHud() const {
         int barX = 76, barY = 29, barW = 270;
         bool hasBossOrDuelist = false;
         for (const Enemy& enemy : enemies_) {
-            if (enemy.type == EnemyType::Boss || enemy.type == EnemyType::Duelist) { hasBossOrDuelist = true; break; }
+            if (enemy.type == EnemyType::Boss || enemy.type == EnemyType::Duelist
+                || enemy.type == EnemyType::DummyBoss) { hasBossOrDuelist = true; break; }
         }
         if (hasBossOrDuelist) barY = 46;
         DrawRectangle(barX, barY, barW, 6, Color{18, 10, 5, 220});
-        DrawRectangle(barX, barY, static_cast<int>(barW * bh), 6, Color{255, 190, 60, 255});
-        DrawRectangleLines(barX, barY, barW, 6, Color{255, 220, 140, 210});
-        DrawText("STAR OF BETHLEHEM", barX, barY + 9, 8, Color{255, 225, 150, 255});
+        Color bethFill = TutorialMode() ? Color{140, 140, 155, 255} : Color{255, 190, 60, 255};
+        Color bethBorder = TutorialMode() ? Color{180, 180, 195, 210} : Color{255, 220, 140, 210};
+        Color bethLabel = TutorialMode() ? Color{180, 180, 195, 255} : Color{255, 225, 150, 255};
+        DrawRectangle(barX, barY, static_cast<int>(barW * bh), 6, bethFill);
+        DrawRectangleLines(barX, barY, barW, 6, bethBorder);
+        DrawText("STAR OF BETHLEHEM", barX, barY + 9, 8, bethLabel);
     }
 
     for (const Enemy& enemy : enemies_) {
-        if (enemy.type != EnemyType::Boss && enemy.type != EnemyType::Duelist) {
+        if (enemy.type != EnemyType::Boss && enemy.type != EnemyType::Duelist
+            && enemy.type != EnemyType::DummyBoss) {
             continue;
         }
         float health = enemy.maxHealth > 0.0f ? std::clamp(enemy.health / enemy.maxHealth, 0.0f, 1.0f) : 0.0f;
@@ -4980,27 +5308,80 @@ void Game::DrawHud() const {
         int barY = 29;
         int barW = 270;
         DrawRectangle(barX, barY, barW, 6, Color{18, 10, 30, 220});
-        Color barColor = enemy.type == EnemyType::Duelist ? Color{255, 210, 105, 255} : health < 0.45f ? Color{255, 75, 160, 255} : Color{160, 115, 255, 255};
+        Color barColor = enemy.type == EnemyType::Duelist ? Color{255, 210, 105, 255}
+            : enemy.type == EnemyType::DummyBoss ? Color{140, 140, 155, 255}
+            : health < 0.45f ? Color{255, 75, 160, 255}
+            : Color{160, 115, 255, 255};
         DrawRectangle(barX, barY, static_cast<int>(barW * health), 6, barColor);
-        DrawRectangleLines(barX, barY, barW, 6, Color{230, 210, 255, 210});
-        const char* duelistWeapon = "LASER";
-        if (enemy.weaponSlot == 1) {
-            duelistWeapon = "FLAME";
-        } else if (enemy.weaponSlot == 2) {
-            duelistWeapon = "ROCKET";
-        } else if (enemy.weaponSlot == 3) {
-            duelistWeapon = "SHOT";
-        } else if (enemy.weaponSlot == 4) {
-            duelistWeapon = "NAIL";
-        } else if (enemy.weaponSlot == 5) {
-            duelistWeapon = "GAUNT";
-        } else if (enemy.weaponSlot == 6) {
-            duelistWeapon = "LANCE";
-        } else if (enemy.weaponSlot == 7) {
-            duelistWeapon = "NANO";
+        Color borderColor = enemy.type == EnemyType::DummyBoss ? Color{180, 180, 195, 210} : Color{230, 210, 255, 210};
+        DrawRectangleLines(barX, barY, barW, 6, borderColor);
+        const char* bossLabel;
+        Color labelColor;
+        if (enemy.type == EnemyType::Duelist) {
+            const char* duelistWeapon = "LASER";
+            if (enemy.weaponSlot == 1) duelistWeapon = "FLAME";
+            else if (enemy.weaponSlot == 2) duelistWeapon = "ROCKET";
+            else if (enemy.weaponSlot == 3) duelistWeapon = "SHOT";
+            else if (enemy.weaponSlot == 4) duelistWeapon = "NAIL";
+            else if (enemy.weaponSlot == 5) duelistWeapon = "GAUNT";
+            else if (enemy.weaponSlot == 6) duelistWeapon = "LANCE";
+            else if (enemy.weaponSlot == 7) duelistWeapon = "NANO";
+            bossLabel = TextFormat("DUELIST %s", duelistWeapon);
+            labelColor = Color{255, 230, 150, 255};
+        } else if (enemy.type == EnemyType::DummyBoss) {
+            bossLabel = "DUMMY LORD";
+            labelColor = Color{180, 180, 195, 255};
+        } else {
+            bossLabel = "GEOMETRY LORD";
+            labelColor = Color{230, 210, 255, 255};
         }
-        DrawText(enemy.type == EnemyType::Duelist ? TextFormat("DUELIST %s", duelistWeapon) : "GEOMETRY LORD", barX, barY + 9, 8, enemy.type == EnemyType::Duelist ? Color{255, 230, 150, 255} : Color{230, 210, 255, 255});
+        DrawText(bossLabel, barX, barY + 9, 8, labelColor);
         break;
+    }
+
+    if (showKeybindOverlay_) {
+        int px = 40, py = 60, fh = 8;
+        int panelW = 346, panelH = 130;
+        DrawRectangle(px - 8, py - 8, panelW, panelH, Color{0, 0, 0, 210});
+        DrawRectangleLines(px - 8, py - 8, panelW, panelH, Color{140, 140, 160, 180});
+        DrawText("CONTROLS  (K to close)", px + 80, py - 2, fh + 1, Color{220, 220, 240, 255});
+        py += 16;
+
+        auto Row = [&](const char* key, const char* desc, Color kc, int x) {
+            DrawText(key, x, py, fh, kc);
+            DrawText(desc, x + 66, py, fh, Color{190, 190, 205, 255});
+            py += fh + 2;
+        };
+        auto Section = [&](const char* title, int x) {
+            DrawText(title, x, py, fh, Color{120, 180, 220, 255});
+            py += fh + 3;
+        };
+        Color k = Color{255, 225, 160, 255};
+
+        int left = px, right = px + 178;
+        int startPy = py;
+        Section("MOVEMENT", left);
+        Row("W A S D", "Move", k, left);
+        Row("Space", "Jump / Fly up", k, left);
+        Row("Shift", "Run", k, left);
+        Row("Ctrl", "Fly down", k, left);
+        py += 5;
+        Section("EQUIPMENT", left);
+        Row("Z", "Space suit", k, left);
+        Row("X", "Flight rig", k, left);
+        Row("C", "Skates", k, left);
+
+        py = startPy;
+        Section("WEAPONS", right);
+        Row("1 - 8", "Select weapon", k, right);
+        Row("LMB", "Fire", k, right);
+        Row("RMB", "Alt / mode toggle", k, right);
+        Row("Wheel", "Switch / adjust", k, right);
+        py += 5;
+        Section("SYSTEM", right);
+        Row("P", "Hide HUD", k, right);
+        Row("R", "Restart", k, right);
+        Row("K", "Keybindings", k, right);
     }
 
     if (state_ == State::Dead) {
@@ -5011,5 +5392,54 @@ void Game::DrawHud() const {
         DrawRectangle(0, 0, pixelWidth_, pixelHeight_, Color{80, 0, 0, 90});
         DrawText(title, pixelWidth_ / 2 - titleWidth / 2, pixelHeight_ / 2 - 20, 20, Color{255, 230, 220, 255});
         DrawText(hint, pixelWidth_ / 2 - hintWidth / 2, pixelHeight_ / 2 + 10, 9, Color{220, 220, 220, 255});
+    }
+
+    if (tutorialTipTimer_ > 0.0f && tutorialTip_[0] != '\0') {
+        float elapsed = tutorialTipDuration_ - tutorialTipTimer_;
+        float fadeIn = elapsed < 0.4f ? elapsed / 0.4f : 1.0f;
+        float fadeOut = tutorialTipTimer_ < 0.6f ? tutorialTipTimer_ / 0.6f : 1.0f;
+        float alpha = fadeIn * fadeOut;
+        Color tipColor = Color{255, 230, 140, static_cast<unsigned char>(255.0f * alpha)};
+        Color barColor = Color{0, 0, 0, static_cast<unsigned char>(90.0f * alpha)};
+        if (cjkFontLoaded_) {
+            constexpr float kFontSize = 12.0f;
+            constexpr float kLineGap = 5.0f;
+            constexpr float kBarPad = 12.0f;
+            // Split on '\n'
+            const char* line1 = tutorialTip_;
+            const char* line2 = strchr(tutorialTip_, '\n');
+            char line2Buf[256] = {};
+            if (line2) {
+                size_t len1 = line2 - line1;
+                if (len1 < sizeof(line2Buf)) {
+                    memcpy(line2Buf, line1, len1);
+                    line2Buf[len1] = '\0';
+                    line1 = line2Buf;
+                }
+                line2 = line2 + 1;
+            }
+            float w1 = MeasureTextEx(cjkFont_, line1, kFontSize, 1.0f).x;
+            float w2 = line2 ? MeasureTextEx(cjkFont_, line2, kFontSize, 1.0f).x : 0.0f;
+            float barH = line2 ? kBarPad * 2 + kFontSize * 2 + kLineGap : kBarPad * 2 + kFontSize;
+            float barY = static_cast<float>(pixelHeight_) - barH;
+            DrawRectangle(0, static_cast<int>(barY), pixelWidth_, static_cast<int>(barH), barColor);
+            float y1 = barY + kBarPad;
+            DrawTextEx(cjkFont_, line1, Vector2{pixelWidth_ / 2.0f - w1 / 2.0f, y1}, kFontSize, 1.0f, tipColor);
+            if (line2) {
+                DrawTextEx(cjkFont_, line2, Vector2{pixelWidth_ / 2.0f - w2 / 2.0f, y1 + kFontSize + kLineGap}, kFontSize, 1.0f, tipColor);
+            }
+        } else {
+            DrawRectangle(0, pixelHeight_ - 38, pixelWidth_, 38, barColor);
+            int tw = MeasureText(tutorialTip_, 9);
+            DrawText(tutorialTip_, pixelWidth_ / 2 - tw / 2, pixelHeight_ - 28, 9, tipColor);
+        }
+    }
+
+    if (TutorialMode() && !hideUI_ && !showKeybindOverlay_) {
+        const char* kHint = "K: Controls";
+        int kw = MeasureText(kHint, 9);
+        int kx = pixelWidth_ - kw - 8, ky = pixelHeight_ - 120;
+        DrawRectangle(kx - 3, ky - 1, kw + 6, 11, Color{0, 0, 0, 140});
+        DrawText(kHint, kx, ky, 9, Color{255, 235, 140, 230});
     }
 }

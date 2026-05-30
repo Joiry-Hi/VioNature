@@ -120,7 +120,9 @@ private:
         Harrier,
         Blinker,
         Boss,
-        Duelist
+        Duelist,
+        Dummy,
+        DummyBoss
     };
 
     enum class State {
@@ -147,6 +149,7 @@ private:
         Vector3 storedVelocity = {};
         ProjectileOwner owner = ProjectileOwner::Player;
         bool frozen = false;
+        JPH::BodyID lastHitEnemy;
     };
 
     struct Beam {
@@ -178,6 +181,16 @@ private:
         Vector3 externalVelocity = {};
         Vector3 storedVelocity = {};
         bool frozen = false;
+    };
+
+    struct DamageNumber {
+        JPH::BodyID enemyBody;
+        Vector3 worldPosition = {};
+        float value = 0.0f;
+        float life = 0.0f;
+        float maxLife = 1.2f;
+        float screenYOffset = 0.0f;
+        float heightOffset = 0.0f;
     };
 
     struct Particle {
@@ -303,7 +316,10 @@ private:
     void SpawnEnemyOfType(EnemyType type);
     bool BossAlive() const;
     bool DuelMode() const;
+    bool TutorialMode() const;
     bool DuelWon() const;
+    void ShowTutorialTip(const char* text);
+    void RecordDummyDamage(const Enemy& enemy, float damage);
     void FireBossRing(Vector3 position, int count, float speedScale);
     void UpdateDuelist(Enemy& enemy, Vector3 position, Vector3 direction, float dt, float& speed, bool& skipVelocity);
     void SwitchDuelistWeapon(Enemy& enemy, float distance);
@@ -409,6 +425,7 @@ private:
     std::vector<Projectile> projectiles_;
     std::vector<Enemy> enemies_;
     std::vector<Particle> particles_;
+    std::vector<DamageNumber> damageNumbers_;
     std::vector<Beam> beams_;
     std::vector<Shockwave> shockwaves_;
     std::vector<HeatwavePulse> heatwaves_;
@@ -456,6 +473,16 @@ private:
     GauntletMode gauntletMode_ = GauntletMode::TimeStop;
     float blinkDistanceScale_ = 1.0f;
     bool timeStopped_ = false;
+    bool weaponTipShown_[8] = {};
+    bool showKeybindOverlay_ = false;
+    char tutorialTip_[256] = {};
+    float tutorialTipTimer_ = 0.0f;
+    float tutorialTipDuration_ = 0.0f;
+    float tutorialHintTimer_ = 8.0f;
+    int tutorialHintIndex_ = 0;
+    float configReminderTimer_ = 90.0f;
+    int configReminderIndex_ = 0;
+    bool pickupTipShown_[3] = {};
     float timeStopTintTimer_ = 0.0f;
     float fireCooldown_ = 0.0f;
     bool chargingLaser_ = false;
@@ -478,6 +505,8 @@ private:
     BethlehemBoss bethlehem_;
     Model bethlehemModel_;
     bool bethlehemModelLoaded_ = false;
+    Font cjkFont_ = {};
+    bool cjkFontLoaded_ = false;
     bool duelWon_ = false;
     float nextMixedEventTime_ = 104.0f;
     int duelArmor_ = 0;

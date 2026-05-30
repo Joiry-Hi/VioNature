@@ -219,6 +219,10 @@ GameplayConfig LoadGameplayConfig(const char* path) {
         {"bethlehem_laser_range", &config.bethlehemLaserRange},
         {"bethlehem_laser_damage", &config.bethlehemLaserDamage},
         {"bethlehem_laser_rotate_speed", &config.bethlehemLaserRotateSpeed},
+        {"dummy_health", &config.dummyHealth},
+        {"dummy_spawn_interval", &config.dummySpawnInterval},
+        {"dummy_boss_spawn_time", &config.dummyBossSpawnTime},
+        {"dummy_bethlehem_spawn_time", &config.dummyBethlehemSpawnTime},
     };
 
     std::string line;
@@ -267,6 +271,11 @@ GameplayConfig LoadGameplayConfig(const char* path) {
             int parsed = 3;
             if (ParseInt(value, parsed)) {
                 config.droneMaxCount = parsed;
+            }
+        } else if (key == "dummy_max_count") {
+            int parsed = 6;
+            if (ParseInt(value, parsed)) {
+                config.dummyMaxCount = parsed;
             }
         } else if (key == "invincible") {
             bool parsed = false;
@@ -432,5 +441,10 @@ GameplayConfig LoadGameplayConfig(const char* path) {
     config.bethlehemLaserRange = std::max(2.0f, config.bethlehemLaserRange);
     config.bethlehemLaserDamage = std::max(0.0f, config.bethlehemLaserDamage);
     config.bethlehemLaserRotateSpeed = std::max(0.0f, config.bethlehemLaserRotateSpeed);
+    config.dummyHealth = std::max(1.0f, config.dummyHealth);
+    config.dummySpawnInterval = std::max(0.5f, config.dummySpawnInterval);
+    config.dummyBossSpawnTime = std::max(1.0f, config.dummyBossSpawnTime);
+    config.dummyBethlehemSpawnTime = std::max(1.0f, config.dummyBethlehemSpawnTime);
+    config.dummyMaxCount = std::max(0, config.dummyMaxCount);
     return config;
 }
