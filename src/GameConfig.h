@@ -35,6 +35,8 @@ struct GameplayConfig {
     float shotgunPelletDamage = 0.42f;
     float shotgunRecoilImpulse = 13.0f;
     float shotgunRecoilVerticalBonus = 5.5f;
+    int shotgunPelletCount = 9;
+    int shotgunShardCount = 5;
     float rocketJumpImpulse = 18.0f;
     float rocketJumpRadius = 5.2f;
     float enemyShotDamage = 1.0f;
@@ -79,6 +81,13 @@ struct GameplayConfig {
     float glassShardDamage = 0.78f;
     float glassShardSpeed = 72.0f;
     float glassShardRecoilScale = 0.72f;
+    float glassShardLingerTime = 2.0f;
+    float glassShardDrag = 0.0f;
+    float glassShardLingerHeight = 1.5f;
+    float glassShardCloudRadius = 3.0f;
+    float glassShardSeparationRadius = 1.0f;
+    float glassShardCenterForce = 2.0f;
+    float glassShardCloudFormTime = 1.5f;
     float recoilLanceDamage = 3.2f;
     float recoilLanceSpeed = 92.0f;
     float recoilLanceImpulse = 20.0f;
@@ -106,6 +115,8 @@ struct GameplayConfig {
     float riftPlatformThickness = 0.45f;
     float blinkDistance = 12.0f;
     float blinkClearRadius = 8.0f;
+    float blinkDistanceMin = 0.25f;
+    float blinkDistanceMax = 3.0f;
     bool timeStopEnabled = true;
     bool blinkEnabled = true;
     bool bossRushMode = false;

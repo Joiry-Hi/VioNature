@@ -153,6 +153,13 @@ GameplayConfig LoadGameplayConfig(const char* path) {
         {"glass_shard_damage", &config.glassShardDamage},
         {"glass_shard_speed", &config.glassShardSpeed},
         {"glass_shard_recoil_scale", &config.glassShardRecoilScale},
+        {"glass_shard_linger_time", &config.glassShardLingerTime},
+        {"glass_shard_drag", &config.glassShardDrag},
+        {"glass_shard_linger_height", &config.glassShardLingerHeight},
+        {"glass_shard_cloud_radius", &config.glassShardCloudRadius},
+        {"glass_shard_separation_radius", &config.glassShardSeparationRadius},
+        {"glass_shard_center_force", &config.glassShardCenterForce},
+        {"glass_shard_cloud_form_time", &config.glassShardCloudFormTime},
         {"recoil_lance_damage", &config.recoilLanceDamage},
         {"recoil_lance_speed", &config.recoilLanceSpeed},
         {"recoil_lance_impulse", &config.recoilLanceImpulse},
@@ -180,6 +187,8 @@ GameplayConfig LoadGameplayConfig(const char* path) {
         {"rift_platform_thickness", &config.riftPlatformThickness},
         {"blink_distance", &config.blinkDistance},
         {"blink_clear_radius", &config.blinkClearRadius},
+        {"blink_distance_min", &config.blinkDistanceMin},
+        {"blink_distance_max", &config.blinkDistanceMax},
         {"drone_canister_speed", &config.droneCanisterSpeed},
         {"drone_canister_gravity", &config.droneCanisterGravity},
         {"drone_lifetime", &config.droneLifetime},
@@ -248,6 +257,12 @@ GameplayConfig LoadGameplayConfig(const char* path) {
             if (ParseInt(value, parsed)) {
                 config.duelPlayerArmor = parsed;
             }
+        } else if (key == "shotgun_pellet_count") {
+            int parsed = 9;
+            if (ParseInt(value, parsed)) { config.shotgunPelletCount = parsed; }
+        } else if (key == "shotgun_shard_count") {
+            int parsed = 5;
+            if (ParseInt(value, parsed)) { config.shotgunShardCount = parsed; }
         } else if (key == "drone_max_count") {
             int parsed = 3;
             if (ParseInt(value, parsed)) {
@@ -348,6 +363,13 @@ GameplayConfig LoadGameplayConfig(const char* path) {
     config.glassShardDamage = std::max(0.0f, config.glassShardDamage);
     config.glassShardSpeed = std::max(0.0f, config.glassShardSpeed);
     config.glassShardRecoilScale = std::max(0.0f, config.glassShardRecoilScale);
+    config.glassShardLingerTime = std::max(0.0f, config.glassShardLingerTime);
+    config.glassShardDrag = std::clamp(config.glassShardDrag, 0.0f, 20.0f);
+    config.glassShardLingerHeight = std::max(0.1f, config.glassShardLingerHeight);
+    config.glassShardCloudRadius = std::max(0.3f, config.glassShardCloudRadius);
+    config.glassShardSeparationRadius = std::max(0.1f, config.glassShardSeparationRadius);
+    config.glassShardCenterForce = std::max(0.0f, config.glassShardCenterForce);
+    config.glassShardCloudFormTime = std::max(0.0f, config.glassShardCloudFormTime);
     config.recoilLanceDamage = std::max(0.0f, config.recoilLanceDamage);
     config.recoilLanceSpeed = std::max(0.0f, config.recoilLanceSpeed);
     config.recoilLanceImpulse = std::max(0.0f, config.recoilLanceImpulse);
@@ -375,8 +397,12 @@ GameplayConfig LoadGameplayConfig(const char* path) {
     config.riftPlatformThickness = std::max(0.1f, config.riftPlatformThickness);
     config.blinkDistance = std::max(0.0f, config.blinkDistance);
     config.blinkClearRadius = std::max(0.1f, config.blinkClearRadius);
+    config.blinkDistanceMin = std::max(0.1f, config.blinkDistanceMin);
+    config.blinkDistanceMax = std::max(config.blinkDistanceMin, config.blinkDistanceMax);
     config.droneCanisterSpeed = std::max(6.0f, config.droneCanisterSpeed);
     config.droneCanisterGravity = std::clamp(config.droneCanisterGravity, 0.0f, 1.5f);
+    config.shotgunPelletCount = std::max(1, config.shotgunPelletCount);
+    config.shotgunShardCount = std::max(1, config.shotgunShardCount);
     config.droneMaxCount = std::max(1, config.droneMaxCount);
     config.droneLifetime = std::max(5.0f, config.droneLifetime);
     config.droneDeployTime = std::max(0.2f, config.droneDeployTime);

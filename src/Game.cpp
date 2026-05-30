@@ -150,6 +150,8 @@ void Game::Reset() {
     riftCutterMode_ = RiftCutterMode::BladeWave;
     recoilLanceMode_ = RecoilLanceMode::Throw;
     riftPlatformRangeScale_ = 1.0f;
+    gauntletMode_ = GauntletMode::TimeStop;
+    blinkDistanceScale_ = 1.0f;
     timeStopped_ = false;
     timeStopTintTimer_ = 0.0f;
     fireCooldown_ = 0.0f;
@@ -620,8 +622,11 @@ void Game::UpdateWeaponSwitching() {
     bool wheelAdjustedPlatformRange = false;
     if (wheel != 0.0f && activeWeapon_ == WeaponType::RiftCutter && riftCutterMode_ == RiftCutterMode::Platform) {
         riftPlatformRangeScale_ = std::clamp(riftPlatformRangeScale_ + (wheel > 0.0f ? 0.08f : -0.08f), 0.35f, 1.85f);
-        eventText_ = TextFormat("PLATFORM %.1fm", config_.riftPlatformRange * riftPlatformRangeScale_);
-        eventTextTimer_ = 0.75f;
+        wheelAdjustedPlatformRange = true;
+    }
+    if (wheel != 0.0f && activeWeapon_ == WeaponType::InfinityGauntlet && gauntletMode_ == GauntletMode::Blink) {
+        constexpr float kBlinkStep = 1.2f;
+        blinkDistanceScale_ = std::clamp(blinkDistanceScale_ * (wheel > 0.0f ? kBlinkStep : 1.0f / kBlinkStep), config_.blinkDistanceMin, config_.blinkDistanceMax);
         wheelAdjustedPlatformRange = true;
     }
     if (IsKeyPressed(KEY_ONE)) {
@@ -678,7 +683,7 @@ void Game::UpdateWeaponSwitching() {
         }
     }
 
-    if (activeWeapon_ != WeaponType::Laser && activeWeapon_ != WeaponType::InfinityGauntlet && IsMouseButtonReleased(MOUSE_BUTTON_RIGHT) && rightMouseHeld_ < 0.22f) {
+    if (activeWeapon_ != WeaponType::Laser && IsMouseButtonReleased(MOUSE_BUTTON_RIGHT) && rightMouseHeld_ < 0.22f) {
         if (activeWeapon_ == WeaponType::Flamethrower) {
             flamethrowerMode_ = flamethrowerMode_ == FlamethrowerMode::FlameBall ? FlamethrowerMode::Heatwave : FlamethrowerMode::FlameBall;
             eventText_ = flamethrowerMode_ == FlamethrowerMode::Heatwave ? "HEATWAVE" : "FLAME BALL";
@@ -702,6 +707,10 @@ void Game::UpdateWeaponSwitching() {
         } else if (activeWeapon_ == WeaponType::RiftCutter) {
             riftCutterMode_ = riftCutterMode_ == RiftCutterMode::BladeWave ? RiftCutterMode::Platform : RiftCutterMode::BladeWave;
             eventText_ = riftCutterMode_ == RiftCutterMode::Platform ? "NANO PLATFORM" : "BLADE WAVE";
+            eventTextTimer_ = 1.4f;
+        } else if (activeWeapon_ == WeaponType::InfinityGauntlet) {
+            gauntletMode_ = gauntletMode_ == GauntletMode::TimeStop ? GauntletMode::Blink : GauntletMode::TimeStop;
+            eventText_ = gauntletMode_ == GauntletMode::Blink ? "BLINK" : "TIME STOP";
             eventTextTimer_ = 1.4f;
         }
     }
@@ -729,11 +738,14 @@ void Game::UpdateShooting(float dt) {
     }
 
     if (activeWeapon_ == WeaponType::InfinityGauntlet) {
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && config_.timeStopEnabled) {
-            ToggleTimeStop();
-        }
-        if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && config_.blinkEnabled) {
-            Blink();
+        if (gauntletMode_ == GauntletMode::TimeStop) {
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && config_.timeStopEnabled) {
+                ToggleTimeStop();
+            }
+        } else {
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && config_.blinkEnabled) {
+                Blink();
+            }
         }
         return;
     }
@@ -793,17 +805,16 @@ void Game::UpdateShooting(float dt) {
         }
     } else if (activeWeapon_ == WeaponType::Shotgun) {
         if (shotgunMode_ == ShotgunMode::GlassShard) {
-            for (int i = 0; i < 5; ++i) {
+            for (int i = 0; i < config_.shotgunShardCount; ++i) {
                 float side = RandomFloat(-0.09f, 0.09f);
                 float lift = RandomFloat(-0.055f, 0.055f);
                 Vector3 direction = Vector3Normalize(Vector3Add(forward, Vector3Add(Vector3Scale(right, side), Vector3Scale(up, lift))));
-                FireProjectile(ProjectileKind::GlassShard, direction, config_.glassShardSpeed, config_.glassShardDamage, 0.95f, 0.13f, 0.13f, Color{190, 245, 255, 255});
-                projectiles_.back().bouncesLeft = 1;
+                FireProjectile(ProjectileKind::GlassShard, direction, config_.glassShardSpeed, config_.glassShardDamage, config_.glassShardLingerTime, 0.13f, 0.13f, Color{190, 245, 255, 255});
             }
             ApplyShotgunRecoil(Vector3Scale(forward, config_.glassShardRecoilScale));
             fireCooldown_ = 0.72f;
         } else {
-            for (int i = 0; i < 9; ++i) {
+            for (int i = 0; i < config_.shotgunPelletCount; ++i) {
                 float side = RandomFloat(-0.18f, 0.18f);
                 float lift = RandomFloat(-0.12f, 0.12f);
                 Vector3 direction = Vector3Normalize(Vector3Add(forward, Vector3Add(Vector3Scale(right, side), Vector3Scale(up, lift))));
@@ -1365,6 +1376,16 @@ void Game::UpdateProjectiles(float dt) {
             projectile.radius = projectile.maxRadius * (0.25f + age * 0.75f);
         }
 
+        if (projectile.kind == ProjectileKind::GlassShard && config_.glassShardDrag > 0.0f) {
+            JPH::Vec3 vel = physics_.Bodies().GetLinearVelocity(projectile.body);
+            float speed = vel.Length();
+            if (speed > 0.01f) {
+                float dragFactor = 1.0f - config_.glassShardDrag * dt;
+                if (dragFactor < 0.0f) dragFactor = 0.0f;
+                physics_.Bodies().SetLinearVelocity(projectile.body, vel * dragFactor);
+            }
+        }
+
         if (projectile.owner == ProjectileOwner::Enemy && projectile.kind != ProjectileKind::EnemyShot && EnemyTouchesPlayer(position, projectile.radius)) {
             if (projectile.kind == ProjectileKind::Rocket) {
                 ExplodeRocket(position, projectile.owner);
@@ -1413,47 +1434,6 @@ void Game::UpdateProjectiles(float dt) {
                 SpawnHitBurst(corrected, projectile.color, 3);
             }
             expired = projectile.life <= 0.0f || outOfBounds;
-        }
-        if (projectile.kind == ProjectileKind::GlassShard && projectile.bouncesLeft > 0) {
-            bool bounced = false;
-            JPH::Vec3 velocity = physics_.Bodies().GetLinearVelocity(projectile.body);
-            if (IsSphericalMap()) {
-                Vector3 up = SphericalUpAt(position);
-                Vector3 rayVelocity = ToRayVector(velocity);
-                float inwardSpeed = Vector3DotProduct(rayVelocity, up);
-                bool shardTouchesSurface = IsHollowWorldMap()
-                    ? Vector3Length(position) >= SphericalRadius() - 0.28f
-                    : Vector3Length(position) <= SphericalRadius() + 0.28f;
-                if (shardTouchesSurface && inwardSpeed < 0.0f) {
-                    rayVelocity = Vector3Subtract(rayVelocity, Vector3Scale(up, inwardSpeed * 1.72f));
-                    rayVelocity = Vector3Add(rayVelocity, Vector3Scale(up, 2.0f));
-                    velocity = ToJoltVelocity(rayVelocity);
-                    bounced = true;
-                }
-            } else if (position.y <= 0.24f && velocity.GetY() < 0.0f) {
-                velocity.SetY(std::abs(velocity.GetY()) * 0.72f + 3.0f);
-                bounced = true;
-            }
-            bool hitBoundary = !IsSphericalMap() && (IsSquareMap()
-                ? (std::abs(position.x) > squareHalfExtent_ - 0.4f || std::abs(position.z) > squareHalfExtent_ - 0.4f)
-                : DistanceXZ(position, Vector3Zero()) > arenaRadius_ - 0.4f);
-            if (hitBoundary) {
-                Vector3 normal = IsSquareMap()
-                    ? Vector3{std::abs(position.x) > std::abs(position.z) ? (position.x > 0.0f ? -1.0f : 1.0f) : 0.0f, 0.0f, std::abs(position.z) >= std::abs(position.x) ? (position.z > 0.0f ? -1.0f : 1.0f) : 0.0f}
-                    : Vector3Normalize(Vector3{-position.x, 0.0f, -position.z});
-                Vector3 rayVelocity = ToRayVector(velocity);
-                float intoWall = Vector3DotProduct(rayVelocity, normal);
-                if (intoWall > 0.0f) {
-                    rayVelocity = Vector3Subtract(rayVelocity, Vector3Scale(normal, intoWall * 2.0f));
-                    velocity = JPH::Vec3(rayVelocity.x, rayVelocity.y, rayVelocity.z);
-                    bounced = true;
-                }
-            }
-            if (bounced) {
-                physics_.Bodies().SetLinearVelocity(projectile.body, velocity);
-                projectile.bouncesLeft -= 1;
-                SpawnHitBurst(position, Color{190, 245, 255, 255}, 5);
-            }
         }
 
         if (expired && projectile.kind == ProjectileKind::GravityNail) {
@@ -1505,6 +1485,74 @@ void Game::UpdateProjectiles(float dt) {
         }
 
         ++i;
+    }
+
+    // Glass shard dust cloud boids (only affect slow / lingering shards)
+    if (config_.glassShardCenterForce > 0.0f || config_.glassShardSeparationRadius > 0.0f) {
+        constexpr float kCloudSpeedThreshold = 8.0f;
+        float formTime = config_.glassShardCloudFormTime;
+        // Collect shards still in the active cloud-forming phase
+        int cloudCount = 0;
+        Vector3 cloudCenter = {};
+        for (const Projectile& p : projectiles_) {
+            if (p.kind != ProjectileKind::GlassShard) continue;
+            float age = p.maxLife - p.life;
+            if (formTime > 0.0f && age >= formTime) continue;  // frozen
+            JPH::Vec3 vel = physics_.Bodies().GetLinearVelocity(p.body);
+            if (vel.Length() > kCloudSpeedThreshold) continue;
+            cloudCenter = Vector3Add(cloudCenter, BodyPosition(p.body));
+            cloudCount++;
+        }
+        if (cloudCount >= 2) {
+            cloudCenter = Vector3Scale(cloudCenter, 1.0f / static_cast<float>(cloudCount));
+            if (!IsSphericalMap()) {
+                cloudCenter.y = config_.glassShardLingerHeight;
+            } else {
+                cloudCenter = SphericalSurfacePoint(cloudCenter, config_.glassShardLingerHeight);
+            }
+            float cloudR = config_.glassShardCloudRadius;
+            float sepR = config_.glassShardSeparationRadius;
+            float centerF = config_.glassShardCenterForce;
+            for (Projectile& p : projectiles_) {
+                if (p.kind != ProjectileKind::GlassShard) continue;
+                float age = p.maxLife - p.life;
+                if (formTime > 0.0f && age >= formTime) continue;
+                JPH::Vec3 vel = physics_.Bodies().GetLinearVelocity(p.body);
+                if (vel.Length() > kCloudSpeedThreshold) continue;
+                Vector3 pos = BodyPosition(p.body);
+                Vector3 force = {};
+                Vector3 toCenter = Vector3Subtract(cloudCenter, pos);
+                float distToCenter = Vector3Length(toCenter);
+                if (distToCenter > cloudR && distToCenter > 0.001f) {
+                    force = Vector3Add(force, Vector3Scale(Vector3Normalize(toCenter), centerF * std::min((distToCenter - cloudR) / cloudR, 2.0f)));
+                }
+                if (sepR > 0.0f) {
+                    for (const Projectile& other : projectiles_) {
+                        if (&other == &p) continue;
+                        if (other.kind != ProjectileKind::GlassShard) continue;
+                        float otherAge = other.maxLife - other.life;
+                        if (formTime > 0.0f && otherAge >= formTime) continue;
+                        JPH::Vec3 otherVel = physics_.Bodies().GetLinearVelocity(other.body);
+                        if (otherVel.Length() > kCloudSpeedThreshold) continue;
+                        Vector3 otherPos = BodyPosition(other.body);
+                        Vector3 away = Vector3Subtract(pos, otherPos);
+                        float dist = Vector3Length(away);
+                        if (dist < sepR && dist > 0.001f) {
+                            force = Vector3Add(force, Vector3Scale(Vector3Normalize(away), centerF * 0.8f * (1.0f - dist / sepR)));
+                        }
+                    }
+                }
+                if (Vector3Length(force) > 0.001f) {
+                    JPH::Vec3 newVel = vel + ToJoltVelocity(Vector3Scale(force, dt));
+                    float speed = newVel.Length();
+                    if (speed > 4.0f) newVel = newVel / speed * 4.0f;
+                    physics_.Bodies().SetLinearVelocity(p.body, newVel);
+                } else if (age >= formTime * 0.5f) {
+                    // Freeze shards that have been forming long enough and are stable
+                    physics_.Bodies().SetLinearVelocity(p.body, JPH::Vec3::sZero());
+                }
+            }
+        }
     }
 }
 
@@ -2707,10 +2755,7 @@ void Game::FireDuelistWeapon(Enemy& enemy, Vector3 position, Vector3 toPlayer) {
             float side = RandomFloat(glass ? -0.08f : -0.16f, glass ? 0.08f : 0.16f);
             float lift = RandomFloat(glass ? -0.045f : -0.08f, glass ? 0.055f : 0.08f);
             Vector3 direction = Vector3Normalize(Vector3Add(aimDirection, Vector3Add(Vector3Scale(right, side), Vector3Scale(up, lift))));
-            FireEnemyProjectile(glass ? ProjectileKind::GlassShard : ProjectileKind::Pellet, origin, direction, glass ? config_.glassShardSpeed * 0.78f : RandomFloat(42.0f, 50.0f), glass ? config_.glassShardDamage : config_.shotgunPelletDamage, glass ? 0.95f : 0.58f, glass ? 0.13f : 0.1f, glass ? 0.13f : 0.1f, glass ? Color{190, 245, 255, 255} : Color{255, 205, 130, 255});
-            if (glass) {
-                projectiles_.back().bouncesLeft = 1;
-            }
+            FireEnemyProjectile(glass ? ProjectileKind::GlassShard : ProjectileKind::Pellet, origin, direction, glass ? config_.glassShardSpeed * 0.78f : RandomFloat(42.0f, 50.0f), glass ? config_.glassShardDamage : config_.shotgunPelletDamage, glass ? config_.glassShardLingerTime : 0.58f, glass ? 0.13f : 0.1f, glass ? 0.13f : 0.1f, glass ? Color{190, 245, 255, 255} : Color{255, 205, 130, 255});
         }
         AddEnemyImpulse(enemy, Vector3Scale(aimDirection, -5.0f));
         enemy.cooldownTimer = (glass ? 1.05f : 0.82f) / rate;
@@ -3117,7 +3162,7 @@ void Game::RestoreDynamicObjects() {
 void Game::Blink() {
     Vector3 start = camera_.position;
     Vector3 forward = PlayerForward();
-    float travel = config_.blinkDistance;
+    float travel = config_.blinkDistance * blinkDistanceScale_;
     float maxDistance = arenaRadius_ - playerRadius_;
     if (!IsSphericalMap()) {
         Vector3 flatStart = Vector3{start.x, 0.0f, start.z};
@@ -3867,7 +3912,8 @@ const char* Game::WeaponModeName() const {
         return gravityNailerMode_ == GravityNailerMode::BlackHole ? "BH" : "N";
     }
     if (activeWeapon_ == WeaponType::InfinityGauntlet) {
-        return timeStopped_ ? "T" : "B";
+        if (timeStopped_) return "T";
+        return gauntletMode_ == GauntletMode::Blink ? "B" : "TS";
     }
     if (activeWeapon_ == WeaponType::RiftCutter) {
         return riftCutterMode_ == RiftCutterMode::Platform ? "P" : "B";
@@ -3953,6 +3999,7 @@ void Game::Draw() const {
     DrawRifts();
     DrawParticles();
     DrawRallyMarker();
+    DrawBlinkIndicator();
     if (!fireControlActive_ && !hideUI_) DrawWeapon();
     EndMode3D();
 
@@ -4723,6 +4770,44 @@ void Game::DrawRallyMarker() const {
     }
 }
 
+void Game::DrawBlinkIndicator() const {
+    if (activeWeapon_ != WeaponType::InfinityGauntlet || gauntletMode_ != GauntletMode::Blink) return;
+    Vector3 start = camera_.position;
+    Vector3 forward = PlayerForward();
+    float travel = config_.blinkDistance * blinkDistanceScale_;
+    // Clamp travel to arena boundaries (simplified, mirrors Blink() logic)
+    if (!IsSphericalMap()) {
+        float maxDistance = arenaRadius_ - playerRadius_;
+        Vector3 flatStart = Vector3{start.x, 0.0f, start.z};
+        Vector3 flatForward = Vector3{forward.x, 0.0f, forward.z};
+        float a = Vector3DotProduct(flatForward, flatForward);
+        if (a > 0.0001f) {
+            float b = 2.0f * Vector3DotProduct(flatStart, flatForward);
+            float c = Vector3DotProduct(flatStart, flatStart) - maxDistance * maxDistance;
+            float det = b * b - 4.0f * a * c;
+            if (det >= 0.0f) {
+                float boundaryT = (-b + std::sqrt(det)) / (2.0f * a);
+                if (boundaryT >= 0.0f) travel = std::min(travel, std::max(0.0f, boundaryT - 0.15f));
+            }
+        }
+    }
+    Vector3 target = Vector3Add(start, Vector3Scale(forward, travel));
+    // Clamp Y for flat maps
+    if (!IsSphericalMap()) {
+        target.y = std::max(playerRadius_, std::min(target.y, config_.flightMaxAltitude));
+        if (IsSquareMap()) {
+            target.x = std::clamp(target.x, -squareHalfExtent_ + playerRadius_, squareHalfExtent_ - playerRadius_);
+            target.z = std::clamp(target.z, -squareHalfExtent_ + playerRadius_, squareHalfExtent_ - playerRadius_);
+        }
+    }
+    // Three mutually perpendicular dashed circles forming a sphere outline
+    float r = 1.2f;
+    Color c = FadeColor(Color{175, 130, 255, 255}, 0.55f);
+    DrawDashedCircle3D(target, r, Vector3{1.0f, 0.0f, 0.0f}, c);  // YZ plane
+    DrawDashedCircle3D(target, r, Vector3{0.0f, 1.0f, 0.0f}, c);  // XZ plane
+    DrawDashedCircle3D(target, r, Vector3{0.0f, 0.0f, 1.0f}, c);  // XY plane
+}
+
 void Game::DrawFireControlOverlay() const {
     int w = pixelWidth_;
     int h = pixelHeight_;
@@ -4864,6 +4949,10 @@ void Game::DrawHud() const {
     if (DuelMode() && state_ == State::Playing) {
         Color armorColor = duelArmorInvulnTimer_ > 0.0f ? Color{255, 230, 140, 255} : duelArmor_ > 0 ? Color{160, 220, 255, 255} : Color{255, 105, 95, 255};
         DrawText(TextFormat("ARMOR %d", duelArmor_), 6, 39, 8, armorColor);
+    }
+    if (activeWeapon_ == WeaponType::InfinityGauntlet && gauntletMode_ == GauntletMode::Blink) {
+        const char* blinkText = TextFormat("BLINK %.1fm", config_.blinkDistance * blinkDistanceScale_);
+        DrawText(blinkText, 100, 117, 8, Color{190, 160, 255, 255});
     }
     const char* fpsText = TextFormat("FPS %d", GetFPS());
     DrawText(fpsText, pixelWidth_ - MeasureText(fpsText, 8) - 6, 7, 8, Color{170, 230, 170, 255});

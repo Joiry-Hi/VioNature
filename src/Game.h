@@ -49,6 +49,11 @@ private:
         GlassShard
     };
 
+    enum class GauntletMode {
+        TimeStop,
+        Blink
+    };
+
     enum class GravityNailerMode {
         Nail,
         BlackHole
@@ -383,6 +388,7 @@ private:
     void DrawDrones() const;
     void DrawRallyMarker() const;
     void DrawDashedCircle3D(Vector3 center, float radius, Vector3 normal, Color color) const;
+    void DrawBlinkIndicator() const;
     void DrawFireControlOverlay() const;
     void DrawParticles() const;
     void DrawWeapon() const;
@@ -447,6 +453,8 @@ private:
     RiftCutterMode riftCutterMode_ = RiftCutterMode::BladeWave;
     RecoilLanceMode recoilLanceMode_ = RecoilLanceMode::Throw;
     float riftPlatformRangeScale_ = 1.0f;
+    GauntletMode gauntletMode_ = GauntletMode::TimeStop;
+    float blinkDistanceScale_ = 1.0f;
     bool timeStopped_ = false;
     float timeStopTintTimer_ = 0.0f;
     float fireCooldown_ = 0.0f;
