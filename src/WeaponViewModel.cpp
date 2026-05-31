@@ -40,7 +40,7 @@ int ModelIndex(WeaponVisualMode mode) {
     if (mode == WeaponVisualMode::RecoilLance) {
         return 6;
     }
-    if (mode == WeaponVisualMode::RiftCutter) {
+    if (mode == WeaponVisualMode::NanoConstructor) {
         return 7;
     }
     return 0;
@@ -69,7 +69,7 @@ Color ModeTint(WeaponVisualMode mode, float charge) {
     if (mode == WeaponVisualMode::RecoilLance) {
         return Color{210, 245, 255, 255};
     }
-    if (mode == WeaponVisualMode::RiftCutter) {
+    if (mode == WeaponVisualMode::NanoConstructor) {
         return Color{255, 225, 120, 255};
     }
     return Color{230, 230, 220, 255};

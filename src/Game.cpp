@@ -66,21 +66,22 @@ static const int cjkCodepoints[] = {
     80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95,
     96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111,
     112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 8212,
-    19977, 19979, 19981, 20013, 20024, 20041, 20063, 20107, 20113, 20132, 20154, 20179, 20214, 20260, 20301, 20302,
-    20445, 20572, 20809, 20837, 20840, 20851, 20914, 20915, 20923, 20934, 20987, 20992, 20999, 21033, 21046, 21106,
-    21147, 21152, 21160, 21319, 21322, 21442, 21449, 21453, 21457, 21462, 21463, 21487, 21488, 21491, 21512, 21516,
-    21518, 21943, 22120, 22270, 22320, 22330, 22352, 22806, 22826, 22871, 23384, 23398, 23450, 23475, 23545, 23556,
-    23576, 24038, 24039, 24050, 24149, 24179, 24230, 24320, 24335, 24341, 24377, 24418, 24452, 24471, 24748, 25112,
-    25163, 25216, 25226, 25237, 25307, 25342, 25345, 25351, 25353, 25381, 25442, 25506, 25511, 25512, 25527, 25552,
-    25705, 25758, 25830, 25932, 25945, 25955, 25968, 25972, 26007, 26080, 26102, 26381, 26426, 26432, 26463, 26495,
-    26497, 26538, 26684, 27169, 27493, 27494, 27573, 27874, 27934, 27979, 28010, 28369, 28378, 28608, 28779, 28856,
-    28857, 28909, 28976, 29190, 29255, 29301, 29615, 29616, 29627, 29699, 29827, 29983, 29992, 30001, 30028, 30340,
+    19977, 19979, 19981, 20013, 20024, 20041, 20063, 20107, 20113, 20132, 20154, 20165, 20174, 20179, 20202, 20214,
+    20260, 20301, 20302, 20379, 20391, 20445, 20572, 20809, 20837, 20840, 20851, 20914, 20915, 20923, 20934, 20987,
+    20992, 20999, 21033, 21046, 21106, 21147, 21152, 21160, 21319, 21322, 21442, 21449, 21453, 21457, 21462, 21463,
+    21487, 21488, 21491, 21512, 21516, 21518, 21943, 22120, 22270, 22320, 22330, 22352, 22806, 22826, 22871, 23384,
+    23398, 23450, 23475, 23478, 23545, 23556, 23576, 24038, 24039, 24050, 24149, 24179, 24213, 24230, 24320, 24335,
+    24341, 24377, 24418, 24452, 24471, 24615, 24748, 25112, 25163, 25216, 25226, 25237, 25307, 25321, 25342, 25345,
+    25351, 25353, 25377, 25381, 25442, 25506, 25511, 25512, 25527, 25552, 25705, 25745, 25758, 25830, 25903, 25932,
+    25945, 25955, 25968, 25972, 26007, 26080, 26102, 26143, 26381, 26426, 26432, 26463, 26495, 26497, 26500, 26538,
+    26684, 27060, 27169, 27493, 27494, 27573, 27874, 27934, 27979, 28010, 28369, 28378, 28608, 28779, 28856, 28857,
+    28909, 28976, 29190, 29255, 29301, 29609, 29615, 29616, 29627, 29699, 29827, 29983, 29992, 30001, 30028, 30340,
     30596, 30636, 30683, 30862, 31034, 31163, 31186, 31227, 31354, 31359, 31435, 31449, 31561, 31570, 31661, 31859,
     32034, 32435, 32447, 32469, 32493, 32511, 32534, 32622, 32626, 32773, 32960, 33050, 33080, 33192, 33258, 33267,
     33719, 33988, 34013, 34255, 34892, 35010, 35013, 35270, 35282, 35299, 35774, 35797, 35825, 35843, 36148, 36229,
-    36291, 36305, 36317, 36339, 36718, 36753, 36827, 36828, 36830, 36861, 36879, 36880, 36895, 37096, 37325, 37327,
-    38025, 38035, 38142, 38181, 38190, 38271, 38378, 38388, 38477, 38480, 38544, 38553, 38598, 38647, 38704, 38738,
-    38754, 38899, 39069, 39118, 39134, 39640, 40060, 40657,
+    36291, 36305, 36317, 36339, 36718, 36753, 36807, 36827, 36828, 36830, 36861, 36873, 36879, 36880, 36895, 36896,
+    37096, 37325, 37327, 38025, 38035, 38142, 38181, 38190, 38271, 38378, 38388, 38459, 38477, 38480, 38544, 38553,
+    38598, 38647, 38704, 38738, 38754, 38899, 39030, 39069, 39118, 39134, 39640, 40060, 40657,
 };
 static constexpr int cjkCodepointCount = sizeof(cjkCodepoints) / sizeof(cjkCodepoints[0]);
 
@@ -195,9 +196,9 @@ void Game::Reset() {
     drones_.clear();
     shotgunMode_ = ShotgunMode::Pellet;
     gravityNailerMode_ = GravityNailerMode::Nail;
-    riftCutterMode_ = RiftCutterMode::BladeWave;
+    nanoConstructorMode_ = NanoConstructorMode::NanoBlade;
     recoilLanceMode_ = RecoilLanceMode::Throw;
-    riftPlatformRangeScale_ = 1.0f;
+    nanoPlatformRangeScale_ = 1.0f;
     gauntletMode_ = GauntletMode::TimeStop;
     blinkDistanceScale_ = 1.0f;
     timeStopped_ = false;
@@ -215,6 +216,7 @@ void Game::Reset() {
     spitterAmbushDone_ = false;
     pouncerRushDone_ = false;
     bossSpawned_ = false;
+    slimeKingSpawned_ = false;
     bethlehemSpawned_ = false;
     for (int i = 0; i < 8; ++i) weaponTipShown_[i] = false;
     tutorialTip_[0] = '\0';
@@ -234,6 +236,7 @@ void Game::Reset() {
     survivalTime_ = 0.0f;
     cameraShake_ = 0.0f;
     score_ = 0;
+    totalDamageDealt_ = 0.0f;
 
     BuildMap();
 
@@ -263,8 +266,12 @@ void Game::ClearWorld() {
     shockwaves_.clear();
     heatwaves_.clear();
     gravityWells_.clear();
-    rifts_.clear();
+    nanoBlades_.clear();
+    for (NanoPlatform& platform : nanoPlatforms_) {
+        physics_.DestroyBody(platform.platformBody);
+    }
     nanoPlatforms_.clear();
+    slimeSpawnPods_.clear();
 
     for (const Enemy& enemy : enemies_) {
         physics_.DestroyBody(enemy.body);
@@ -275,6 +282,7 @@ void Game::ClearWorld() {
     floorBody_ = JPH::BodyID();
     particles_.clear();
     damageNumbers_.clear();
+    totalDamageDealt_ = 0.0f;
     props_.clear();
     pickups_.clear();
 }
@@ -314,6 +322,9 @@ void Game::Update(float dt) {
     if (IsKeyPressed(KEY_K)) {
         showKeybindOverlay_ = !showKeybindOverlay_;
     }
+    if (IsKeyPressed(KEY_F11)) {
+        ToggleFullscreen();
+    }
 
     thrustControlLockTimer_ = std::max(0.0f, thrustControlLockTimer_ - dt);
     UpdateLook(dt);
@@ -332,9 +343,10 @@ void Game::Update(float dt) {
         UpdateHeatwaves(dt);
         if (!timeStopped_) {
             UpdateGravityWells(dt);
-            UpdateRifts(dt);
+            UpdateNanoBlades(dt);
             UpdateNanoPlatforms(dt);
         }
+        UpdateSlimeSpawnPods(dt);
         if (!timeStopped_ && !DuelMode() && !TutorialMode()) {
             UpdateWaveDirector(dt);
         }
@@ -647,8 +659,9 @@ void Game::UpdateMovement(float dt) {
         float desiredRadius = SphericalSignedRadius(SphericalPlayerAltitude());
         float distance = Vector3Length(camera_.position);
         float radialSpeed = Vector3DotProduct(playerVelocity_, up);
-        bool touchesSurface = IsHollowWorldMap() ? distance >= desiredRadius : distance <= desiredRadius;
-        if (!flightRigEnabled_ && touchesSurface) {
+        constexpr float kGroundTolerance = 0.2f;
+        bool nearSurface = IsHollowWorldMap() ? distance >= desiredRadius - kGroundTolerance : distance <= desiredRadius + kGroundTolerance;
+        if (!flightRigEnabled_ && nearSurface && radialSpeed <= 0.0f) {
             camera_.position = SphericalSurfacePoint(camera_.position, SphericalPlayerAltitude());
             if (radialSpeed < 0.0f) {
                 playerVelocity_ = ProjectOnSphericalTangent(playerVelocity_, up);
@@ -742,9 +755,10 @@ void Game::UpdateMovement(float dt) {
     camera_.position = Vector3Add(camera_.position, Vector3Scale(playerVelocity_, dt));
 
     float floorHeight = playerHeight_;
-    if (!flightRigEnabled_ && camera_.position.y <= floorHeight) {
+    constexpr float kGroundTolerance = 0.2f;
+    if (!flightRigEnabled_ && playerVelocity_.y <= 0.0f && camera_.position.y <= floorHeight + kGroundTolerance) {
         camera_.position.y = floorHeight;
-        playerVelocity_.y = 0.0f;
+        if (playerVelocity_.y < 0.0f) playerVelocity_.y = 0.0f;
         grounded_ = true;
         coyoteTimer_ = kCoyoteTime;
     } else {
@@ -775,8 +789,8 @@ void Game::UpdateWeaponSwitching() {
     WeaponType previousWeapon = activeWeapon_;
     float wheel = GetMouseWheelMove();
     bool wheelAdjustedPlatformRange = false;
-    if (wheel != 0.0f && activeWeapon_ == WeaponType::RiftCutter && riftCutterMode_ == RiftCutterMode::Platform) {
-        riftPlatformRangeScale_ = std::clamp(riftPlatformRangeScale_ + (wheel > 0.0f ? 0.08f : -0.08f), 0.35f, 1.85f);
+    if (wheel != 0.0f && activeWeapon_ == WeaponType::NanoConstructor && nanoConstructorMode_ == NanoConstructorMode::NanoPlatform) {
+        nanoPlatformRangeScale_ = std::clamp(nanoPlatformRangeScale_ + (wheel > 0.0f ? 0.08f : -0.08f), 0.35f, 1.85f);
         wheelAdjustedPlatformRange = true;
     }
     if (wheel != 0.0f && activeWeapon_ == WeaponType::InfinityGauntlet && gauntletMode_ == GauntletMode::Blink) {
@@ -799,7 +813,7 @@ void Game::UpdateWeaponSwitching() {
     } else if (IsKeyPressed(KEY_SEVEN)) {
         activeWeapon_ = WeaponType::RecoilLance;
     } else if (IsKeyPressed(KEY_EIGHT)) {
-        activeWeapon_ = WeaponType::RiftCutter;
+        activeWeapon_ = WeaponType::NanoConstructor;
     } else if (wheel != 0.0f && !wheelAdjustedPlatformRange) {
         int index = 0;
         if (activeWeapon_ == WeaponType::Flamethrower) {
@@ -814,7 +828,7 @@ void Game::UpdateWeaponSwitching() {
             index = 5;
         } else if (activeWeapon_ == WeaponType::RecoilLance) {
             index = 6;
-        } else if (activeWeapon_ == WeaponType::RiftCutter) {
+        } else if (activeWeapon_ == WeaponType::NanoConstructor) {
             index = 7;
         }
 
@@ -834,7 +848,7 @@ void Game::UpdateWeaponSwitching() {
         } else if (index == 6) {
             activeWeapon_ = WeaponType::RecoilLance;
         } else {
-            activeWeapon_ = WeaponType::RiftCutter;
+            activeWeapon_ = WeaponType::NanoConstructor;
         }
     }
 
@@ -859,9 +873,9 @@ void Game::UpdateWeaponSwitching() {
             rocketLauncherMode_ = rocketLauncherMode_ == RocketLauncherMode::Rocket ? RocketLauncherMode::Drone : RocketLauncherMode::Rocket;
             eventText_ = rocketLauncherMode_ == RocketLauncherMode::Drone ? "DRONE" : "ROCKET";
             eventTextTimer_ = 1.4f;
-        } else if (activeWeapon_ == WeaponType::RiftCutter) {
-            riftCutterMode_ = riftCutterMode_ == RiftCutterMode::BladeWave ? RiftCutterMode::Platform : RiftCutterMode::BladeWave;
-            eventText_ = riftCutterMode_ == RiftCutterMode::Platform ? "NANO PLATFORM" : "BLADE WAVE";
+        } else if (activeWeapon_ == WeaponType::NanoConstructor) {
+            nanoConstructorMode_ = nanoConstructorMode_ == NanoConstructorMode::NanoBlade ? NanoConstructorMode::NanoPlatform : NanoConstructorMode::NanoBlade;
+            eventText_ = nanoConstructorMode_ == NanoConstructorMode::NanoPlatform ? "NANO PLATFORM" : "NANO BLADE";
             eventTextTimer_ = 1.4f;
         } else if (activeWeapon_ == WeaponType::InfinityGauntlet) {
             gauntletMode_ = gauntletMode_ == GauntletMode::TimeStop ? GauntletMode::Blink : GauntletMode::TimeStop;
@@ -878,14 +892,14 @@ void Game::UpdateWeaponSwitching() {
             int idx = static_cast<int>(activeWeapon_);
             if (idx < 8) {
                 const char* tips[] = {
-                    "激光步枪\n左键高速连射  |  右键+左键蓄力穿透光束",
+                    "外星激光枪\n左键高速连射  |  右键+左键蓄力穿透光束",
                     "火焰喷射器\n左键火球(半径膨胀)  |  右键热浪冲击波(锥形推飞弹幕)",
                     "火箭筒\n左键火箭(火箭跳)  |  右键无人机仓  |  长按右键指挥界面",
                     "霰弹枪\n左键散射弹丸(后坐力位移)  |  右键玻璃碎片尘云(持续伤害)",
-                    "重力钉枪\n左键重力钉牵引力场  |  右键黑洞手雷(事件视界秒杀)",
+                    "重力钉枪\n左键重力钉牵引力场  |  右键黑洞榴弹(事件视界秒杀)",
                     "无限手套\n右键切换:时停(TS)/闪现(B)  |  闪现时滚轮调距离",
                     "反冲长矛\n左键投掷穿透+反冲位移  |  右键音速推进(锥形+后坐力)",
-                    "纳米铸造器\n左键纳米刀波(50伤/秒)  |  右键纳米平台(可站立)  |  滚轮调距离",
+                    "纳米构造仪\n左键纳米刀波(50伤/秒)  |  右键纳米平台(可站立)  |  滚轮调距离",
                 };
                 ShowTutorialTip(tips[idx]);
                 tutorialHintTimer_ = 0.3f;
@@ -929,13 +943,13 @@ void Game::UpdateShooting(float dt) {
     }
     if (chargingLaser_) {
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && laserChord) {
-            laserCharge_ = std::min(1.0f, laserCharge_ + dt * 0.72f);
+            laserCharge_ = std::min(1.0f, laserCharge_ + dt * config_.laserChargeRate);
             cameraShake_ = std::min(1.0f, cameraShake_ + dt * 0.25f);
         } else {
             FireLaser(laserCharge_);
             chargingLaser_ = false;
             laserCharge_ = 0.0f;
-            fireCooldown_ = 0.18f;
+            fireCooldown_ = config_.laserBeamCooldown;
         }
         return;
     }
@@ -949,8 +963,8 @@ void Game::UpdateShooting(float dt) {
     Vector3 up = PlayerUp();
 
     if (activeWeapon_ == WeaponType::Laser) {
-        FireProjectile(ProjectileKind::LaserShot, forward, 68.0f, config_.daggerDamage, 1.65f, 0.18f, 0.18f, Color{255, 240, 185, 255});
-        fireCooldown_ = 0.075f;
+        FireProjectile(ProjectileKind::LaserShot, forward, config_.plasmaSpeed, config_.plasmaDamage, config_.plasmaLifetime, config_.plasmaRadius, config_.plasmaRadius, Color{255, 240, 185, 255});
+        fireCooldown_ = config_.plasmaCooldown;
         cameraShake_ = std::min(1.0f, cameraShake_ + 0.15f);
     } else if (activeWeapon_ == WeaponType::Flamethrower) {
         if (flamethrowerMode_ == FlamethrowerMode::Heatwave) {
@@ -1017,13 +1031,13 @@ void Game::UpdateShooting(float dt) {
             fireCooldown_ = 0.86f;
             cameraShake_ = std::min(1.0f, cameraShake_ + 0.5f);
         }
-    } else if (activeWeapon_ == WeaponType::RiftCutter) {
-        if (riftCutterMode_ == RiftCutterMode::Platform) {
+    } else if (activeWeapon_ == WeaponType::NanoConstructor) {
+        if (nanoConstructorMode_ == NanoConstructorMode::NanoPlatform) {
             FireNanoPlatform(forward);
             fireCooldown_ = 0.82f;
             cameraShake_ = std::min(1.0f, cameraShake_ + 0.18f);
         } else {
-            FireRiftCutter(forward);
+            FireNanoBlade(forward);
             fireCooldown_ = 0.78f;
             cameraShake_ = std::min(1.0f, cameraShake_ + 0.38f);
         }
@@ -1108,6 +1122,7 @@ void Game::UpdateGravityWells(float dt) {
                 float falloff = 1.0f - distance / well.radius;
                 float strength = well.force * (0.35f + falloff * 0.65f);
                 enemy.health -= well.damagePerSecond * dt * (0.25f + falloff * 0.75f);
+                totalDamageDealt_ += well.damagePerSecond * dt * (0.25f + falloff * 0.75f);
                 if (enemy.type == EnemyType::Dummy || enemy.type == EnemyType::DummyBoss) {
                     RecordDummyDamage(enemy, well.damagePerSecond * dt * (0.25f + falloff * 0.75f));
                 }
@@ -1141,77 +1156,78 @@ void Game::UpdateGravityWells(float dt) {
     }
 }
 
-void Game::UpdateRifts(float dt) {
-    for (size_t riftIndex = 0; riftIndex < rifts_.size();) {
-        RiftSlash& rift = rifts_[riftIndex];
-        if (rift.delay > 0.0f) {
-            rift.delay -= dt;
-            if (rift.delay <= 0.0f) {
-                SpawnHitBurst(rift.center, Color{255, 235, 150, 255}, 18);
+void Game::UpdateNanoBlades(float dt) {
+    for (size_t bladeIndex = 0; bladeIndex < nanoBlades_.size();) {
+        NanoBlade& blade = nanoBlades_[bladeIndex];
+        if (blade.delay > 0.0f) {
+            blade.delay -= dt;
+            if (blade.delay <= 0.0f) {
+                SpawnHitBurst(blade.center, Color{255, 235, 150, 255}, 18);
             }
-            ++riftIndex;
+            ++bladeIndex;
             continue;
         }
 
-        rift.life -= dt;
-        if (rift.life <= 0.0f) {
-            rifts_[riftIndex] = rifts_.back();
-            rifts_.pop_back();
+        blade.life -= dt;
+        if (blade.life <= 0.0f) {
+            nanoBlades_[bladeIndex] = nanoBlades_.back();
+            nanoBlades_.pop_back();
             continue;
         }
-        rift.center = Vector3Add(rift.center, Vector3Scale(rift.velocity, dt));
+        blade.center = Vector3Add(blade.center, Vector3Scale(blade.velocity, dt));
 
         bool outsideBounds = false;
         if (IsSphericalMap()) {
-            float distance = Vector3Length(rift.center);
+            float distance = Vector3Length(blade.center);
             outsideBounds = IsHollowWorldMap()
-                ? (distance > SphericalRadius() + rift.radius || distance < std::max(1.0f, SphericalRadius() - SphericalCleanupDistance()))
-                : (distance > SphericalCleanupDistance() || distance < SphericalRadius() - rift.radius);
+                ? (distance > SphericalRadius() + blade.radius || distance < std::max(1.0f, SphericalRadius() - SphericalCleanupDistance()))
+                : (distance > SphericalCleanupDistance() || distance < SphericalRadius() - blade.radius);
         } else {
             outsideBounds = IsSquareMap()
-                ? (std::abs(rift.center.x) > squareHalfExtent_ + rift.radius || std::abs(rift.center.z) > squareHalfExtent_ + rift.radius)
-                : (Vector3Length(Vector3{rift.center.x, 0.0f, rift.center.z}) > arenaRadius_ + rift.radius);
-            outsideBounds = outsideBounds || rift.center.y < -rift.radius || rift.center.y > 48.0f;
+                ? (std::abs(blade.center.x) > squareHalfExtent_ + blade.radius || std::abs(blade.center.z) > squareHalfExtent_ + blade.radius)
+                : (Vector3Length(Vector3{blade.center.x, 0.0f, blade.center.z}) > arenaRadius_ + blade.radius);
+            outsideBounds = outsideBounds || blade.center.y < -blade.radius || blade.center.y > 48.0f;
         }
         if (outsideBounds) {
-            rifts_[riftIndex] = rifts_.back();
-            rifts_.pop_back();
+            nanoBlades_[bladeIndex] = nanoBlades_.back();
+            nanoBlades_.pop_back();
             continue;
         }
 
-        auto insideRift = [&](Vector3 point, float radiusPadding) {
-            Vector3 offset = Vector3Subtract(point, rift.center);
-            float planeDistance = std::abs(Vector3DotProduct(offset, rift.normal));
-            float horizontal = Vector3DotProduct(offset, rift.right);
-            float vertical = Vector3DotProduct(offset, rift.up);
+        auto insideBlade = [&](Vector3 point, float radiusPadding) {
+            Vector3 offset = Vector3Subtract(point, blade.center);
+            float planeDistance = std::abs(Vector3DotProduct(offset, blade.normal));
+            float horizontal = Vector3DotProduct(offset, blade.right);
+            float vertical = Vector3DotProduct(offset, blade.up);
             float radius = std::sqrt(horizontal * horizontal + vertical * vertical);
-            float normalizedVertical = vertical / std::max(0.001f, rift.radius);
-            float crescentCenter = std::sqrt(std::max(0.0f, 1.0f - horizontal * horizontal / std::max(0.001f, rift.radius * rift.radius))) * rift.radius * 0.34f;
+            float normalizedVertical = vertical / std::max(0.001f, blade.radius);
+            float crescentCenter = std::sqrt(std::max(0.0f, 1.0f - horizontal * horizontal / std::max(0.001f, blade.radius * blade.radius))) * blade.radius * 0.34f;
             float arcDistance = std::abs(vertical - crescentCenter);
-            return planeDistance <= rift.planeThickness + radiusPadding * 0.45f
-                && radius <= rift.radius + radiusPadding
-                && radius >= rift.radius - rift.thickness - radiusPadding
+            return planeDistance <= blade.planeThickness + radiusPadding * 0.45f
+                && radius <= blade.radius + radiusPadding
+                && radius >= blade.radius - blade.thickness - radiusPadding
                 && normalizedVertical > -0.55f
-                && arcDistance <= rift.thickness * 0.72f + radiusPadding * 0.45f;
+                && arcDistance <= blade.thickness * 0.72f + radiusPadding * 0.45f;
         };
 
-        if (rift.owner == ProjectileOwner::Enemy && insideRift(camera_.position, playerRadius_)) {
+        if (blade.owner == ProjectileOwner::Enemy && insideBlade(camera_.position, playerRadius_)) {
             ApplyPlayerHit(camera_.position, Color{255, 210, 120, 255});
         }
 
-        if (rift.owner == ProjectileOwner::Player) {
+        if (blade.owner == ProjectileOwner::Player) {
             for (size_t enemyIndex = 0; enemyIndex < enemies_.size();) {
                 Enemy& enemy = enemies_[enemyIndex];
                 Vector3 enemyPosition = BodyPosition(enemy.body);
-                if (insideRift(enemyPosition, enemy.radius)) {
-                    enemy.health -= rift.damagePerSecond * dt;
+                if (insideBlade(enemyPosition, enemy.radius)) {
+                    enemy.health -= blade.damagePerSecond * dt;
+                    totalDamageDealt_ += blade.damagePerSecond * dt;
                     if (enemy.type == EnemyType::Dummy || enemy.type == EnemyType::DummyBoss) {
-                        RecordDummyDamage(enemy, rift.damagePerSecond * dt);
+                        RecordDummyDamage(enemy, blade.damagePerSecond * dt);
                     }
-                    Vector3 offset = Vector3Subtract(enemyPosition, rift.center);
-                    float horizontal = Vector3DotProduct(offset, rift.right);
-                    float vertical = Vector3DotProduct(offset, rift.up);
-                    Vector3 push = Vector3Add(rift.normal, Vector3Scale(Vector3Normalize(Vector3Add(Vector3Scale(rift.right, horizontal), Vector3Scale(rift.up, vertical))), 0.35f));
+                    Vector3 offset = Vector3Subtract(enemyPosition, blade.center);
+                    float horizontal = Vector3DotProduct(offset, blade.right);
+                    float vertical = Vector3DotProduct(offset, blade.up);
+                    Vector3 push = Vector3Add(blade.normal, Vector3Scale(Vector3Normalize(Vector3Add(Vector3Scale(blade.right, horizontal), Vector3Scale(blade.up, vertical))), 0.35f));
                     if (Vector3Length(push) > 0.001f) {
                         push = Vector3Normalize(push);
                         AddEnemyImpulse(enemy, Vector3Scale(push, 7.0f * dt));
@@ -1227,7 +1243,7 @@ void Game::UpdateRifts(float dt) {
             }
         }
 
-        ++riftIndex;
+        ++bladeIndex;
     }
 }
 
@@ -1241,6 +1257,27 @@ void Game::UpdateNanoPlatforms(float dt) {
                     ? platform.position
                     : Vector3{platform.position.x, platform.position.y + platform.scale.y, platform.position.z};
                 SpawnHitBurst(burstPosition, Color{255, 232, 150, 255}, 16);
+
+                Vector3 center = IsSphericalMap()
+                    ? platform.position
+                    : Vector3{platform.position.x, platform.position.y + platform.scale.y * 0.5f, platform.position.z};
+                JPH::Vec3 halfExt(platform.scale.x * 0.5f, platform.scale.y * 0.5f, platform.scale.z * 0.5f);
+                JPH::BoxShape* boxShape = new JPH::BoxShape(halfExt);
+
+                Matrix rotMatrix = MatrixIdentity();
+                rotMatrix.m0 = platform.right.x;   rotMatrix.m4 = platform.normal.x;   rotMatrix.m8 = -platform.forward.x;
+                rotMatrix.m1 = platform.right.y;   rotMatrix.m5 = platform.normal.y;   rotMatrix.m9 = -platform.forward.y;
+                rotMatrix.m2 = platform.right.z;   rotMatrix.m6 = platform.normal.z;   rotMatrix.m10 = -platform.forward.z;
+                Quaternion rq = QuaternionFromMatrix(rotMatrix);
+                JPH::Quat rotation(rq.x, rq.y, rq.z, rq.w);
+
+                PhysicsWorld::BodyConfig platformBodyConfig;
+                platformBodyConfig.motionType = JPH::EMotionType::Static;
+                platformBodyConfig.layer = Layers::NON_MOVING;
+                platformBodyConfig.allowSleeping = false;
+                platform.platformBody = physics_.CreateBody(
+                    boxShape, ToJoltVector(center), rotation,
+                    platformBodyConfig, JPH::EActivation::DontActivate);
             }
             ++i;
             continue;
@@ -1252,6 +1289,7 @@ void Game::UpdateNanoPlatforms(float dt) {
                 ? platform.position
                 : Vector3{platform.position.x, platform.position.y + platform.scale.y, platform.position.z};
             SpawnHitBurst(burstPosition, Color{255, 210, 110, 255}, 10);
+            physics_.DestroyBody(platform.platformBody);
             nanoPlatforms_[i] = nanoPlatforms_.back();
             nanoPlatforms_.pop_back();
             continue;
@@ -1397,16 +1435,165 @@ void Game::UpdateEnemies(float dt) {
             direction = Vector3Normalize(Vector3Add(Vector3Scale(direction, rangeBias), Vector3Scale(tangent, 0.85f)));
             speed = enemy.speed;
 
-            if (enemy.cooldownTimer <= 0.0f) {
-                FireBossRing(Vector3Add(position, Vector3Scale(enemyUp, enemy.radius * 0.35f)), enemy.health < enemy.maxHealth * 0.45f ? 18 : 12, enemy.health < enemy.maxHealth * 0.45f ? 1.25f : 1.0f);
-                enemy.cooldownTimer = enemy.health < enemy.maxHealth * 0.45f ? 1.55f : 2.15f;
-                enemy.burstTimer = 0.46f;
-                cameraShake_ = std::min(1.0f, cameraShake_ + 0.12f);
-            } else if (enemy.burstTimer > 0.0f && enemy.burstTimer < 0.12f) {
+            bool enraged = enemy.health < enemy.maxHealth * 0.45f;
+            float cooldownAfter = enraged ? 1.4f : 2.0f;
+            float burstInterval = config_.bossHomingBurstInterval * (enraged ? 0.7f : 1.0f);
+
+            if (enemy.cooldownTimer <= 0.0f && enemy.burstCount == 0) {
+                FireBossRing(Vector3Add(position, Vector3Scale(enemyUp, enemy.radius * 0.35f)), enraged ? 12 : 8, 0.85f);
                 Vector3 shotOrigin = Vector3Add(position, Vector3Scale(enemyUp, enemy.radius * 0.55f));
-                Vector3 shotDirection = Vector3Normalize(Vector3Subtract(camera_.position, shotOrigin));
-                FireEnemyShot(shotOrigin, shotDirection);
-                enemy.burstTimer = 0.0f;
+                Vector3 shotDir = Vector3Normalize(Vector3Subtract(camera_.position, shotOrigin));
+                float speed = config_.enemyShotSpeed * config_.bossHomingSpeedScale;
+                FireHomingShot(shotOrigin, shotDir, speed, config_.bossHomingTurnRate, config_.bossHomingLife, config_.enemyShotDamage, Color{180, 125, 255, 255}, ProjectileOwner::Enemy);
+                enemy.burstCount = 1;
+                if (enemy.burstCount >= config_.bossHomingBurstCount) {
+                    enemy.cooldownTimer = cooldownAfter;
+                    enemy.burstCount = 0;
+                } else {
+                    enemy.burstTimer = burstInterval;
+                }
+                cameraShake_ = std::min(1.0f, cameraShake_ + 0.08f);
+            } else if (enemy.burstCount > 0 && enemy.burstTimer <= 0.0f) {
+                Vector3 shotOrigin = Vector3Add(position, Vector3Scale(enemyUp, enemy.radius * 0.55f));
+                Vector3 shotDir = Vector3Normalize(Vector3Subtract(camera_.position, shotOrigin));
+                float speed = config_.enemyShotSpeed * config_.bossHomingSpeedScale;
+                FireHomingShot(shotOrigin, shotDir, speed, config_.bossHomingTurnRate, config_.bossHomingLife, config_.enemyShotDamage, Color{180, 125, 255, 255}, ProjectileOwner::Enemy);
+                enemy.burstCount++;
+                if (enemy.burstCount >= config_.bossHomingBurstCount) {
+                    enemy.cooldownTimer = cooldownAfter;
+                    enemy.burstCount = 0;
+                } else {
+                    enemy.burstTimer = burstInterval;
+                }
+                cameraShake_ = std::min(1.0f, cameraShake_ + 0.08f);
+            }
+        } else if (enemy.type == EnemyType::SlimeKing) {
+            speed = enemy.speed;
+            Vector3 enemyUp = IsSphericalMap() ? SphericalUpAt(position) : Vector3{0.0f, 1.0f, 0.0f};
+            Vector3 playerGround = camera_.position;
+            if (IsSphericalMap()) {
+                playerGround = SphericalSurfacePoint(camera_.position, SphericalPlayerAltitude());
+            } else {
+                playerGround.y -= playerHeight_;
+            }
+            float dist = Vector3Length(Vector3Subtract(position, camera_.position));
+            float targetAlt = IsSphericalMap() ? SphericalEnemyAltitude(EnemyType::SlimeKing) : 0.0f;
+            float currentAlt = IsSphericalMap() ? SphericalAltitudeAt(position) : 0.0f;
+            bool nearSurface = IsSphericalMap()
+                ? currentAlt <= targetAlt + enemy.radius * 0.55f
+                : position.y <= 0.6f + enemy.radius * 0.5f;
+
+            // State machine using burstCount: 0=ground, 1=long_jump, 2=high_jump_rise, 3=high_jump_fall, 4=shooting
+            if (enemy.burstCount == 0) {
+                enemy.cooldownTimer -= dt;
+                if (enemy.cooldownTimer <= 0.0f) {
+                    if (dist > config_.slimeKingSlamRange) {
+                        // Long jump toward player
+                        Vector3 jumpDir = Vector3Normalize(Vector3Subtract(camera_.position, position));
+                        if (IsSphericalMap()) {
+                            jumpDir = ProjectOnSphericalTangent(jumpDir, enemyUp);
+                            jumpDir = Vector3Normalize(jumpDir);
+                        }
+                        Vector3 jumpVel = Vector3Add(
+                            Vector3Scale(jumpDir, config_.slimeKingLongJumpSpeed),
+                            Vector3Scale(enemyUp, config_.slimeKingLongJumpSpeed * 0.45f));
+                        physics_.Bodies().SetLinearVelocity(enemy.body, ToJoltVelocity(jumpVel));
+                        enemy.burstCount = 1;
+                        enemy.actionTimer = 1.2f;
+                        skipVelocity = true;
+                    } else if (RandomFloat(0.0f, 1.0f) < 0.25f) {
+                        enemy.burstCount = 4;
+                        enemy.burstTimer = 0.0f;
+                        enemy.actionTimer = 0;
+                        skipVelocity = true;
+                    } else {
+                        Vector3 jumpVel = Vector3Scale(enemyUp, config_.slimeKingHighJumpSpeed);
+                        physics_.Bodies().SetLinearVelocity(enemy.body, ToJoltVelocity(jumpVel));
+                        enemy.burstCount = 2;
+                        enemy.actionTimer = 1.2f;
+                        skipVelocity = true;
+                    }
+                }
+            } else if (enemy.burstCount == 1) {
+                // Long jump: apply radial gravity on spherical maps, detect landing
+                enemy.actionTimer -= dt;
+                if (IsSphericalMap()) {
+                    // Pull toward surface
+                    float alt = SphericalAltitudeAt(position);
+                    float pull = (targetAlt - alt) * 14.0f;
+                    JPH::Vec3 vel = physics_.Bodies().GetLinearVelocity(enemy.body);
+                    JPH::Vec3 radialVel = JPH::Vec3(enemyUp.x * pull, enemyUp.y * pull, enemyUp.z * pull);
+                    physics_.Bodies().SetLinearVelocity(enemy.body, vel + radialVel * dt);
+                }
+                if (nearSurface || enemy.actionTimer <= 0.0f) {
+                    enemy.burstCount = 0;
+                    enemy.cooldownTimer = config_.slimeKingCooldown * 0.6f;
+                }
+                skipVelocity = true;
+            } else if (enemy.burstCount == 2) {
+                // High jump rising: detect apex via radial velocity reversal
+                enemy.actionTimer -= dt;
+                if (IsSphericalMap()) {
+                    float alt = SphericalAltitudeAt(position);
+                    float pull = (targetAlt - alt) * 12.0f;
+                    JPH::Vec3 vel = physics_.Bodies().GetLinearVelocity(enemy.body);
+                    JPH::Vec3 radialVel = JPH::Vec3(enemyUp.x * pull, enemyUp.y * pull, enemyUp.z * pull);
+                    physics_.Bodies().SetLinearVelocity(enemy.body, vel + radialVel * dt);
+                }
+                JPH::Vec3 vel = physics_.Bodies().GetLinearVelocity(enemy.body);
+                bool falling = IsSphericalMap()
+                    ? Vector3DotProduct(ToRayVector(vel), enemyUp) <= 0.5f
+                    : vel.GetY() <= 0.0f;
+                if (enemy.actionTimer <= 0.0f || falling) {
+                    Vector3 slamTarget = IsSphericalMap()
+                        ? SphericalSurfacePoint(camera_.position, SphericalPlayerAltitude())
+                        : Vector3{camera_.position.x, 0.6f, camera_.position.z};
+                    Vector3 slamDir = Vector3Normalize(Vector3Subtract(slamTarget, position));
+                    Vector3 slamVel = Vector3Scale(slamDir, config_.slimeKingSlamSpeed);
+                    physics_.Bodies().SetLinearVelocity(enemy.body, ToJoltVelocity(slamVel));
+                    enemy.burstCount = 3;
+                    enemy.actionTimer = 0.8f;
+                }
+                skipVelocity = true;
+            } else if (enemy.burstCount == 3) {
+                // Slamming down
+                enemy.actionTimer -= dt;
+                bool hitGround = IsSphericalMap()
+                    ? SphericalAltitudeAt(position) <= targetAlt + enemy.radius * 0.35f
+                    : position.y <= 0.6f + enemy.radius * 0.3f;
+                if (hitGround || enemy.actionTimer <= 0.0f) {
+                    Vector3 impactPos = IsSphericalMap()
+                        ? SphericalSurfacePoint(position, targetAlt)
+                        : Vector3{position.x, 0.6f, position.z};
+                    SpawnShockwave(impactPos, config_.slimeKingSlamRadius, Color{120, 240, 160, 255});
+                    SpawnHitBurst(impactPos, Color{100, 220, 140, 255}, 24);
+                    cameraShake_ = std::min(1.0f, cameraShake_ + 0.35f);
+                    if (EnemyTouchesPlayer(impactPos, config_.slimeKingSlamRadius)) {
+                        ApplyPlayerHit(impactPos, Color{100, 220, 140, 255}, "SLIME SLAM");
+                    }
+                    enemy.burstCount = 0;
+                    enemy.cooldownTimer = config_.slimeKingCooldown;
+                }
+                skipVelocity = true;
+            } else if (enemy.burstCount == 4) {
+                // Shooting
+                enemy.burstTimer -= dt;
+                if (enemy.burstTimer <= 0.0f && enemy.actionTimer < config_.slimeKingShootCount) {
+                    Vector3 shootDir = Vector3Normalize(Vector3Subtract(camera_.position, position));
+                    float spread = (enemy.actionTimer - config_.slimeKingShootCount * 0.5f) * 0.12f;
+                    Vector3 spreadDir = Vector3Add(shootDir, Vector3{RandomFloat(-spread, spread), RandomFloat(-spread, spread), RandomFloat(-spread, spread)});
+                    spreadDir = Vector3Normalize(spreadDir);
+                    FireEnemyProjectile(ProjectileKind::EnemyShot, position, spreadDir,
+                        config_.slimeKingShootSpeed, config_.slimeKingSlamDamage,
+                        4.0f, 0.28f, 0.28f, Color{100, 230, 150, 255});
+                    enemy.burstTimer = config_.slimeKingShootInterval;
+                    enemy.actionTimer += 1.0f;
+                }
+                if (enemy.actionTimer >= config_.slimeKingShootCount) {
+                    enemy.burstCount = 0;
+                    enemy.cooldownTimer = config_.slimeKingCooldown;
+                }
+                skipVelocity = true;
             }
         } else if (enemy.type == EnemyType::Duelist) {
             UpdateDuelist(enemy, position, direction, dt, speed, skipVelocity);
@@ -1437,14 +1624,14 @@ void Game::UpdateEnemies(float dt) {
             if (IsHollowWorldMap()) {
                 radialCorrection = -radialCorrection;
             }
-            if (enemy.type == EnemyType::Pouncer) {
+            if (enemy.type == EnemyType::Pouncer || enemy.type == EnemyType::SlimeKing) {
                 JPH::Vec3 current = physics_.Bodies().GetLinearVelocity(enemy.body);
                 radialCorrection = Vector3DotProduct(ToRayVector(current), enemyUp);
             }
             velocity = Vector3Add(Vector3Add(Vector3Scale(direction, speed), Vector3Scale(enemyUp, radialCorrection)), enemy.externalVelocity);
         } else {
             float verticalVelocity = 0.0f;
-            if (enemy.type == EnemyType::Pouncer) {
+            if (enemy.type == EnemyType::Pouncer || enemy.type == EnemyType::SlimeKing) {
                 verticalVelocity = physics_.Bodies().GetLinearVelocity(enemy.body).GetY();
             } else {
                 float targetHeight = enemy.type == EnemyType::Harrier ? config_.harrierTargetHeight + std::sin(enemy.bobTimer * 2.6f) * 1.2f : enemy.type == EnemyType::Blinker ? 1.0f : enemy.type == EnemyType::Wisp || enemy.type == EnemyType::Spitter ? 1.35f : enemy.type == EnemyType::Boss ? 2.2f : enemy.type == EnemyType::Duelist ? 1.2f : 0.8f;
@@ -1523,6 +1710,13 @@ void Game::UpdateWaveDirector(float dt) {
         bossSpawned_ = true;
     }
 
+    if (!slimeKingSpawned_ && survivalTime_ >= config_.slimeKingSpawnTime) {
+        SpawnEnemyOfType(EnemyType::SlimeKing);
+        eventText_ = "SLIME KING";
+        eventTextTimer_ = 4.0f;
+        slimeKingSpawned_ = true;
+    }
+
     if (!bethlehemSpawned_ && survivalTime_ >= config_.bethlehemSpawnTime) {
         SpawnBethlehem();
         eventText_ = "STAR OF BETHLEHEM";
@@ -1579,7 +1773,45 @@ void Game::UpdateProjectiles(float dt) {
             }
         }
 
-        if (projectile.owner == ProjectileOwner::Enemy && projectile.kind != ProjectileKind::EnemyShot && EnemyTouchesPlayer(position, projectile.radius)) {
+        if (projectile.kind == ProjectileKind::HomingShot && projectile.turnRate > 0.0f && !projectile.frozen) {
+            JPH::Vec3 currentVel = physics_.Bodies().GetLinearVelocity(projectile.body);
+            float speed = currentVel.Length();
+            if (speed > 0.5f) {
+                Vector3 currentDir = Vector3Scale(ToRayVector(currentVel), 1.0f / speed);
+                Vector3 target;
+                if (projectile.owner == ProjectileOwner::Enemy) {
+                    target = camera_.position;
+                } else {
+                    float nearestDist = INFINITY;
+                    for (const Enemy& enemy : enemies_) {
+                        Vector3 ep = BodyPosition(enemy.body);
+                        float d = Vector3Distance(position, ep);
+                        if (d < nearestDist) { nearestDist = d; target = ep; }
+                    }
+                    if (nearestDist == INFINITY) { ++i; continue; }
+                }
+                Vector3 toTarget = Vector3Subtract(target, position);
+                float distToTarget = Vector3Length(toTarget);
+                if (distToTarget > 0.01f) {
+                    toTarget = Vector3Scale(toTarget, 1.0f / distToTarget);
+                    float dot = std::clamp(Vector3DotProduct(currentDir, toTarget), -1.0f, 1.0f);
+                    float angle = std::acos(dot);
+                    float maxTurn = projectile.turnRate * dt;
+                    if (angle > maxTurn) {
+                        Vector3 axis = Vector3CrossProduct(currentDir, toTarget);
+                        float axisLen = Vector3Length(axis);
+                        if (axisLen > 0.001f) {
+                            axis = Vector3Scale(axis, 1.0f / axisLen);
+                            Quaternion rot = QuaternionFromAxisAngle(axis, maxTurn);
+                            toTarget = Vector3RotateByQuaternion(currentDir, rot);
+                        }
+                    }
+                    physics_.Bodies().SetLinearVelocity(projectile.body, ToJoltVelocity(Vector3Scale(toTarget, speed)));
+                }
+            }
+        }
+
+        if (projectile.owner == ProjectileOwner::Enemy && projectile.kind != ProjectileKind::EnemyShot && projectile.kind != ProjectileKind::HomingShot && EnemyTouchesPlayer(position, projectile.radius)) {
             if (projectile.kind == ProjectileKind::Rocket) {
                 ExplodeRocket(position, projectile.owner);
             } else if (projectile.kind == ProjectileKind::BlackHoleGrenade) {
@@ -1643,6 +1875,12 @@ void Game::UpdateProjectiles(float dt) {
 
         if (projectile.kind == ProjectileKind::EnemyShot && projectile.owner == ProjectileOwner::Enemy && EnemyTouchesPlayer(position, projectile.radius)) {
             ApplyPlayerHit(camera_.position, Color{120, 245, 255, 255});
+            DestroyProjectile(i);
+            continue;
+        }
+
+        if (projectile.kind == ProjectileKind::HomingShot && projectile.owner == ProjectileOwner::Enemy && EnemyTouchesPlayer(position, projectile.radius)) {
+            ApplyPlayerHit(camera_.position, projectile.color);
             DestroyProjectile(i);
             continue;
         }
@@ -1746,6 +1984,65 @@ void Game::UpdateProjectiles(float dt) {
                 }
             }
         }
+    }
+}
+
+void Game::UpdateSlimeSpawnPods(float dt) {
+    for (size_t i = 0; i < slimeSpawnPods_.size();) {
+        SlimeSpawnPod& pod = slimeSpawnPods_[i];
+        // Apply gravity (world-space Y on flat, radial on spherical)
+        if (IsSphericalMap()) {
+            Vector3 podUp = SphericalUpAt(pod.position);
+            float alt = SphericalAltitudeAt(pod.position);
+            float targetAlt = SphericalEnemyAltitude(EnemyType::SlimeKing);
+            float pull = (targetAlt - alt) * 10.0f;
+            pod.velocity = Vector3Add(pod.velocity, Vector3Scale(podUp, pull * dt));
+        } else {
+            pod.velocity.y -= CurrentGravity() * 0.65f * dt;
+        }
+        // Move
+        pod.position = Vector3Add(pod.position, Vector3Scale(pod.velocity, dt));
+        // Ground landing
+        bool landed = false;
+        if (IsSphericalMap()) {
+            float alt = SphericalAltitudeAt(pod.position);
+            if (alt <= SphericalEnemyAltitude(EnemyType::SlimeKing) + 0.2f) {
+                pod.position = SphericalSurfacePoint(pod.position, SphericalEnemyAltitude(EnemyType::SlimeKing));
+                pod.velocity = Vector3Scale(pod.velocity, 0.3f);
+                landed = true;
+            }
+        } else {
+            if (pod.position.y <= 0.5f) {
+                pod.position.y = 0.5f;
+                pod.velocity = Vector3Scale(pod.velocity, 0.3f);
+                landed = true;
+            }
+        }
+        // Countdown (faster after landing)
+        pod.timer -= dt * (landed ? 1.0f : 0.35f);
+        if (pod.timer <= 0.0f) {
+            // Spawn child slime
+            Vector3 spawnPos = IsSphericalMap()
+                ? SphericalSurfacePoint(pod.position, SphericalEnemyAltitude(EnemyType::SlimeKing))
+                : Vector3{pod.position.x, 1.5f, pod.position.z};
+            PhysicsWorld::BodyConfig childConfig;
+            childConfig.motionType = JPH::EMotionType::Dynamic;
+            childConfig.layer = Layers::MOVING;
+            childConfig.gravityFactor = !IsSphericalMap() ? 0.75f : 0.0f;
+            childConfig.linearDamping = 0.0f;
+            childConfig.friction = 0.0f;
+            childConfig.allowSleeping = false;
+            JPH::BodyID childBody = physics_.CreateBody(enemyShape_, ToJoltVector(spawnPos), JPH::Quat::sIdentity(), childConfig);
+            enemies_.push_back(Enemy{childBody, EnemyType::SlimeKing, pod.radius, config_.slimeKingSpeed,
+                pod.health, pod.health, RandomFloat(0.0f, 6.28f), 0.0f, RandomFloat(0.8f, 1.4f),
+                0.0f, 0, 0, 0.0f, 0.0f, 100, Color{100, 220, 140, 255},
+                Vector3Zero(), Vector3Zero(), false, pod.generation});
+            SpawnHitBurst(spawnPos, Color{80, 210, 120, 255}, 12);
+            slimeSpawnPods_[i] = slimeSpawnPods_.back();
+            slimeSpawnPods_.pop_back();
+            continue;
+        }
+        ++i;
     }
 }
 
@@ -2164,6 +2461,7 @@ void Game::UpdateCollisions() {
                     break;
                 } else if (projectiles_[projectileIndex].kind == ProjectileKind::GravityNail) {
                     enemy.health -= projectiles_[projectileIndex].damage;
+                    totalDamageDealt_ += projectiles_[projectileIndex].damage;
                     if (enemy.type == EnemyType::Dummy || enemy.type == EnemyType::DummyBoss) {
                         RecordDummyDamage(enemy, projectiles_[projectileIndex].damage);
                     }
@@ -2179,6 +2477,7 @@ void Game::UpdateCollisions() {
                     break;
                 } else if (projectiles_[projectileIndex].kind == ProjectileKind::BlackHoleGrenade) {
                     enemy.health -= projectiles_[projectileIndex].damage;
+                    totalDamageDealt_ += projectiles_[projectileIndex].damage;
                     if (enemy.type == EnemyType::Dummy || enemy.type == EnemyType::DummyBoss) {
                         RecordDummyDamage(enemy, projectiles_[projectileIndex].damage);
                     }
@@ -2194,6 +2493,7 @@ void Game::UpdateCollisions() {
                     break;
                 } else if (projectiles_[projectileIndex].kind == ProjectileKind::Lance) {
                     enemy.health -= projectiles_[projectileIndex].damage;
+                    totalDamageDealt_ += projectiles_[projectileIndex].damage;
                     if (enemy.type == EnemyType::Dummy || enemy.type == EnemyType::DummyBoss) {
                         RecordDummyDamage(enemy, projectiles_[projectileIndex].damage);
                     }
@@ -2208,6 +2508,7 @@ void Game::UpdateCollisions() {
                 }
 
                 enemy.health -= projectiles_[projectileIndex].damage;
+                totalDamageDealt_ += projectiles_[projectileIndex].damage;
                 if (enemy.type == EnemyType::Dummy || enemy.type == EnemyType::DummyBoss) {
                     RecordDummyDamage(enemy, projectiles_[projectileIndex].damage);
                 }
@@ -2246,6 +2547,7 @@ void Game::UpdateCollisions() {
             float hitDist = projectiles_[pi].radius + 3.0f;
             if (Vector3Distance(pp, bethlehem_.position) <= hitDist) {
                 bethlehem_.health -= projectiles_[pi].damage;
+                totalDamageDealt_ += projectiles_[pi].damage;
                 SpawnHitBurst(pp, Color{255, 210, 100, 255}, 8);
                 DestroyProjectile(pi);
                 if (bethlehem_.health <= 0.0f) {
@@ -2464,20 +2766,23 @@ void Game::ResolveMapCollision(Vector3 previousPosition) {
             continue;
         }
 
-        float minX = platform.position.x - platform.scale.x * 0.5f - playerRadius_;
-        float maxX = platform.position.x + platform.scale.x * 0.5f + playerRadius_;
-        float minZ = platform.position.z - platform.scale.z * 0.5f - playerRadius_;
-        float maxZ = platform.position.z + platform.scale.z * 0.5f + playerRadius_;
+        Vector3 right = platform.right;
+        Vector3 forward = platform.forward;
         float topY = platform.position.y + platform.scale.y;
         float bottomY = platform.position.y;
         float feetY = camera_.position.y - playerHeight_;
+        float previousFeetY = previousPosition.y - playerHeight_;
 
-        bool overlapsXZ = camera_.position.x >= minX && camera_.position.x <= maxX && camera_.position.z >= minZ && camera_.position.z <= maxZ;
-        if (!overlapsXZ) {
+        Vector3 offsetXZ = Vector3{camera_.position.x - platform.position.x, 0.0f, camera_.position.z - platform.position.z};
+        float localX = Vector3DotProduct(offsetXZ, right);
+        float localZ = Vector3DotProduct(offsetXZ, forward);
+        float halfX = platform.scale.x * 0.5f + playerRadius_;
+        float halfZ = platform.scale.z * 0.5f + playerRadius_;
+        bool inside = std::abs(localX) <= halfX && std::abs(localZ) <= halfZ;
+        if (!inside) {
             continue;
         }
 
-        float previousFeetY = previousPosition.y - playerHeight_;
         if (playerVelocity_.y <= 0.0f && previousFeetY >= topY - 0.25f && feetY <= topY + 0.35f) {
             camera_.position.y = topY + playerHeight_;
             playerVelocity_.y = 0.0f;
@@ -2492,27 +2797,7 @@ void Game::ResolveMapCollision(Vector3 previousPosition) {
             }
             continue;
         }
-
-        if (feetY < topY - 0.12f && camera_.position.y > bottomY + 0.15f) {
-            float pushLeft = std::abs(camera_.position.x - minX);
-            float pushRight = std::abs(maxX - camera_.position.x);
-            float pushBack = std::abs(camera_.position.z - minZ);
-            float pushFront = std::abs(maxZ - camera_.position.z);
-            float best = std::min(std::min(pushLeft, pushRight), std::min(pushBack, pushFront));
-            if (best == pushLeft) {
-                camera_.position.x = minX;
-                playerVelocity_.x = std::min(0.0f, playerVelocity_.x);
-            } else if (best == pushRight) {
-                camera_.position.x = maxX;
-                playerVelocity_.x = std::max(0.0f, playerVelocity_.x);
-            } else if (best == pushBack) {
-                camera_.position.z = minZ;
-                playerVelocity_.z = std::min(0.0f, playerVelocity_.z);
-            } else {
-                camera_.position.z = maxZ;
-                playerVelocity_.z = std::max(0.0f, playerVelocity_.z);
-            }
-        }
+        // 玩家可从侧面/底部穿过平台（纳米机器人选择性阻挡），仅顶面提供支撑
     }
 }
 
@@ -2600,6 +2885,8 @@ void Game::SpawnEnemyOfType(EnemyType type) {
         position.y = 1.0f;
     } else if (type == EnemyType::Boss) {
         position.y = 2.2f;
+    } else if (type == EnemyType::SlimeKing) {
+        position.y = 1.5f;
     } else if (type == EnemyType::Duelist) {
         position.y = 1.2f;
     } else if (type == EnemyType::Dummy) {
@@ -2656,6 +2943,12 @@ void Game::SpawnEnemyOfType(EnemyType type) {
         speed = 2.3f;
         scoreValue = 650;
         color = Color{120, 95, 255, 255};
+    } else if (type == EnemyType::SlimeKing) {
+        enemyRadius = config_.slimeKingRadius;
+        health = config_.slimeKingHealth;
+        speed = config_.slimeKingSpeed;
+        scoreValue = 800;
+        color = Color{100, 220, 140, 255};
     } else if (type == EnemyType::Duelist) {
         enemyRadius = 0.82f;
         health = config_.duelistHealth;
@@ -2679,7 +2972,7 @@ void Game::SpawnEnemyOfType(EnemyType type) {
     PhysicsWorld::BodyConfig enemyConfig;
     enemyConfig.motionType = JPH::EMotionType::Dynamic;
     enemyConfig.layer = Layers::MOVING;
-    enemyConfig.gravityFactor = !IsSphericalMap() && type == EnemyType::Pouncer ? 0.75f : 0.0f;
+    enemyConfig.gravityFactor = !IsSphericalMap() && (type == EnemyType::Pouncer || type == EnemyType::SlimeKing) ? 0.75f : 0.0f;
     enemyConfig.linearDamping = 0.0f;
     enemyConfig.angularDamping = 1.0f;
     enemyConfig.friction = 0.0f;
@@ -2691,7 +2984,7 @@ void Game::SpawnEnemyOfType(EnemyType type) {
         JPH::Quat::sIdentity(),
         enemyConfig);
 
-    enemies_.push_back(Enemy{body, type, enemyRadius, speed, health, health, RandomFloat(0.0f, 6.28f), RandomFloat(0.0f, 1.0f), RandomFloat(0.4f, 1.6f), RandomFloat(0.0f, 0.5f), 0, RandomFloat(config_.duelistWeaponSwitchMin, config_.duelistWeaponSwitchMax), 0.0f, scoreValue, color, Vector3Zero(), Vector3Zero(), false});
+    enemies_.push_back(Enemy{body, type, enemyRadius, speed, health, health, RandomFloat(0.0f, 6.28f), RandomFloat(0.0f, 1.0f), RandomFloat(0.4f, 1.6f), RandomFloat(0.0f, 0.5f), 0, 0, RandomFloat(config_.duelistWeaponSwitchMin, config_.duelistWeaponSwitchMax), 0.0f, scoreValue, color, Vector3Zero(), Vector3Zero(), false, 0});
     if (timeStopped_) {
         Enemy& enemy = enemies_.back();
         enemy.frozen = true;
@@ -2742,11 +3035,11 @@ void Game::FireLaser(float charge) {
     float normalizedCharge = std::clamp(charge, 0.18f, 1.0f);
     Vector3 forward = PlayerForward();
     Vector3 start = WeaponMuzzlePosition();
-    Vector3 end = Vector3Add(start, Vector3Scale(forward, 62.0f));
+    Vector3 end = Vector3Add(start, Vector3Scale(forward, config_.laserBeamRange));
     float damage = config_.laserBaseDamage + normalizedCharge * config_.laserChargeDamage;
-    float beamRadius = config_.laserBeamRadius + normalizedCharge * 0.45f;
+    float beamRadius = config_.laserBeamRadius + normalizedCharge * config_.laserBeamRadiusChargeBonus;
 
-    float beamLife = 0.16f + normalizedCharge * 0.1f;
+    float beamLife = config_.laserBeamLifetime + normalizedCharge * config_.laserBeamLifetimeChargeBonus;
     beams_.push_back(Beam{
         start,
         end,
@@ -2762,6 +3055,7 @@ void Game::FireLaser(float charge) {
         float hitDistance = beamRadius + enemies_[i].radius * 0.85f;
         if (DistancePointToSegment(enemyPosition, start, end) <= hitDistance) {
             enemies_[i].health -= damage;
+            totalDamageDealt_ += damage;
             SpawnHitBurst(enemyPosition, Color{150, 235, 255, 255}, 18 + static_cast<int>(normalizedCharge * 10.0f));
             if (enemies_[i].health <= 0.0f) {
                 score_ += enemies_[i].scoreValue;
@@ -2796,6 +3090,23 @@ void Game::FireEnemyShot(Vector3 position, Vector3 direction) {
     projectiles_.push_back(Projectile{body, ProjectileKind::EnemyShot, 3.0f, 3.0f, config_.enemyShotDamage, 0.2f, 0.2f, Color{105, 255, 220, 255}, 0, intendedVelocity, ProjectileOwner::Enemy, timeStopped_});
 }
 
+void Game::FireHomingShot(Vector3 position, Vector3 direction, float speed, float turnRate, float life, float damage, Color color, ProjectileOwner owner) {
+    Vector3 intendedVelocity = Vector3Scale(direction, speed);
+    PhysicsWorld::BodyConfig projectileConfig;
+    projectileConfig.motionType = JPH::EMotionType::Dynamic;
+    projectileConfig.layer = Layers::PROJECTILE;
+    projectileConfig.linearVelocity = timeStopped_ ? JPH::Vec3::sZero() : JPH::Vec3(intendedVelocity.x, intendedVelocity.y, intendedVelocity.z);
+    projectileConfig.gravityFactor = 0.0f;
+    projectileConfig.linearDamping = 0.0f;
+    projectileConfig.motionQuality = JPH::EMotionQuality::LinearCast;
+    projectileConfig.allowSleeping = false;
+
+    JPH::BodyID body = physics_.CreateBody(projectileShape_, ToJoltVector(position), JPH::Quat::sIdentity(), projectileConfig);
+    Projectile proj{body, ProjectileKind::HomingShot, life, life, damage, 0.22f, 0.22f, color, 0, intendedVelocity, owner, timeStopped_};
+    proj.turnRate = turnRate;
+    projectiles_.push_back(proj);
+}
+
 void Game::FireEnemyBeam(Vector3 origin, Vector3 direction, float charge) {
     Vector3 forward = Vector3Normalize(direction);
     float normalizedCharge = std::clamp(charge, 0.25f, 1.0f);
@@ -2820,37 +3131,48 @@ void Game::FireEnemyBeam(Vector3 origin, Vector3 direction, float charge) {
 
 void Game::SpawnEnemyNanoPlatform(Vector3 origin, Vector3 direction) {
     Vector3 forward = Vector3Normalize(direction);
-    Vector3 target = Vector3Add(origin, Vector3Scale(forward, config_.riftPlatformRange * 0.72f));
-    float halfSize = config_.riftPlatformSize * 0.36f;
-    Vector3 scale = Vector3{config_.riftPlatformSize * 0.72f, config_.riftPlatformThickness, config_.riftPlatformSize * 0.72f};
+    Vector3 target = Vector3Add(origin, Vector3Scale(forward, config_.nanoPlatformRange * 0.72f));
+    float halfLength = config_.nanoPlatformLength * 0.36f;
+    float halfWidth = config_.nanoPlatformWidth * 0.36f;
+    Vector3 scale = Vector3{config_.nanoPlatformLength * 0.72f, config_.nanoPlatformHeight, config_.nanoPlatformWidth * 0.72f};
     if (IsSphericalMap()) {
         Vector3 normal = SphericalUpAt(target);
         float targetAltitude = std::max(SphericalPlayerAltitude(), SphericalAltitudeAt(target));
-        targetAltitude += config_.riftPlatformRange * 0.72f * 0.18f;
+        targetAltitude += config_.nanoPlatformRange * 0.72f * 0.18f;
         Vector3 center = SphericalSurfacePoint(target, targetAltitude);
         Vector3 platformRight = SafeNormalize(Vector3CrossProduct(forward, normal), PlayerRight());
         Vector3 platformForward = SafeNormalize(Vector3CrossProduct(normal, platformRight), PlayerForward());
-        nanoPlatforms_.push_back(NanoPlatform{center, scale, normal, platformRight, platformForward, config_.riftPlatformDelay, config_.riftPlatformLifetime * 0.45f, config_.riftPlatformLifetime * 0.45f});
+        nanoPlatforms_.push_back(NanoPlatform{center, scale, normal, platformRight, platformForward, config_.nanoPlatformDelay, config_.nanoPlatformLifetime * 0.45f, config_.nanoPlatformLifetime * 0.45f});
         SpawnHitBurst(center, Color{255, 220, 115, 255}, 8);
         return;
     }
 
     if (IsSquareMap()) {
-        float limit = squareHalfExtent_ - halfSize - 0.25f;
-        target.x = std::clamp(target.x, -limit, limit);
-        target.z = std::clamp(target.z, -limit, limit);
+        float limitX = squareHalfExtent_ - halfLength - 0.25f;
+        float limitZ = squareHalfExtent_ - halfWidth - 0.25f;
+        target.x = std::clamp(target.x, -limitX, limitX);
+        target.z = std::clamp(target.z, -limitZ, limitZ);
     } else {
         Vector3 flat = Vector3{target.x, 0.0f, target.z};
-        float limit = std::max(0.1f, arenaRadius_ - halfSize - 0.25f);
+        float maxHalf = std::max(halfLength, halfWidth);
+        float limit = std::max(0.1f, arenaRadius_ - maxHalf - 0.25f);
         if (Vector3Length(flat) > limit) {
             flat = Vector3Scale(Vector3Normalize(flat), limit);
             target.x = flat.x;
             target.z = flat.z;
         }
     }
-    float topY = std::clamp(target.y, 1.2f, 16.0f);
-    Vector3 position = Vector3{target.x, topY - scale.y, target.z};
-    nanoPlatforms_.push_back(NanoPlatform{position, scale, Vector3{0.0f, 1.0f, 0.0f}, Vector3{1.0f, 0.0f, 0.0f}, Vector3{0.0f, 0.0f, 1.0f}, config_.riftPlatformDelay, config_.riftPlatformLifetime * 0.45f, config_.riftPlatformLifetime * 0.45f});
+    float centerY = std::clamp(target.y, 1.2f, 16.0f);
+    Vector3 position = Vector3{target.x, centerY - scale.y * 0.5f, target.z};
+    Vector3 normal = Vector3{0.0f, 1.0f, 0.0f};
+    Vector3 platformRight = Vector3CrossProduct(forward, normal);
+    if (Vector3Length(platformRight) <= 0.001f) {
+        platformRight = PlayerRight();
+    } else {
+        platformRight = Vector3Normalize(platformRight);
+    }
+    Vector3 platformForward = Vector3Normalize(Vector3CrossProduct(normal, platformRight));
+    nanoPlatforms_.push_back(NanoPlatform{position, scale, normal, platformRight, platformForward, config_.nanoPlatformDelay, config_.nanoPlatformLifetime * 0.45f, config_.nanoPlatformLifetime * 0.45f});
     SpawnHitBurst(Vector3{position.x, position.y + scale.y, position.z}, Color{255, 220, 115, 255}, 8);
 }
 
@@ -2990,7 +3312,7 @@ void Game::FireDuelistWeapon(Enemy& enemy, Vector3 position, Vector3 toPlayer) {
             enemy.cooldownTimer = 1.05f / rate;
             enemy.telegraphTimer = 0.34f;
         } else {
-            FireEnemyProjectile(ProjectileKind::LaserShot, origin, aimDirection, 58.0f, config_.daggerDamage, 1.6f, 0.17f, 0.17f, Color{255, 235, 145, 255});
+            FireEnemyProjectile(ProjectileKind::LaserShot, origin, aimDirection, 58.0f, config_.plasmaDamage, 1.6f, 0.17f, 0.17f, Color{255, 235, 145, 255});
             enemy.cooldownTimer = 0.28f / rate;
         }
     } else if (enemy.weaponSlot == 1) {
@@ -3044,7 +3366,7 @@ void Game::FireDuelistWeapon(Enemy& enemy, Vector3 position, Vector3 toPlayer) {
             enemy.cooldownTimer = 1.4f / rate;
             enemy.telegraphTimer = 0.28f;
         } else {
-            SpawnEnemyRift(origin, aimDirection);
+            SpawnEnemyNanoBlade(origin, aimDirection);
             enemy.cooldownTimer = 1.25f / rate;
             enemy.telegraphTimer = 0.35f;
         }
@@ -3106,6 +3428,7 @@ void Game::FireHeatwave(Vector3 direction) {
 
         float falloff = 1.0f - distance / range;
         enemy.health -= config_.heatwaveDamage * (0.35f + falloff * 0.65f);
+        totalDamageDealt_ += config_.heatwaveDamage * (0.35f + falloff * 0.65f);
         if (enemy.type == EnemyType::Dummy || enemy.type == EnemyType::DummyBoss) {
             RecordDummyDamage(enemy, config_.heatwaveDamage * (0.35f + falloff * 0.65f));
         }
@@ -3172,27 +3495,27 @@ void Game::FireDuelistHeatwave(Vector3 origin, Vector3 direction) {
     heatwaves_.push_back(HeatwavePulse{origin, forward, 0.18f, 0.18f, range, 0.8f, Color{255, 150, 70, 255}});
 }
 
-void Game::FireRiftCutter(Vector3 direction) {
+void Game::FireNanoBlade(Vector3 direction) {
     Vector3 forward = Vector3Normalize(direction);
     Vector3 planeNormal = PlayerRight();
     if (Vector3Length(planeNormal) <= 0.001f) {
         planeNormal = Vector3{1.0f, 0.0f, 0.0f};
     }
     Vector3 up = PlayerUp();
-    Vector3 center = Vector3Add(WeaponMuzzlePosition(), Vector3Scale(forward, config_.riftCutterWaveSpawnDistance));
-    rifts_.push_back(RiftSlash{
+    Vector3 center = Vector3Add(WeaponMuzzlePosition(), Vector3Scale(forward, config_.nanoBladeWaveSpawnDistance));
+    nanoBlades_.push_back(NanoBlade{
         center,
         planeNormal,
         forward,
         up,
-        Vector3Scale(forward, config_.riftCutterWaveSpeed),
-        config_.riftCutterDelay,
-        config_.riftCutterLifetime,
-        config_.riftCutterLifetime,
-        config_.riftCutterRadius,
-        config_.riftCutterThickness,
-        config_.riftCutterPlaneThickness,
-        config_.riftCutterDamage / config_.riftCutterLifetime,
+        Vector3Scale(forward, config_.nanoBladeWaveSpeed),
+        config_.nanoBladeDelay,
+        config_.nanoBladeLifetime,
+        config_.nanoBladeLifetime,
+        config_.nanoBladeRadius,
+        config_.nanoBladeThickness,
+        config_.nanoBladePlaneThickness,
+        config_.nanoBladeDamage / config_.nanoBladeLifetime,
         ProjectileOwner::Player
     });
     SpawnHitBurst(WeaponMuzzlePosition(), Color{255, 225, 140, 255}, 8);
@@ -3235,6 +3558,7 @@ void Game::FireLanceThrust(Vector3 direction) {
 
         float falloff = 1.0f - std::clamp(distance / std::max(0.001f, range), 0.0f, 1.0f);
         enemy.health -= config_.recoilLanceThrustDamage * (0.35f + falloff * 0.65f);
+        totalDamageDealt_ += config_.recoilLanceThrustDamage * (0.35f + falloff * 0.65f);
         if (enemy.type == EnemyType::Dummy || enemy.type == EnemyType::DummyBoss) {
             RecordDummyDamage(enemy, config_.recoilLanceThrustDamage * (0.35f + falloff * 0.65f));
         }
@@ -3306,6 +3630,7 @@ void Game::DetonateLance(Vector3 position, ProjectileOwner owner) {
             if (distance <= radius + enemy.radius) {
                 float falloff = 1.0f - std::clamp(distance / std::max(0.001f, radius), 0.0f, 1.0f);
                 enemy.health -= config_.recoilLanceShockwaveDamage * (0.25f + falloff * 0.75f);
+                totalDamageDealt_ += config_.recoilLanceShockwaveDamage * (0.25f + falloff * 0.75f);
                 if (enemy.type == EnemyType::Dummy || enemy.type == EnemyType::DummyBoss) {
                     RecordDummyDamage(enemy, config_.recoilLanceShockwaveDamage * (0.25f + falloff * 0.75f));
                 }
@@ -3343,15 +3668,15 @@ void Game::DetonateLance(Vector3 position, ProjectileOwner owner) {
     });
 }
 
-void Game::SpawnEnemyRift(Vector3 origin, Vector3 direction) {
+void Game::SpawnEnemyNanoBlade(Vector3 origin, Vector3 direction) {
     Vector3 forward = Vector3Normalize(direction);
     Vector3 planeNormal = Vector3Normalize(Vector3CrossProduct(forward, Vector3{0.0f, 1.0f, 0.0f}));
     if (Vector3Length(planeNormal) <= 0.001f) {
         planeNormal = Vector3{1.0f, 0.0f, 0.0f};
     }
     Vector3 up = Vector3Normalize(Vector3CrossProduct(planeNormal, forward));
-    Vector3 center = Vector3Add(origin, Vector3Scale(forward, config_.riftCutterWaveSpawnDistance));
-    rifts_.push_back(RiftSlash{center, planeNormal, forward, up, Vector3Scale(forward, config_.riftCutterWaveSpeed * 0.82f), config_.riftCutterDelay, config_.riftCutterLifetime, config_.riftCutterLifetime, config_.riftCutterRadius, config_.riftCutterThickness, config_.riftCutterPlaneThickness, config_.riftCutterDamage / config_.riftCutterLifetime, ProjectileOwner::Enemy});
+    Vector3 center = Vector3Add(origin, Vector3Scale(forward, config_.nanoBladeWaveSpawnDistance));
+    nanoBlades_.push_back(NanoBlade{center, planeNormal, forward, up, Vector3Scale(forward, config_.nanoBladeWaveSpeed * 0.82f), config_.nanoBladeDelay, config_.nanoBladeLifetime, config_.nanoBladeLifetime, config_.nanoBladeRadius, config_.nanoBladeThickness, config_.nanoBladePlaneThickness, config_.nanoBladeDamage / config_.nanoBladeLifetime, ProjectileOwner::Enemy});
     SpawnHitBurst(origin, Color{255, 210, 120, 255}, 6);
 }
 
@@ -3579,6 +3904,7 @@ void Game::ExplodeRocket(Vector3 position, ProjectileOwner owner) {
             if (distance <= radius + enemies_[i].radius) {
                 float falloff = 1.0f - std::clamp(distance / std::max(0.001f, radius), 0.0f, 1.0f);
                 enemies_[i].health -= config_.rocketExplosionDamage * (0.35f + falloff * 0.65f);
+                totalDamageDealt_ += config_.rocketExplosionDamage * (0.35f + falloff * 0.65f);
                 if (enemies_[i].type == EnemyType::Dummy || enemies_[i].type == EnemyType::DummyBoss) {
                     RecordDummyDamage(enemies_[i], config_.rocketExplosionDamage * (0.35f + falloff * 0.65f));
                 }
@@ -3781,7 +4107,32 @@ void Game::DestroyProjectile(size_t index) {
 void Game::DestroyEnemy(size_t index) {
     bool wasBoss = enemies_[index].type == EnemyType::Boss;
     bool wasDuelist = enemies_[index].type == EnemyType::Duelist;
+    bool wasSlimeKing = enemies_[index].type == EnemyType::SlimeKing;
     Vector3 position = BodyPosition(enemies_[index].body);
+
+    // Slime King split: launch spawn pods that fly outward and land before spawning
+    if (wasSlimeKing && enemies_[index].slimeGeneration < config_.slimeKingMaxGenerations) {
+        int generation = enemies_[index].slimeGeneration;
+        float parentHealth = enemies_[index].health;
+        float parentRadius = enemies_[index].radius;
+        float childHealth = std::max(parentHealth * 0.5f / static_cast<float>(config_.slimeKingSplitCount), config_.slimeKingMinHealth);
+        float childRadius = parentRadius * config_.slimeKingChildScale;
+        int childCount = config_.slimeKingSplitCount;
+
+        for (int i = 0; i < childCount; ++i) {
+            float angle = static_cast<float>(i) / static_cast<float>(childCount) * 6.2831853f + RandomFloat(-0.3f, 0.3f);
+            Vector3 outDir = Vector3{std::cos(angle), 0.5f, std::sin(angle)};
+            outDir = Vector3Normalize(outDir);
+            float ejectSpeed = RandomFloat(10.0f, 16.0f) * (1.0f + generation * 0.25f);
+            slimeSpawnPods_.push_back(SlimeSpawnPod{
+                position, Vector3Scale(outDir, ejectSpeed), 1.0f, 1.0f,
+                childHealth, childRadius, generation + 1});
+        }
+        SpawnShockwave(position, parentRadius * 2.0f, Color{120, 240, 160, 255});
+        SpawnHitBurst(position, Color{100, 230, 150, 255}, 35);
+        cameraShake_ = std::min(1.0f, cameraShake_ + 0.4f);
+    }
+
     physics_.DestroyBody(enemies_[index].body);
     enemies_[index] = enemies_.back();
     enemies_.pop_back();
@@ -3986,12 +4337,13 @@ Vector3 Game::WeaponMuzzlePosition() const {
 
 Game::NanoPlatform Game::MakeNanoPlatformTarget(Vector3 direction) const {
     Vector3 forward = Vector3Length(direction) > 0.001f ? Vector3Normalize(direction) : PlayerForward();
-    Vector3 target = Vector3Add(WeaponMuzzlePosition(), Vector3Scale(forward, config_.riftPlatformRange * riftPlatformRangeScale_));
-    float halfSize = config_.riftPlatformSize * 0.5f;
+    Vector3 target = Vector3Add(WeaponMuzzlePosition(), Vector3Scale(forward, config_.nanoPlatformRange * nanoPlatformRangeScale_));
+    float halfLength = config_.nanoPlatformLength * 0.5f;
+    float halfWidth = config_.nanoPlatformWidth * 0.5f;
 
     if (IsSphericalMap()) {
         Vector3 normal = SphericalUpAt(target);
-        float platformRange = config_.riftPlatformRange * riftPlatformRangeScale_;
+        float platformRange = config_.nanoPlatformRange * nanoPlatformRangeScale_;
         float targetAltitude = std::max(SphericalPlayerAltitude(), SphericalAltitudeAt(target));
         targetAltitude += platformRange * 0.18f;
         Vector3 center = SphericalSurfacePoint(target, targetAltitude);
@@ -4002,17 +4354,19 @@ Game::NanoPlatform Game::MakeNanoPlatformTarget(Vector3 direction) const {
             platformRight = Vector3Normalize(platformRight);
         }
         Vector3 platformForward = Vector3Normalize(Vector3CrossProduct(normal, platformRight));
-        Vector3 scale = Vector3{config_.riftPlatformSize, config_.riftPlatformThickness, config_.riftPlatformSize};
-        return NanoPlatform{center, scale, normal, platformRight, platformForward, config_.riftPlatformDelay, config_.riftPlatformLifetime, config_.riftPlatformLifetime};
+        Vector3 scale = Vector3{config_.nanoPlatformLength, config_.nanoPlatformHeight, config_.nanoPlatformWidth};
+        return NanoPlatform{center, scale, normal, platformRight, platformForward, config_.nanoPlatformDelay, config_.nanoPlatformLifetime, config_.nanoPlatformLifetime};
     }
 
     if (IsSquareMap()) {
-        float limit = squareHalfExtent_ - halfSize - 0.25f;
-        target.x = std::clamp(target.x, -limit, limit);
-        target.z = std::clamp(target.z, -limit, limit);
+        float limitX = squareHalfExtent_ - halfLength - 0.25f;
+        float limitZ = squareHalfExtent_ - halfWidth - 0.25f;
+        target.x = std::clamp(target.x, -limitX, limitX);
+        target.z = std::clamp(target.z, -limitZ, limitZ);
     } else {
         Vector3 flat = Vector3{target.x, 0.0f, target.z};
-        float maxDistance = std::max(0.1f, arenaRadius_ - halfSize - 0.25f);
+        float maxHalf = std::max(halfLength, halfWidth);
+        float maxDistance = std::max(0.1f, arenaRadius_ - maxHalf - 0.25f);
         if (Vector3Length(flat) > maxDistance) {
             flat = Vector3Scale(Vector3Normalize(flat), maxDistance);
             target.x = flat.x;
@@ -4020,10 +4374,18 @@ Game::NanoPlatform Game::MakeNanoPlatformTarget(Vector3 direction) const {
         }
     }
 
-    float topY = std::clamp(target.y, 1.2f, 34.0f);
-    Vector3 scale = Vector3{config_.riftPlatformSize, config_.riftPlatformThickness, config_.riftPlatformSize};
-    Vector3 position = Vector3{target.x, topY - scale.y, target.z};
-    return NanoPlatform{position, scale, Vector3{0.0f, 1.0f, 0.0f}, Vector3{1.0f, 0.0f, 0.0f}, Vector3{0.0f, 0.0f, 1.0f}, config_.riftPlatformDelay, config_.riftPlatformLifetime, config_.riftPlatformLifetime};
+    float centerY = std::clamp(target.y, 1.2f, 34.0f);
+    Vector3 scale = Vector3{config_.nanoPlatformLength, config_.nanoPlatformHeight, config_.nanoPlatformWidth};
+    Vector3 position = Vector3{target.x, centerY - scale.y * 0.5f, target.z};
+    Vector3 normal = Vector3{0.0f, 1.0f, 0.0f};
+    Vector3 platformRight = Vector3CrossProduct(forward, normal);
+    if (Vector3Length(platformRight) <= 0.001f) {
+        platformRight = PlayerRight();
+    } else {
+        platformRight = Vector3Normalize(platformRight);
+    }
+    Vector3 platformForward = Vector3Normalize(Vector3CrossProduct(normal, platformRight));
+    return NanoPlatform{position, scale, normal, platformRight, platformForward, config_.nanoPlatformDelay, config_.nanoPlatformLifetime, config_.nanoPlatformLifetime};
 }
 
 Vector3 Game::GetFireControlAimPoint() const {
@@ -4143,6 +4505,9 @@ float Game::SphericalEnemyAltitude(EnemyType type) const {
     if (type == EnemyType::Boss || type == EnemyType::DummyBoss) {
         return 2.2f;
     }
+    if (type == EnemyType::SlimeKing) {
+        return 1.5f;
+    }
     if (type == EnemyType::Duelist) {
         return 1.2f;
     }
@@ -4175,7 +4540,7 @@ const char* Game::WeaponName() const {
             return "GAUNT";
         case WeaponType::RecoilLance:
             return "LANCE";
-        case WeaponType::RiftCutter:
+        case WeaponType::NanoConstructor:
             return "NANO";
         default:
             return "UNKNOWN";
@@ -4199,8 +4564,8 @@ const char* Game::WeaponModeName() const {
         if (timeStopped_) return "T";
         return gauntletMode_ == GauntletMode::Blink ? "B" : "TS";
     }
-    if (activeWeapon_ == WeaponType::RiftCutter) {
-        return riftCutterMode_ == RiftCutterMode::Platform ? "P" : "B";
+    if (activeWeapon_ == WeaponType::NanoConstructor) {
+        return nanoConstructorMode_ == NanoConstructorMode::NanoPlatform ? "P" : "B";
     }
     if (activeWeapon_ == WeaponType::RecoilLance) {
         return recoilLanceMode_ == RecoilLanceMode::Thrust ? "T" : "L";
@@ -4271,6 +4636,7 @@ void Game::Draw() const {
     DrawArena();
     DrawProps();
     DrawNanoPlatforms();
+    DrawSlimeSpawnPods();
     DrawDrones();
     DrawEnemies();
     DrawBethlehem();
@@ -4280,7 +4646,7 @@ void Game::Draw() const {
     DrawShockwaves();
     DrawHeatwaves();
     DrawGravityWells();
-    DrawRifts();
+    DrawNanoBlades();
     DrawParticles();
     DrawRallyMarker();
     DrawBlinkIndicator();
@@ -4451,17 +4817,17 @@ void Game::DrawProps() const {
 }
 
 void Game::DrawNanoPlatformFrame(const NanoPlatform& platform, Color color, bool dashed) const {
-    Vector3 normal = IsSphericalMap() ? SafeNormalize(platform.normal, SphericalUpAt(platform.position)) : Vector3{0.0f, 1.0f, 0.0f};
-    Vector3 right = IsSphericalMap() ? SafeNormalize(platform.right, PlayerRight()) : Vector3{1.0f, 0.0f, 0.0f};
-    Vector3 forward = IsSphericalMap() ? SafeNormalize(platform.forward, PlayerForward()) : Vector3{0.0f, 0.0f, 1.0f};
-    Vector3 topCenter = IsSphericalMap()
+    Vector3 normal = IsSphericalMap() ? SafeNormalize(platform.normal, SphericalUpAt(platform.position)) : platform.normal;
+    Vector3 right = IsSphericalMap() ? SafeNormalize(platform.right, PlayerRight()) : platform.right;
+    Vector3 forward = IsSphericalMap() ? SafeNormalize(platform.forward, PlayerForward()) : platform.forward;
+    Vector3 center = IsSphericalMap()
         ? Vector3Add(platform.position, Vector3Scale(normal, 0.035f))
-        : Vector3{platform.position.x, platform.position.y + platform.scale.y + 0.035f, platform.position.z};
+        : Vector3{platform.position.x, platform.position.y + platform.scale.y * 0.5f, platform.position.z};
     Vector3 corners[4] = {
-        Vector3Add(topCenter, Vector3Add(Vector3Scale(right, -platform.scale.x * 0.5f), Vector3Scale(forward, -platform.scale.z * 0.5f))),
-        Vector3Add(topCenter, Vector3Add(Vector3Scale(right, platform.scale.x * 0.5f), Vector3Scale(forward, -platform.scale.z * 0.5f))),
-        Vector3Add(topCenter, Vector3Add(Vector3Scale(right, platform.scale.x * 0.5f), Vector3Scale(forward, platform.scale.z * 0.5f))),
-        Vector3Add(topCenter, Vector3Add(Vector3Scale(right, -platform.scale.x * 0.5f), Vector3Scale(forward, platform.scale.z * 0.5f)))
+        Vector3Add(center, Vector3Add(Vector3Scale(right, -platform.scale.x * 0.5f), Vector3Scale(forward, -platform.scale.z * 0.5f))),
+        Vector3Add(center, Vector3Add(Vector3Scale(right, platform.scale.x * 0.5f), Vector3Scale(forward, -platform.scale.z * 0.5f))),
+        Vector3Add(center, Vector3Add(Vector3Scale(right, platform.scale.x * 0.5f), Vector3Scale(forward, platform.scale.z * 0.5f))),
+        Vector3Add(center, Vector3Add(Vector3Scale(right, -platform.scale.x * 0.5f), Vector3Scale(forward, platform.scale.z * 0.5f)))
     };
 
     auto drawEdge = [&](Vector3 a, Vector3 b) {
@@ -4488,7 +4854,7 @@ void Game::DrawNanoPlatformFrame(const NanoPlatform& platform, Color color, bool
 }
 
 void Game::DrawNanoPlatforms() const {
-    if (activeWeapon_ == WeaponType::RiftCutter && riftCutterMode_ == RiftCutterMode::Platform && state_ == State::Playing) {
+    if (activeWeapon_ == WeaponType::NanoConstructor && nanoConstructorMode_ == NanoConstructorMode::NanoPlatform && state_ == State::Playing) {
         NanoPlatform preview = MakeNanoPlatformTarget(PlayerForward());
         DrawNanoPlatformFrame(preview, FadeColor(Color{255, 238, 145, 255}, 0.68f), true);
     }
@@ -4502,39 +4868,39 @@ void Game::DrawNanoPlatforms() const {
 
         float alpha = platform.maxLife > 0.0f ? std::clamp(platform.life / platform.maxLife, 0.0f, 1.0f) : 0.0f;
         Color fill = FadeColor(Color{255, 218, 92, 255}, 0.35f + alpha * 0.25f);
-        if (IsSphericalMap()) {
-            Vector3 normal = SafeNormalize(platform.normal, SphericalUpAt(platform.position));
-            Vector3 right = SafeNormalize(platform.right, PlayerRight());
-            Vector3 forward = SafeNormalize(platform.forward, PlayerForward());
-            Vector3 top[4] = {
-                Vector3Add(platform.position, Vector3Add(Vector3Scale(right, -platform.scale.x * 0.5f), Vector3Scale(forward, -platform.scale.z * 0.5f))),
-                Vector3Add(platform.position, Vector3Add(Vector3Scale(right, platform.scale.x * 0.5f), Vector3Scale(forward, -platform.scale.z * 0.5f))),
-                Vector3Add(platform.position, Vector3Add(Vector3Scale(right, platform.scale.x * 0.5f), Vector3Scale(forward, platform.scale.z * 0.5f))),
-                Vector3Add(platform.position, Vector3Add(Vector3Scale(right, -platform.scale.x * 0.5f), Vector3Scale(forward, platform.scale.z * 0.5f)))
-            };
-            Vector3 bottomOffset = Vector3Scale(normal, -platform.scale.y);
-            Vector3 bottom[4] = {
-                Vector3Add(top[0], bottomOffset),
-                Vector3Add(top[1], bottomOffset),
-                Vector3Add(top[2], bottomOffset),
-                Vector3Add(top[3], bottomOffset)
-            };
-            DrawTriangle3D(top[0], top[1], top[2], fill);
-            DrawTriangle3D(top[0], top[2], top[3], fill);
-            DrawTriangle3D(top[2], top[1], top[0], fill);
-            DrawTriangle3D(top[3], top[2], top[0], fill);
-            Color side = FadeColor(Color{255, 188, 68, 255}, 0.22f + alpha * 0.22f);
-            for (int edge = 0; edge < 4; ++edge) {
-                int next = (edge + 1) % 4;
-                DrawTriangle3D(top[edge], bottom[edge], top[next], side);
-                DrawTriangle3D(top[next], bottom[edge], bottom[next], side);
-                DrawLine3D(top[edge], bottom[edge], FadeColor(Color{255, 244, 170, 255}, 0.68f));
-            }
-        } else {
-            Vector3 center = platform.position;
-            center.y += platform.scale.y * 0.5f;
-            DrawCube(center, platform.scale.x, platform.scale.y, platform.scale.z, fill);
-            DrawCubeWires(center, platform.scale.x, platform.scale.y, platform.scale.z, FadeColor(Color{255, 244, 170, 255}, 0.82f));
+        Vector3 normal = IsSphericalMap() ? SafeNormalize(platform.normal, SphericalUpAt(platform.position)) : Vector3{0.0f, 1.0f, 0.0f};
+        Vector3 right = IsSphericalMap() ? SafeNormalize(platform.right, PlayerRight()) : platform.right;
+        Vector3 forward = IsSphericalMap() ? SafeNormalize(platform.forward, PlayerForward()) : platform.forward;
+        Vector3 center = IsSphericalMap()
+            ? platform.position
+            : Vector3{platform.position.x, platform.position.y + platform.scale.y * 0.5f, platform.position.z};
+        Vector3 top[4] = {
+            Vector3Add(center, Vector3Add(Vector3Scale(right, -platform.scale.x * 0.5f), Vector3Add(Vector3Scale(forward, -platform.scale.z * 0.5f), Vector3Scale(normal, platform.scale.y * 0.5f)))),
+            Vector3Add(center, Vector3Add(Vector3Scale(right, platform.scale.x * 0.5f), Vector3Add(Vector3Scale(forward, -platform.scale.z * 0.5f), Vector3Scale(normal, platform.scale.y * 0.5f)))),
+            Vector3Add(center, Vector3Add(Vector3Scale(right, platform.scale.x * 0.5f), Vector3Add(Vector3Scale(forward, platform.scale.z * 0.5f), Vector3Scale(normal, platform.scale.y * 0.5f)))),
+            Vector3Add(center, Vector3Add(Vector3Scale(right, -platform.scale.x * 0.5f), Vector3Add(Vector3Scale(forward, platform.scale.z * 0.5f), Vector3Scale(normal, platform.scale.y * 0.5f))))
+        };
+        Vector3 bottomOffset = Vector3Scale(normal, -platform.scale.y);
+        Vector3 bottom[4] = {
+            Vector3Add(top[0], bottomOffset),
+            Vector3Add(top[1], bottomOffset),
+            Vector3Add(top[2], bottomOffset),
+            Vector3Add(top[3], bottomOffset)
+        };
+        DrawTriangle3D(top[0], top[1], top[2], fill);
+        DrawTriangle3D(top[0], top[2], top[3], fill);
+        DrawTriangle3D(top[2], top[1], top[0], fill);
+        DrawTriangle3D(top[3], top[2], top[0], fill);
+        DrawTriangle3D(bottom[0], bottom[2], bottom[1], fill);
+        DrawTriangle3D(bottom[0], bottom[3], bottom[2], fill);
+        DrawTriangle3D(bottom[1], bottom[2], bottom[0], fill);
+        DrawTriangle3D(bottom[2], bottom[3], bottom[0], fill);
+        Color side = FadeColor(Color{255, 188, 68, 255}, 0.22f + alpha * 0.22f);
+        for (int edge = 0; edge < 4; ++edge) {
+            int next = (edge + 1) % 4;
+            DrawTriangle3D(top[edge], bottom[edge], top[next], side);
+            DrawTriangle3D(top[next], bottom[edge], bottom[next], side);
+            DrawLine3D(top[edge], bottom[edge], FadeColor(Color{255, 244, 170, 255}, 0.68f));
         }
         DrawNanoPlatformFrame(platform, FadeColor(Color{255, 245, 170, 255}, 0.72f), false);
     }
@@ -4545,34 +4911,48 @@ void Game::DrawEnemies() const {
         Vector3 position = BodyPosition(enemy.body);
         float pulse = 1.0f + std::sin(enemy.bobTimer * 5.0f) * 0.06f;
 
+        Vector3 surfUp = IsSphericalMap() ? SphericalUpAt(position) : Vector3{0.0f, 1.0f, 0.0f};
+        rlPushMatrix();
+        rlTranslatef(position.x, position.y, position.z);
+        if (IsSphericalMap()) {
+            Vector3 axis = Vector3CrossProduct(Vector3{0.0f, 1.0f, 0.0f}, surfUp);
+            float axisLen = Vector3Length(axis);
+            if (axisLen > 0.001f) {
+                float angle = std::acos(Vector3DotProduct(Vector3{0.0f, 1.0f, 0.0f}, surfUp));
+                rlRotatef(angle * RAD2DEG, axis.x / axisLen, axis.y / axisLen, axis.z / axisLen);
+            } else if (surfUp.y < 0.0f) {
+                rlRotatef(180.0f, 1.0f, 0.0f, 0.0f);
+            }
+        }
+
         if (enemy.type == EnemyType::Brute) {
-            DrawCube(position, enemy.radius * 1.65f, enemy.radius * 1.65f, enemy.radius * 1.65f, enemy.color);
-            DrawCubeWires(position, enemy.radius * 1.8f, enemy.radius * 1.8f, enemy.radius * 1.8f, Color{55, 8, 0, 255});
+            DrawCube(Vector3Zero(), enemy.radius * 1.65f, enemy.radius * 1.65f, enemy.radius * 1.65f, enemy.color);
+            DrawCubeWires(Vector3Zero(), enemy.radius * 1.8f, enemy.radius * 1.8f, enemy.radius * 1.8f, Color{55, 8, 0, 255});
             for (int i = 0; i < 4; ++i) {
                 float angle = static_cast<float>(i) * 1.5707963f;
-                Vector3 spike = Vector3Add(position, Vector3{std::cos(angle) * enemy.radius * 1.35f, enemy.radius * 0.5f, std::sin(angle) * enemy.radius * 1.35f});
-                DrawLine3D(position, spike, Color{255, 190, 120, 255});
+                Vector3 spike = Vector3{std::cos(angle) * enemy.radius * 1.35f, enemy.radius * 0.5f, std::sin(angle) * enemy.radius * 1.35f};
+                DrawLine3D(Vector3Zero(), spike, Color{255, 190, 120, 255});
             }
         } else if (enemy.type == EnemyType::Wisp) {
-            DrawSphereEx(position, enemy.radius * pulse, 6, 6, enemy.color);
-            DrawSphereWires(position, enemy.radius * 1.45f, 6, 6, Color{170, 235, 255, 200});
-            DrawLine3D(Vector3Add(position, Vector3{-enemy.radius, 0.0f, 0.0f}), Vector3Add(position, Vector3{enemy.radius, 0.0f, 0.0f}), RAYWHITE);
+            DrawSphereEx(Vector3Zero(), enemy.radius * pulse, 6, 6, enemy.color);
+            DrawSphereWires(Vector3Zero(), enemy.radius * 1.45f, 6, 6, Color{170, 235, 255, 200});
+            DrawLine3D(Vector3{-enemy.radius, 0.0f, 0.0f}, Vector3{enemy.radius, 0.0f, 0.0f}, RAYWHITE);
         } else if (enemy.type == EnemyType::Spitter) {
-            DrawSphereEx(position, enemy.radius * pulse, 7, 5, enemy.color);
-            DrawCylinderWires(position, enemy.radius * 1.15f, enemy.radius * 0.55f, enemy.radius * 1.5f, 6, Color{35, 255, 190, 210});
-            DrawSphereEx(Vector3Add(position, Vector3{0.0f, enemy.radius * 0.3f, 0.0f}), enemy.radius * 0.35f, 5, 4, Color{210, 255, 235, 240});
+            DrawSphereEx(Vector3Zero(), enemy.radius * pulse, 7, 5, enemy.color);
+            DrawCylinderWires(Vector3Zero(), enemy.radius * 1.15f, enemy.radius * 0.55f, enemy.radius * 1.5f, 6, Color{35, 255, 190, 210});
+            DrawSphereEx(Vector3{0.0f, enemy.radius * 0.3f, 0.0f}, enemy.radius * 0.35f, 5, 4, Color{210, 255, 235, 240});
         } else if (enemy.type == EnemyType::Pouncer) {
             float squash = enemy.cooldownTimer > config_.pouncerLeapInterval - 0.35f ? 0.62f : 1.0f;
-            DrawSphereEx(position, enemy.radius * pulse, 7, 5, enemy.color);
-            DrawCube(Vector3Add(position, Vector3{0.0f, -enemy.radius * 0.18f, 0.0f}), enemy.radius * 2.1f, enemy.radius * squash, enemy.radius * 1.35f, FadeColor(enemy.color, 0.75f));
-            DrawSphereWires(position, enemy.radius * 1.25f, 7, 5, Color{255, 160, 255, 190});
+            DrawSphereEx(Vector3Zero(), enemy.radius * pulse, 7, 5, enemy.color);
+            DrawCube(Vector3{0.0f, -enemy.radius * 0.18f, 0.0f}, enemy.radius * 2.1f, enemy.radius * squash, enemy.radius * 1.35f, FadeColor(enemy.color, 0.75f));
+            DrawSphereWires(Vector3Zero(), enemy.radius * 1.25f, 7, 5, Color{255, 160, 255, 190});
         } else if (enemy.type == EnemyType::Harrier) {
-            Vector3 nose = Vector3Add(position, Vector3{0.0f, enemy.radius * 0.12f, -enemy.radius * 1.6f});
-            Vector3 tail = Vector3Add(position, Vector3{0.0f, -enemy.radius * 0.06f, enemy.radius * 1.35f});
-            Vector3 left = Vector3Add(position, Vector3{-enemy.radius * 1.35f, 0.0f, enemy.radius * 0.15f});
-            Vector3 right = Vector3Add(position, Vector3{enemy.radius * 1.35f, 0.0f, enemy.radius * 0.15f});
-            Vector3 top = Vector3Add(position, Vector3{0.0f, enemy.radius * 0.75f, 0.0f});
-            Vector3 bottom = Vector3Add(position, Vector3{0.0f, -enemy.radius * 0.55f, 0.0f});
+            Vector3 nose = Vector3{0.0f, enemy.radius * 0.12f, -enemy.radius * 1.6f};
+            Vector3 tail = Vector3{0.0f, -enemy.radius * 0.06f, enemy.radius * 1.35f};
+            Vector3 left = Vector3{-enemy.radius * 1.35f, 0.0f, enemy.radius * 0.15f};
+            Vector3 right = Vector3{enemy.radius * 1.35f, 0.0f, enemy.radius * 0.15f};
+            Vector3 top = Vector3{0.0f, enemy.radius * 0.75f, 0.0f};
+            Vector3 bottom = Vector3{0.0f, -enemy.radius * 0.55f, 0.0f};
             Color fill = enemy.cooldownTimer < 0.22f ? Color{220, 255, 255, 255} : enemy.color;
             DrawTriangle3D(nose, left, top, fill);
             DrawTriangle3D(nose, top, right, fill);
@@ -4581,66 +4961,85 @@ void Game::DrawEnemies() const {
             DrawTriangle3D(nose, bottom, left, FadeColor(fill, 0.72f));
             DrawTriangle3D(nose, right, bottom, FadeColor(fill, 0.72f));
             DrawLine3D(left, right, Color{230, 255, 255, 230});
-            DrawSphereWires(position, enemy.radius * 1.18f, 6, 5, Color{150, 245, 255, 190});
+            DrawSphereWires(Vector3Zero(), enemy.radius * 1.18f, 6, 5, Color{150, 245, 255, 190});
         } else if (enemy.type == EnemyType::Blinker) {
             float warning = enemy.telegraphTimer > 0.0f ? 1.0f : 0.0f;
             Color core = warning > 0.0f ? Color{255, 220, 245, 255} : enemy.color;
-            DrawSphereEx(position, enemy.radius * (0.82f + warning * 0.22f) * pulse, 6, 5, core);
-            DrawCube(Vector3Add(position, Vector3{-enemy.radius * 0.35f, enemy.radius * 0.12f, 0.0f}), enemy.radius * 0.85f, enemy.radius * 0.42f, enemy.radius * 1.25f, FadeColor(enemy.color, 0.82f));
-            DrawCube(Vector3Add(position, Vector3{enemy.radius * 0.42f, -enemy.radius * 0.16f, 0.0f}), enemy.radius * 0.7f, enemy.radius * 0.38f, enemy.radius * 1.05f, FadeColor(Color{120, 25, 90, 255}, 0.82f));
-            DrawSphereWires(position, enemy.radius * (1.2f + warning * 0.38f), 7, 5, warning > 0.0f ? Color{255, 235, 255, 230} : Color{255, 115, 225, 175});
+            DrawSphereEx(Vector3Zero(), enemy.radius * (0.82f + warning * 0.22f) * pulse, 6, 5, core);
+            DrawCube(Vector3{-enemy.radius * 0.35f, enemy.radius * 0.12f, 0.0f}, enemy.radius * 0.85f, enemy.radius * 0.42f, enemy.radius * 1.25f, FadeColor(enemy.color, 0.82f));
+            DrawCube(Vector3{enemy.radius * 0.42f, -enemy.radius * 0.16f, 0.0f}, enemy.radius * 0.7f, enemy.radius * 0.38f, enemy.radius * 1.05f, FadeColor(Color{120, 25, 90, 255}, 0.82f));
+            DrawSphereWires(Vector3Zero(), enemy.radius * (1.2f + warning * 0.38f), 7, 5, warning > 0.0f ? Color{255, 235, 255, 230} : Color{255, 115, 225, 175});
             if (warning > 0.0f) {
-                DrawLine3D(Vector3Add(position, Vector3{-enemy.radius * 1.6f, 0.0f, 0.0f}), Vector3Add(position, Vector3{enemy.radius * 1.6f, 0.0f, 0.0f}), Color{255, 220, 245, 255});
-                DrawLine3D(Vector3Add(position, Vector3{0.0f, -enemy.radius * 1.1f, 0.0f}), Vector3Add(position, Vector3{0.0f, enemy.radius * 1.4f, 0.0f}), Color{255, 220, 245, 255});
+                DrawLine3D(Vector3{-enemy.radius * 1.6f, 0.0f, 0.0f}, Vector3{enemy.radius * 1.6f, 0.0f, 0.0f}, Color{255, 220, 245, 255});
+                DrawLine3D(Vector3{0.0f, -enemy.radius * 1.1f, 0.0f}, Vector3{0.0f, enemy.radius * 1.4f, 0.0f}, Color{255, 220, 245, 255});
             }
         } else if (enemy.type == EnemyType::Boss) {
             float rage = enemy.health < enemy.maxHealth * 0.45f ? 1.0f : 0.0f;
-            DrawCube(position, enemy.radius * 1.55f, enemy.radius * 1.15f, enemy.radius * 1.55f, enemy.color);
-            DrawCubeWires(position, enemy.radius * 1.75f, enemy.radius * 1.3f, enemy.radius * 1.75f, Color{35, 18, 75, 255});
-            DrawSphereEx(Vector3Add(position, Vector3{0.0f, enemy.radius * 0.85f, 0.0f}), enemy.radius * 0.72f, 8, 6, Color{175, 145, 255, 245});
-            DrawSphereWires(position, enemy.radius * (1.35f + std::sin(enemy.bobTimer * 3.0f) * 0.08f), 12, 8, Color{215, 180, 255, 220});
+            DrawCube(Vector3Zero(), enemy.radius * 1.55f, enemy.radius * 1.15f, enemy.radius * 1.55f, enemy.color);
+            DrawCubeWires(Vector3Zero(), enemy.radius * 1.75f, enemy.radius * 1.3f, enemy.radius * 1.75f, Color{35, 18, 75, 255});
+            DrawSphereEx(Vector3{0.0f, enemy.radius * 0.85f, 0.0f}, enemy.radius * 0.72f, 8, 6, Color{175, 145, 255, 245});
+            DrawSphereWires(Vector3Zero(), enemy.radius * (1.35f + std::sin(enemy.bobTimer * 3.0f) * 0.08f), 12, 8, Color{215, 180, 255, 220});
             for (int i = 0; i < 6; ++i) {
                 float angle = static_cast<float>(i) / 6.0f * 6.2831853f + enemy.bobTimer * (0.7f + rage * 0.7f);
-                Vector3 spike = Vector3Add(position, Vector3{std::cos(angle) * enemy.radius * 1.35f, enemy.radius * 0.35f + std::sin(angle * 2.0f) * 0.35f, std::sin(angle) * enemy.radius * 1.35f});
-                DrawLine3D(position, spike, Color{230, 205, 255, 255});
+                Vector3 spike = Vector3{std::cos(angle) * enemy.radius * 1.35f, enemy.radius * 0.35f + std::sin(angle * 2.0f) * 0.35f, std::sin(angle) * enemy.radius * 1.35f};
+                DrawLine3D(Vector3Zero(), spike, Color{230, 205, 255, 255});
                 DrawSphereEx(spike, enemy.radius * 0.13f, 5, 4, rage > 0.0f ? Color{255, 90, 190, 230} : Color{160, 220, 255, 230});
             }
+        } else if (enemy.type == EnemyType::SlimeKing) {
+            float r = enemy.radius;
+            float genScale = 1.0f - enemy.slimeGeneration * 0.15f;
+            Color bodyColor = enemy.color;
+            Color shellColor = Color{60, 180, 110, 230};
+            Color glowColor = Color{140, 240, 180, 160};
+
+            rlPushMatrix();
+            rlScalef(1.0f, 0.55f, 1.0f);
+            DrawSphereEx(Vector3{0.0f, -r * 0.25f, 0.0f}, r * genScale, 10, 8, bodyColor);
+            DrawSphereWires(Vector3{0.0f, -r * 0.25f, 0.0f}, r * genScale * 1.12f, 10, 8, Color{30, 110, 70, 220});
+            rlPopMatrix();
+            DrawSphereEx(Vector3{0.0f, r * 0.25f, 0.0f}, r * 0.68f * genScale, 8, 6, shellColor);
+            DrawSphereWires(Vector3{0.0f, r * 0.25f, 0.0f}, r * 0.72f * genScale, 8, 6, Color{40, 140, 90, 210});
+            DrawSphereEx(Vector3{0.0f, r * 0.55f, 0.0f}, r * 0.22f * genScale, 6, 5, Color{80, 200, 130, 240});
+            DrawCylinderWires(Vector3{0.0f, -r * 0.32f, 0.0f}, r * 0.95f * genScale, r * 0.95f * genScale, 0.02f, 16, Color{25, 95, 60, 210});
+            float pulse = 1.0f + std::sin(static_cast<float>(GetTime()) * 3.0f + position.x * 0.5f) * 0.08f;
+            DrawSphereWires(Vector3{0.0f, 0.0f, 0.0f}, r * (1.08f * pulse) * genScale, 10, 8, FadeColor(glowColor, 0.55f));
         } else if (enemy.type == EnemyType::Duelist) {
             Color core = enemy.telegraphTimer > 0.0f ? Color{255, 245, 150, 255} : enemy.color;
-            DrawSphereEx(position, enemy.radius * 0.92f * pulse, 7, 6, core);
-            DrawCube(Vector3Add(position, Vector3{0.0f, enemy.radius * 0.9f, 0.0f}), enemy.radius * 0.9f, enemy.radius * 0.34f, enemy.radius * 0.9f, Color{70, 62, 84, 255});
-            DrawSphereWires(position, enemy.radius * 1.32f, 8, 6, Color{255, 225, 135, 210});
+            DrawSphereEx(Vector3Zero(), enemy.radius * 0.92f * pulse, 7, 6, core);
+            DrawCube(Vector3{0.0f, enemy.radius * 0.9f, 0.0f}, enemy.radius * 0.9f, enemy.radius * 0.34f, enemy.radius * 0.9f, Color{70, 62, 84, 255});
+            DrawSphereWires(Vector3Zero(), enemy.radius * 1.32f, 8, 6, Color{255, 225, 135, 210});
             float weaponAngle = static_cast<float>(enemy.weaponSlot) / 8.0f * 6.2831853f + enemy.bobTimer * 2.0f;
-            Vector3 focus = Vector3Add(position, Vector3{std::cos(weaponAngle) * enemy.radius * 1.35f, enemy.radius * 0.35f, std::sin(weaponAngle) * enemy.radius * 1.35f});
+            Vector3 focus = Vector3{std::cos(weaponAngle) * enemy.radius * 1.35f, enemy.radius * 0.35f, std::sin(weaponAngle) * enemy.radius * 1.35f};
             Color weaponColor = enemy.weaponSlot == 2 ? Color{255, 145, 80, 255} : enemy.weaponSlot == 4 ? Color{150, 115, 255, 255} : enemy.weaponSlot == 7 ? Color{255, 220, 95, 255} : Color{155, 235, 255, 255};
             DrawSphereEx(focus, enemy.radius * 0.18f, 5, 4, weaponColor);
-            DrawLine3D(position, focus, FadeColor(weaponColor, 0.85f));
+            DrawLine3D(Vector3Zero(), focus, FadeColor(weaponColor, 0.85f));
         } else if (enemy.type == EnemyType::Dummy) {
-            DrawSphereEx(position, enemy.radius, 7, 6, enemy.color);
-            DrawSphereWires(position, enemy.radius * 1.05f, 7, 6, Color{80, 80, 95, 255});
+            DrawSphereEx(Vector3Zero(), enemy.radius, 7, 6, enemy.color);
+            DrawSphereWires(Vector3Zero(), enemy.radius * 1.05f, 7, 6, Color{80, 80, 95, 255});
             float crossLen = enemy.radius * 1.35f;
             Color crossColor = Color{170, 170, 185, 180};
-            DrawLine3D(Vector3Add(position, Vector3{-crossLen, 0.0f, 0.0f}), Vector3Add(position, Vector3{crossLen, 0.0f, 0.0f}), crossColor);
-            DrawLine3D(Vector3Add(position, Vector3{0.0f, -crossLen, 0.0f}), Vector3Add(position, Vector3{0.0f, crossLen, 0.0f}), crossColor);
-            DrawLine3D(Vector3Add(position, Vector3{0.0f, 0.0f, -crossLen}), Vector3Add(position, Vector3{0.0f, 0.0f, crossLen}), crossColor);
+            DrawLine3D(Vector3{-crossLen, 0.0f, 0.0f}, Vector3{crossLen, 0.0f, 0.0f}, crossColor);
+            DrawLine3D(Vector3{0.0f, -crossLen, 0.0f}, Vector3{0.0f, crossLen, 0.0f}, crossColor);
+            DrawLine3D(Vector3{0.0f, 0.0f, -crossLen}, Vector3{0.0f, 0.0f, crossLen}, crossColor);
         } else if (enemy.type == EnemyType::DummyBoss) {
-            DrawCube(position, enemy.radius * 1.55f, enemy.radius * 1.15f, enemy.radius * 1.55f, enemy.color);
-            DrawCubeWires(position, enemy.radius * 1.75f, enemy.radius * 1.3f, enemy.radius * 1.75f, Color{55, 55, 70, 255});
-            DrawSphereEx(Vector3Add(position, Vector3{0.0f, enemy.radius * 0.85f, 0.0f}), enemy.radius * 0.72f, 8, 6, Color{160, 160, 175, 245});
-            DrawSphereWires(position, enemy.radius * (1.35f + std::sin(enemy.bobTimer * 3.0f) * 0.08f), 12, 8, Color{180, 180, 195, 220});
+            DrawCube(Vector3Zero(), enemy.radius * 1.55f, enemy.radius * 1.15f, enemy.radius * 1.55f, enemy.color);
+            DrawCubeWires(Vector3Zero(), enemy.radius * 1.75f, enemy.radius * 1.3f, enemy.radius * 1.75f, Color{55, 55, 70, 255});
+            DrawSphereEx(Vector3{0.0f, enemy.radius * 0.85f, 0.0f}, enemy.radius * 0.72f, 8, 6, Color{160, 160, 175, 245});
+            DrawSphereWires(Vector3Zero(), enemy.radius * (1.35f + std::sin(enemy.bobTimer * 3.0f) * 0.08f), 12, 8, Color{180, 180, 195, 220});
             for (int i = 0; i < 6; ++i) {
                 float angle = static_cast<float>(i) / 6.0f * 6.2831853f + enemy.bobTimer * 0.7f;
-                Vector3 spike = Vector3Add(position, Vector3{std::cos(angle) * enemy.radius * 1.35f, enemy.radius * 0.35f + std::sin(angle * 2.0f) * 0.35f, std::sin(angle) * enemy.radius * 1.35f});
-                DrawLine3D(position, spike, Color{200, 200, 215, 255});
+                Vector3 spike = Vector3{std::cos(angle) * enemy.radius * 1.35f, enemy.radius * 0.35f + std::sin(angle * 2.0f) * 0.35f, std::sin(angle) * enemy.radius * 1.35f};
+                DrawLine3D(Vector3Zero(), spike, Color{200, 200, 215, 255});
                 DrawSphereEx(spike, enemy.radius * 0.13f, 5, 4, Color{170, 170, 190, 230});
             }
         } else {
-            DrawSphereEx(position, enemy.radius, 7, 6, enemy.color);
-            DrawSphereWires(position, enemy.radius * 1.05f, 7, 6, Color{30, 0, 0, 255});
+            DrawSphereEx(Vector3Zero(), enemy.radius, 7, 6, enemy.color);
+            DrawSphereWires(Vector3Zero(), enemy.radius * 1.05f, 7, 6, Color{30, 0, 0, 255});
         }
 
-        Vector3 top = Vector3Add(position, Vector3{0.0f, enemy.radius * 1.8f, 0.0f});
-        DrawLine3D(position, top, Color{255, 220, 170, 255});
+        Vector3 hpTop = Vector3{0.0f, enemy.radius * 1.8f, 0.0f};
+        DrawLine3D(Vector3Zero(), hpTop, Color{255, 220, 170, 255});
+        rlPopMatrix();
     }
 }
 
@@ -4648,7 +5047,21 @@ void Game::DrawPickups() const {
     for (const Pickup& pickup : pickups_) {
         float bob = std::sin(pickup.bobTimer * 3.2f) * 0.12f;
         float pulse = 0.65f + std::sin(pickup.bobTimer * 5.0f) * 0.18f;
-        Vector3 base = Vector3Add(pickup.position, Vector3{0.0f, bob, 0.0f});
+        Vector3 base = Vector3{0.0f, bob, 0.0f};
+
+        Vector3 surfUp = IsSphericalMap() ? SphericalUpAt(pickup.position) : Vector3{0.0f, 1.0f, 0.0f};
+        rlPushMatrix();
+        rlTranslatef(pickup.position.x, pickup.position.y, pickup.position.z);
+        if (IsSphericalMap()) {
+            Vector3 axis = Vector3CrossProduct(Vector3{0.0f, 1.0f, 0.0f}, surfUp);
+            float axisLen = Vector3Length(axis);
+            if (axisLen > 0.001f) {
+                float angle = std::acos(Vector3DotProduct(Vector3{0.0f, 1.0f, 0.0f}, surfUp));
+                rlRotatef(angle * RAD2DEG, axis.x / axisLen, axis.y / axisLen, axis.z / axisLen);
+            } else if (surfUp.y < 0.0f) {
+                rlRotatef(180.0f, 1.0f, 0.0f, 0.0f);
+            }
+        }
 
         if (pickup.type == PickupType::SpaceSuit) {
             DrawCylinder(base, 0.26f, 0.32f, 0.62f, 6, Color{210, 220, 225, 255});
@@ -4672,6 +5085,7 @@ void Game::DrawPickups() const {
             DrawLine3D(Vector3Add(base, Vector3{0.06f, -0.13f, -0.36f}), Vector3Add(base, Vector3{0.34f, -0.13f, 0.36f}), Color{170, 255, 190, 230});
             DrawCylinderWires(Vector3Add(base, Vector3{0.0f, -0.18f, 0.0f}), 0.52f + pulse * 0.08f, 0.52f + pulse * 0.08f, 0.02f, 22, Color{155, 255, 185, 190});
         }
+        rlPopMatrix();
     }
 }
 
@@ -4733,6 +5147,12 @@ void Game::DrawProjectiles() const {
         } else if (projectile.kind == ProjectileKind::DroneBullet) {
             DrawCube(position, projectile.radius * 3.2f, projectile.radius * 0.8f, projectile.radius * 0.8f, projectile.color);
             DrawLine3D(position, Vector3Add(position, trail), FadeColor(Color{255, 250, 200, 255}, 0.7f));
+        } else if (projectile.kind == ProjectileKind::HomingShot) {
+            float spin = static_cast<float>(GetTime()) * 8.0f;
+            DrawSphereEx(position, projectile.radius * 1.3f, 7, 5, projectile.color);
+            DrawSphereWires(position, projectile.radius * (1.9f + std::sin(spin) * 0.22f), 8, 5, FadeColor(Color{255, 200, 140, 255}, 0.75f));
+            DrawCylinderWires(position, projectile.radius * 2.0f, projectile.radius * 1.2f, 0.03f, 10, FadeColor(Color{255, 180, 110, 255}, 0.6f));
+            DrawLine3D(position, Vector3Add(position, Vector3Scale(trail, 1.5f)), FadeColor(projectile.color, 0.8f));
         } else {
             DrawLine3D(position, Vector3Add(position, trail), FadeColor(projectile.color, 0.7f));
             DrawSphereEx(position, projectile.radius, 5, 4, projectile.color);
@@ -4915,24 +5335,24 @@ void Game::DrawGravityWells() const {
     }
 }
 
-void Game::DrawRifts() const {
-    for (const RiftSlash& rift : rifts_) {
-        Vector3 right = Vector3Length(rift.right) > 0.001f ? Vector3Normalize(rift.right) : PlayerRight();
-        Vector3 up = Vector3Length(rift.up) > 0.001f ? Vector3Normalize(rift.up) : PlayerUp();
-        if (rift.delay > 0.0f) {
+void Game::DrawNanoBlades() const {
+    for (const NanoBlade& blade : nanoBlades_) {
+        Vector3 right = Vector3Length(blade.right) > 0.001f ? Vector3Normalize(blade.right) : PlayerRight();
+        Vector3 up = Vector3Length(blade.up) > 0.001f ? Vector3Normalize(blade.up) : PlayerUp();
+        if (blade.delay > 0.0f) {
             float pulse = 0.45f + std::sin(static_cast<float>(GetTime()) * 34.0f) * 0.18f;
             Color preflash = FadeColor(Color{255, 235, 150, 255}, pulse * 0.45f);
-            DrawLine3D(Vector3Subtract(rift.center, Vector3Scale(right, rift.radius * 0.35f)), Vector3Add(rift.center, Vector3Scale(right, rift.radius * 0.35f)), preflash);
-            DrawLine3D(Vector3Subtract(rift.center, Vector3Scale(up, rift.radius * 0.18f)), Vector3Add(rift.center, Vector3Scale(up, rift.radius * 0.18f)), preflash);
+            DrawLine3D(Vector3Subtract(blade.center, Vector3Scale(right, blade.radius * 0.35f)), Vector3Add(blade.center, Vector3Scale(right, blade.radius * 0.35f)), preflash);
+            DrawLine3D(Vector3Subtract(blade.center, Vector3Scale(up, blade.radius * 0.18f)), Vector3Add(blade.center, Vector3Scale(up, blade.radius * 0.18f)), preflash);
             continue;
         }
 
         constexpr int kSegments = 18;
-        float alpha = rift.maxLife > 0.0f ? rift.life / rift.maxLife : 0.0f;
+        float alpha = blade.maxLife > 0.0f ? blade.life / blade.maxLife : 0.0f;
         float birth = 1.0f - alpha;
         float scale = 0.72f + std::min(1.0f, birth * 4.0f) * 0.28f;
-        float outerRadius = rift.radius * scale;
-        float innerRadius = std::max(0.05f, (rift.radius - rift.thickness) * scale);
+        float outerRadius = blade.radius * scale;
+        float innerRadius = std::max(0.05f, (blade.radius - blade.thickness) * scale);
         Color fill = FadeColor(Color{255, 210, 70, 255}, alpha * 0.42f);
         Color bright = FadeColor(Color{255, 245, 175, 255}, alpha * 0.78f);
         Color edge = FadeColor(Color{255, 170, 42, 255}, alpha * 0.9f);
@@ -4945,8 +5365,8 @@ void Game::DrawRifts() const {
             float angle = (-0.82f + t * 1.64f) * 3.1415926f;
             float x = std::cos(angle);
             float y = std::sin(angle) * 0.72f + 0.3f;
-            Vector3 outer = Vector3Add(rift.center, Vector3Add(Vector3Scale(right, x * outerRadius), Vector3Scale(up, y * outerRadius)));
-            Vector3 inner = Vector3Add(rift.center, Vector3Add(Vector3Scale(right, x * innerRadius * 0.82f), Vector3Scale(up, (y * innerRadius) + rift.thickness * 0.38f * scale)));
+            Vector3 outer = Vector3Add(blade.center, Vector3Add(Vector3Scale(right, x * outerRadius), Vector3Scale(up, y * outerRadius)));
+            Vector3 inner = Vector3Add(blade.center, Vector3Add(Vector3Scale(right, x * innerRadius * 0.82f), Vector3Scale(up, (y * innerRadius) + blade.thickness * 0.38f * scale)));
             if (hasPrevious) {
                 DrawTriangle3D(previousOuter, outer, previousInner, fill);
                 DrawTriangle3D(previousOuter, previousInner, outer, fill);
@@ -4960,7 +5380,7 @@ void Game::DrawRifts() const {
             hasPrevious = true;
         }
 
-        Vector3 centerGlow = Vector3Add(rift.center, Vector3Scale(up, rift.radius * 0.25f * scale));
+        Vector3 centerGlow = Vector3Add(blade.center, Vector3Scale(up, blade.radius * 0.25f * scale));
         DrawSphereEx(centerGlow, 0.08f + birth * 0.06f, 6, 4, FadeColor(Color{255, 245, 190, 255}, alpha * 0.7f));
     }
 }
@@ -5186,6 +5606,16 @@ void Game::DrawFireControlOverlay() const {
     }
 }
 
+void Game::DrawSlimeSpawnPods() const {
+    for (const SlimeSpawnPod& pod : slimeSpawnPods_) {
+        float alpha = pod.timer / pod.maxTimer;
+        Color podColor = FadeColor(Color{80, 230, 130, 255}, 0.6f + alpha * 0.4f);
+        float pulse = 1.0f + std::sin(static_cast<float>(GetTime()) * 12.0f + pod.position.x * 0.7f) * 0.12f;
+        DrawSphereEx(pod.position, pod.radius * 0.35f * pulse, 6, 5, podColor);
+        DrawSphereWires(pod.position, pod.radius * 0.42f * pulse, 6, 5, FadeColor(Color{40, 180, 90, 255}, alpha * 0.7f));
+    }
+}
+
 void Game::DrawParticles() const {
     for (const Particle& particle : particles_) {
         float alpha = particle.maxLife > 0.0f ? particle.life / particle.maxLife : 0.0f;
@@ -5209,8 +5639,8 @@ void Game::DrawWeapon() const {
         mode = WeaponVisualMode::InfinityGauntlet;
     } else if (activeWeapon_ == WeaponType::RecoilLance) {
         mode = WeaponVisualMode::RecoilLance;
-    } else if (activeWeapon_ == WeaponType::RiftCutter) {
-        mode = WeaponVisualMode::RiftCutter;
+    } else if (activeWeapon_ == WeaponType::NanoConstructor) {
+        mode = WeaponVisualMode::NanoConstructor;
     }
     weaponViewModel_.Draw(camera_, mode, laserCharge_);
 }
@@ -5257,7 +5687,7 @@ void Game::DrawHud() const {
 
     DrawRectangle(0, 0, pixelWidth_, 22, Color{0, 0, 0, 150});
     DrawText(TextFormat("TIME %.1f", survivalTime_), 6, 7, 8, RAYWHITE);
-    DrawText(TextFormat("SCORE %d", score_), 72, 7, 8, RAYWHITE);
+    DrawText(TextFormat("DMG %.0f", totalDamageDealt_), 72, 7, 8, RAYWHITE);
     DrawText(TextFormat("E %d", static_cast<int>(enemies_.size())), 134, 7, 8, RAYWHITE);
     const char* modeName = WeaponModeName();
     DrawText(TextFormat("W %s%s%s", WeaponName(), modeName[0] != '\0' ? ":" : "", modeName), 174, 7, 8, RAYWHITE);
@@ -5286,7 +5716,7 @@ void Game::DrawHud() const {
         bool hasBossOrDuelist = false;
         for (const Enemy& enemy : enemies_) {
             if (enemy.type == EnemyType::Boss || enemy.type == EnemyType::Duelist
-                || enemy.type == EnemyType::DummyBoss) { hasBossOrDuelist = true; break; }
+                || enemy.type == EnemyType::DummyBoss || enemy.type == EnemyType::SlimeKing) { hasBossOrDuelist = true; break; }
         }
         if (hasBossOrDuelist) barY = 46;
         DrawRectangle(barX, barY, barW, 6, Color{18, 10, 5, 220});
@@ -5300,7 +5730,7 @@ void Game::DrawHud() const {
 
     for (const Enemy& enemy : enemies_) {
         if (enemy.type != EnemyType::Boss && enemy.type != EnemyType::Duelist
-            && enemy.type != EnemyType::DummyBoss) {
+            && enemy.type != EnemyType::DummyBoss && enemy.type != EnemyType::SlimeKing) {
             continue;
         }
         float health = enemy.maxHealth > 0.0f ? std::clamp(enemy.health / enemy.maxHealth, 0.0f, 1.0f) : 0.0f;
@@ -5310,6 +5740,7 @@ void Game::DrawHud() const {
         DrawRectangle(barX, barY, barW, 6, Color{18, 10, 30, 220});
         Color barColor = enemy.type == EnemyType::Duelist ? Color{255, 210, 105, 255}
             : enemy.type == EnemyType::DummyBoss ? Color{140, 140, 155, 255}
+            : enemy.type == EnemyType::SlimeKing ? Color{100, 220, 140, 255}
             : health < 0.45f ? Color{255, 75, 160, 255}
             : Color{160, 115, 255, 255};
         DrawRectangle(barX, barY, static_cast<int>(barW * health), 6, barColor);
@@ -5331,6 +5762,9 @@ void Game::DrawHud() const {
         } else if (enemy.type == EnemyType::DummyBoss) {
             bossLabel = "DUMMY LORD";
             labelColor = Color{180, 180, 195, 255};
+        } else if (enemy.type == EnemyType::SlimeKing) {
+            bossLabel = enemy.slimeGeneration == 0 ? "SLIME KING" : TextFormat("SLIME KING x%d", enemy.slimeGeneration + 1);
+            labelColor = Color{140, 240, 180, 255};
         } else {
             bossLabel = "GEOMETRY LORD";
             labelColor = Color{230, 210, 255, 255};
@@ -5340,8 +5774,8 @@ void Game::DrawHud() const {
     }
 
     if (showKeybindOverlay_) {
-        int px = 40, py = 60, fh = 8;
-        int panelW = 346, panelH = 130;
+        int px = 40, py = 58, fh = 8;
+        int panelW = 346, panelH = 135;
         DrawRectangle(px - 8, py - 8, panelW, panelH, Color{0, 0, 0, 210});
         DrawRectangleLines(px - 8, py - 8, panelW, panelH, Color{140, 140, 160, 180});
         DrawText("CONTROLS  (K to close)", px + 80, py - 2, fh + 1, Color{220, 220, 240, 255});
@@ -5381,6 +5815,7 @@ void Game::DrawHud() const {
         Section("SYSTEM", right);
         Row("P", "Hide HUD", k, right);
         Row("R", "Restart", k, right);
+        Row("F11", "Fullscreen", k, right);
         Row("K", "Keybindings", k, right);
     }
 
@@ -5436,7 +5871,7 @@ void Game::DrawHud() const {
     }
 
     if (TutorialMode() && !hideUI_ && !showKeybindOverlay_) {
-        const char* kHint = "K: Controls";
+        const char* kHint = "F11: Fullscreen\nK: Controls";
         int kw = MeasureText(kHint, 9);
         int kx = pixelWidth_ - kw - 8, ky = pixelHeight_ - 120;
         DrawRectangle(kx - 3, ky - 1, kw + 6, 11, Color{0, 0, 0, 140});

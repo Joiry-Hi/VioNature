@@ -98,11 +98,20 @@ GameplayConfig LoadGameplayConfig(const char* path) {
         {"skates_ground_friction", &config.skatesGroundFriction},
         {"skates_air_control", &config.skatesAirControl},
         {"skates_max_speed_bonus", &config.skatesMaxSpeedBonus},
-        {"dagger_damage", &config.daggerDamage},
-        {"scatter_damage", &config.scatterDamage},
+        {"plasma_damage", &config.plasmaDamage},
+        {"plasma_speed", &config.plasmaSpeed},
+        {"plasma_lifetime", &config.plasmaLifetime},
+        {"plasma_cooldown", &config.plasmaCooldown},
+        {"plasma_radius", &config.plasmaRadius},
         {"laser_base_damage", &config.laserBaseDamage},
         {"laser_charge_damage", &config.laserChargeDamage},
         {"laser_beam_radius", &config.laserBeamRadius},
+        {"laser_charge_rate", &config.laserChargeRate},
+        {"laser_beam_range", &config.laserBeamRange},
+        {"laser_beam_lifetime", &config.laserBeamLifetime},
+        {"laser_beam_lifetime_charge_bonus", &config.laserBeamLifetimeChargeBonus},
+        {"laser_beam_radius_charge_bonus", &config.laserBeamRadiusChargeBonus},
+        {"laser_beam_cooldown", &config.laserBeamCooldown},
         {"flame_damage", &config.flameDamage},
         {"rocket_impact_damage", &config.rocketImpactDamage},
         {"rocket_explosion_damage", &config.rocketExplosionDamage},
@@ -119,6 +128,21 @@ GameplayConfig LoadGameplayConfig(const char* path) {
         {"pouncer_leap_speed", &config.pouncerLeapSpeed},
         {"boss_spawn_time", &config.bossSpawnTime},
         {"boss_health", &config.bossHealth},
+        {"slime_king_spawn_time", &config.slimeKingSpawnTime},
+        {"slime_king_health", &config.slimeKingHealth},
+        {"slime_king_radius", &config.slimeKingRadius},
+        {"slime_king_speed", &config.slimeKingSpeed},
+        {"slime_king_long_jump_speed", &config.slimeKingLongJumpSpeed},
+        {"slime_king_high_jump_speed", &config.slimeKingHighJumpSpeed},
+        {"slime_king_slam_speed", &config.slimeKingSlamSpeed},
+        {"slime_king_slam_radius", &config.slimeKingSlamRadius},
+        {"slime_king_slam_damage", &config.slimeKingSlamDamage},
+        {"slime_king_slam_range", &config.slimeKingSlamRange},
+        {"slime_king_shoot_speed", &config.slimeKingShootSpeed},
+        {"slime_king_shoot_interval", &config.slimeKingShootInterval},
+        {"slime_king_cooldown", &config.slimeKingCooldown},
+        {"slime_king_min_health", &config.slimeKingMinHealth},
+        {"slime_king_child_scale", &config.slimeKingChildScale},
         {"duelist_health", &config.duelistHealth},
         {"duelist_weapon_switch_min", &config.duelistWeaponSwitchMin},
         {"duelist_weapon_switch_max", &config.duelistWeaponSwitchMax},
@@ -170,21 +194,22 @@ GameplayConfig LoadGameplayConfig(const char* path) {
         {"recoil_lance_shockwave_damage", &config.recoilLanceShockwaveDamage},
         {"recoil_lance_shockwave_force", &config.recoilLanceShockwaveForce},
         {"recoil_lance_shockwave_radius", &config.recoilLanceShockwaveRadius},
-        {"rift_cutter_damage", &config.riftCutterDamage},
-        {"rift_cutter_range", &config.riftCutterRange},
-        {"rift_cutter_width", &config.riftCutterWidth},
-        {"rift_cutter_lifetime", &config.riftCutterLifetime},
-        {"rift_cutter_delay", &config.riftCutterDelay},
-        {"rift_cutter_radius", &config.riftCutterRadius},
-        {"rift_cutter_thickness", &config.riftCutterThickness},
-        {"rift_cutter_plane_thickness", &config.riftCutterPlaneThickness},
-        {"rift_cutter_wave_speed", &config.riftCutterWaveSpeed},
-        {"rift_cutter_wave_spawn_distance", &config.riftCutterWaveSpawnDistance},
-        {"rift_platform_range", &config.riftPlatformRange},
-        {"rift_platform_delay", &config.riftPlatformDelay},
-        {"rift_platform_lifetime", &config.riftPlatformLifetime},
-        {"rift_platform_size", &config.riftPlatformSize},
-        {"rift_platform_thickness", &config.riftPlatformThickness},
+        {"nano_blade_damage", &config.nanoBladeDamage},
+        {"nano_blade_range", &config.nanoBladeRange},
+        {"nano_blade_width", &config.nanoBladeWidth},
+        {"nano_blade_lifetime", &config.nanoBladeLifetime},
+        {"nano_blade_delay", &config.nanoBladeDelay},
+        {"nano_blade_radius", &config.nanoBladeRadius},
+        {"nano_blade_thickness", &config.nanoBladeThickness},
+        {"nano_blade_plane_thickness", &config.nanoBladePlaneThickness},
+        {"nano_blade_wave_speed", &config.nanoBladeWaveSpeed},
+        {"nano_blade_wave_spawn_distance", &config.nanoBladeWaveSpawnDistance},
+        {"nano_platform_range", &config.nanoPlatformRange},
+        {"nano_platform_delay", &config.nanoPlatformDelay},
+        {"nano_platform_lifetime", &config.nanoPlatformLifetime},
+        {"nano_platform_length", &config.nanoPlatformLength},
+        {"nano_platform_width", &config.nanoPlatformWidth},
+        {"nano_platform_height", &config.nanoPlatformHeight},
         {"blink_distance", &config.blinkDistance},
         {"blink_clear_radius", &config.blinkClearRadius},
         {"blink_distance_min", &config.blinkDistanceMin},
@@ -223,6 +248,10 @@ GameplayConfig LoadGameplayConfig(const char* path) {
         {"dummy_spawn_interval", &config.dummySpawnInterval},
         {"dummy_boss_spawn_time", &config.dummyBossSpawnTime},
         {"dummy_bethlehem_spawn_time", &config.dummyBethlehemSpawnTime},
+        {"boss_homing_turn_rate", &config.bossHomingTurnRate},
+        {"boss_homing_burst_interval", &config.bossHomingBurstInterval},
+        {"boss_homing_life", &config.bossHomingLife},
+        {"boss_homing_speed_scale", &config.bossHomingSpeedScale},
     };
 
     std::string line;
@@ -277,6 +306,20 @@ GameplayConfig LoadGameplayConfig(const char* path) {
             if (ParseInt(value, parsed)) {
                 config.dummyMaxCount = parsed;
             }
+        } else if (key == "boss_homing_burst_count") {
+            int parsed = 3;
+            if (ParseInt(value, parsed)) {
+                config.bossHomingBurstCount = parsed;
+            }
+        } else if (key == "slime_king_shoot_count") {
+            int parsed = 6;
+            if (ParseInt(value, parsed)) { config.slimeKingShootCount = parsed; }
+        } else if (key == "slime_king_split_count") {
+            int parsed = 4;
+            if (ParseInt(value, parsed)) { config.slimeKingSplitCount = parsed; }
+        } else if (key == "slime_king_max_generations") {
+            int parsed = 2;
+            if (ParseInt(value, parsed)) { config.slimeKingMaxGenerations = parsed; }
         } else if (key == "invincible") {
             bool parsed = false;
             if (ParseBool(value, parsed)) {
@@ -316,11 +359,20 @@ GameplayConfig LoadGameplayConfig(const char* path) {
     config.skatesGroundFriction = std::clamp(config.skatesGroundFriction, 0.0f, 1.0f);
     config.skatesAirControl = std::clamp(config.skatesAirControl, 0.0f, 1.0f);
     config.skatesMaxSpeedBonus = std::max(1.0f, config.skatesMaxSpeedBonus);
-    config.daggerDamage = std::max(0.0f, config.daggerDamage);
-    config.scatterDamage = std::max(0.0f, config.scatterDamage);
+    config.plasmaDamage = std::max(0.0f, config.plasmaDamage);
+    config.plasmaSpeed = std::max(1.0f, config.plasmaSpeed);
+    config.plasmaLifetime = std::max(0.1f, config.plasmaLifetime);
+    config.plasmaCooldown = std::max(0.01f, config.plasmaCooldown);
+    config.plasmaRadius = std::max(0.02f, config.plasmaRadius);
     config.laserBaseDamage = std::max(0.0f, config.laserBaseDamage);
     config.laserChargeDamage = std::max(0.0f, config.laserChargeDamage);
     config.laserBeamRadius = std::max(0.05f, config.laserBeamRadius);
+    config.laserChargeRate = std::max(0.1f, config.laserChargeRate);
+    config.laserBeamRange = std::max(1.0f, config.laserBeamRange);
+    config.laserBeamLifetime = std::max(0.02f, config.laserBeamLifetime);
+    config.laserBeamLifetimeChargeBonus = std::max(0.0f, config.laserBeamLifetimeChargeBonus);
+    config.laserBeamRadiusChargeBonus = std::max(0.0f, config.laserBeamRadiusChargeBonus);
+    config.laserBeamCooldown = std::max(0.01f, config.laserBeamCooldown);
     config.flameDamage = std::max(0.0f, config.flameDamage);
     config.rocketImpactDamage = std::max(0.0f, config.rocketImpactDamage);
     config.rocketExplosionDamage = std::max(0.0f, config.rocketExplosionDamage);
@@ -337,6 +389,24 @@ GameplayConfig LoadGameplayConfig(const char* path) {
     config.pouncerLeapSpeed = std::max(0.0f, config.pouncerLeapSpeed);
     config.bossSpawnTime = std::max(5.0f, config.bossSpawnTime);
     config.bossHealth = std::max(1.0f, config.bossHealth);
+    config.slimeKingSpawnTime = std::max(10.0f, config.slimeKingSpawnTime);
+    config.slimeKingHealth = std::max(50.0f, config.slimeKingHealth);
+    config.slimeKingRadius = std::max(0.5f, config.slimeKingRadius);
+    config.slimeKingSpeed = std::max(0.5f, config.slimeKingSpeed);
+    config.slimeKingLongJumpSpeed = std::max(1.0f, config.slimeKingLongJumpSpeed);
+    config.slimeKingHighJumpSpeed = std::max(1.0f, config.slimeKingHighJumpSpeed);
+    config.slimeKingSlamSpeed = std::max(1.0f, config.slimeKingSlamSpeed);
+    config.slimeKingSlamRadius = std::max(0.5f, config.slimeKingSlamRadius);
+    config.slimeKingSlamDamage = std::max(0.0f, config.slimeKingSlamDamage);
+    config.slimeKingSlamRange = std::max(1.0f, config.slimeKingSlamRange);
+    config.slimeKingShootCount = std::max(1, config.slimeKingShootCount);
+    config.slimeKingShootSpeed = std::max(1.0f, config.slimeKingShootSpeed);
+    config.slimeKingShootInterval = std::max(0.05f, config.slimeKingShootInterval);
+    config.slimeKingCooldown = std::max(0.1f, config.slimeKingCooldown);
+    config.slimeKingSplitCount = std::max(1, config.slimeKingSplitCount);
+    config.slimeKingMaxGenerations = std::max(0, config.slimeKingMaxGenerations);
+    config.slimeKingMinHealth = std::max(1.0f, config.slimeKingMinHealth);
+    config.slimeKingChildScale = std::clamp(config.slimeKingChildScale, 0.1f, 1.0f);
     config.duelistHealth = std::max(1.0f, config.duelistHealth);
     config.duelistWeaponSwitchMin = std::max(0.4f, config.duelistWeaponSwitchMin);
     config.duelistWeaponSwitchMax = std::max(config.duelistWeaponSwitchMin, config.duelistWeaponSwitchMax);
@@ -389,21 +459,22 @@ GameplayConfig LoadGameplayConfig(const char* path) {
     config.recoilLanceShockwaveDamage = std::max(0.0f, config.recoilLanceShockwaveDamage);
     config.recoilLanceShockwaveForce = std::max(0.0f, config.recoilLanceShockwaveForce);
     config.recoilLanceShockwaveRadius = std::max(0.1f, config.recoilLanceShockwaveRadius);
-    config.riftCutterDamage = std::max(0.0f, config.riftCutterDamage);
-    config.riftCutterRange = std::max(0.1f, config.riftCutterRange);
-    config.riftCutterWidth = std::max(0.05f, config.riftCutterWidth);
-    config.riftCutterLifetime = std::max(0.05f, config.riftCutterLifetime);
-    config.riftCutterDelay = std::max(0.0f, config.riftCutterDelay);
-    config.riftCutterRadius = std::max(0.2f, config.riftCutterRadius);
-    config.riftCutterThickness = std::max(0.05f, config.riftCutterThickness);
-    config.riftCutterPlaneThickness = std::max(0.05f, config.riftCutterPlaneThickness);
-    config.riftCutterWaveSpeed = std::max(0.0f, config.riftCutterWaveSpeed);
-    config.riftCutterWaveSpawnDistance = std::max(0.0f, config.riftCutterWaveSpawnDistance);
-    config.riftPlatformRange = std::max(0.5f, config.riftPlatformRange);
-    config.riftPlatformDelay = std::max(0.0f, config.riftPlatformDelay);
-    config.riftPlatformLifetime = std::max(0.1f, config.riftPlatformLifetime);
-    config.riftPlatformSize = std::max(1.0f, config.riftPlatformSize);
-    config.riftPlatformThickness = std::max(0.1f, config.riftPlatformThickness);
+    config.nanoBladeDamage = std::max(0.0f, config.nanoBladeDamage);
+    config.nanoBladeRange = std::max(0.1f, config.nanoBladeRange);
+    config.nanoBladeWidth = std::max(0.05f, config.nanoBladeWidth);
+    config.nanoBladeLifetime = std::max(0.05f, config.nanoBladeLifetime);
+    config.nanoBladeDelay = std::max(0.0f, config.nanoBladeDelay);
+    config.nanoBladeRadius = std::max(0.2f, config.nanoBladeRadius);
+    config.nanoBladeThickness = std::max(0.05f, config.nanoBladeThickness);
+    config.nanoBladePlaneThickness = std::max(0.05f, config.nanoBladePlaneThickness);
+    config.nanoBladeWaveSpeed = std::max(0.0f, config.nanoBladeWaveSpeed);
+    config.nanoBladeWaveSpawnDistance = std::max(0.0f, config.nanoBladeWaveSpawnDistance);
+    config.nanoPlatformRange = std::max(0.5f, config.nanoPlatformRange);
+    config.nanoPlatformDelay = std::max(0.0f, config.nanoPlatformDelay);
+    config.nanoPlatformLifetime = std::max(0.1f, config.nanoPlatformLifetime);
+    config.nanoPlatformLength = std::max(1.0f, config.nanoPlatformLength);
+    config.nanoPlatformWidth = std::max(1.0f, config.nanoPlatformWidth);
+    config.nanoPlatformHeight = std::max(0.1f, config.nanoPlatformHeight);
     config.blinkDistance = std::max(0.0f, config.blinkDistance);
     config.blinkClearRadius = std::max(0.1f, config.blinkClearRadius);
     config.blinkDistanceMin = std::max(0.1f, config.blinkDistanceMin);
@@ -446,5 +517,10 @@ GameplayConfig LoadGameplayConfig(const char* path) {
     config.dummyBossSpawnTime = std::max(1.0f, config.dummyBossSpawnTime);
     config.dummyBethlehemSpawnTime = std::max(1.0f, config.dummyBethlehemSpawnTime);
     config.dummyMaxCount = std::max(0, config.dummyMaxCount);
+    config.bossHomingTurnRate = std::clamp(config.bossHomingTurnRate, 0.5f, 12.0f);
+    config.bossHomingBurstCount = std::clamp(config.bossHomingBurstCount, 1, 6);
+    config.bossHomingBurstInterval = std::clamp(config.bossHomingBurstInterval, 0.05f, 1.0f);
+    config.bossHomingLife = std::max(1.0f, config.bossHomingLife);
+    config.bossHomingSpeedScale = std::clamp(config.bossHomingSpeedScale, 0.1f, 2.0f);
     return config;
 }

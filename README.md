@@ -33,7 +33,7 @@
 | 5 | **重力钉枪** | 引力井（拉拽敌人） | 黑洞手雷（事件视界秒杀） |
 | 6 | **无限手套** | 时间停止（冻结所有敌弹） | 闪现传送（清除落点范围） |
 | 7 | **反冲长矛** | 高速投掷长矛（自身反冲） | 音速推进锥（定向加速） |
-| 8 | **裂隙切割者** | 缓慢新月刀波（50 DPS） | 可站立纳米平台（临时地板） |
+| 8 | **纳米构造仪** | 纳米构筑新月刃波（50 DPS） | 可站立纳米平台（临时地板） |
 
 单击右键切换副模式；手持火箭筒时**长按**右键（>0.22s）打开无人机指挥界面。
 
@@ -167,6 +167,7 @@ bash scripts/package-release.sh
 | 1–8 | 选择武器 |
 | Z / X / C | 切换太空服 / 飞行 / 滑板 |
 | P | 隐藏 HUD + 武器模型（截图模式） |
+| F11 | 全屏 / 窗口切换 |
 | R | 重置游戏 |
 
 ---
@@ -194,7 +195,7 @@ bash scripts/package-release.sh
 | 5 | **Gravity Nailer** | Pinned gravity well (pulls enemies) | Black hole grenade (event horizon kills) |
 | 6 | **Infinity Gauntlet** | Time stop (freezes all enemies/projectiles) | Blink teleport (clears landing zone) |
 | 7 | **Recoil Lance** | High-speed thrown lance (self-knockback) | Sonic thrust cone (directional boost) |
-| 8 | **Rift Cutter** | Slow crescent blade wave (50 DPS) | Placeable nano-platform (temporary floor) |
+| 8 | **Nano Constructor** | Nano-constructed crescent blade wave (50 DPS) | Placeable nano-platform (temporary floor) |
 
 Right-click toggles alt-mode; hold right-click (>0.22s) on the rocket launcher for the drone command overlay.
 
@@ -314,4 +315,5 @@ Full controls and mechanics are documented in [GAMEPLAY_GUIDE.md](GAMEPLAY_GUIDE
 | 1–8 | Select weapon |
 | Z / X / C | Toggle suit / flight / skates |
 | P | Hide HUD + weapon model (screenshot mode) |
+| F11 | Toggle fullscreen |
 | R | Reset game |

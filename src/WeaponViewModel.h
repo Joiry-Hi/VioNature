@@ -13,7 +13,7 @@ enum class WeaponVisualMode {
     GravityNailer,
     InfinityGauntlet,
     RecoilLance,
-    RiftCutter
+    NanoConstructor
 };
 
 class WeaponViewModel {

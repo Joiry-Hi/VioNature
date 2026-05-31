@@ -31,7 +31,7 @@ private:
         GravityNailer,
         InfinityGauntlet,
         RecoilLance,
-        RiftCutter
+        NanoConstructor
     };
 
     enum class FlamethrowerMode {
@@ -59,9 +59,9 @@ private:
         BlackHole
     };
 
-    enum class RiftCutterMode {
-        BladeWave,
-        Platform
+    enum class NanoConstructorMode {
+        NanoBlade,
+        NanoPlatform
     };
 
     enum class RecoilLanceMode {
@@ -103,7 +103,8 @@ private:
         BlackHoleGrenade,
         Lance,
         DroneCanister,
-        DroneBullet
+        DroneBullet,
+        HomingShot
     };
 
     enum class ProjectileOwner {
@@ -120,6 +121,7 @@ private:
         Harrier,
         Blinker,
         Boss,
+        SlimeKing,
         Duelist,
         Dummy,
         DummyBoss
@@ -150,6 +152,7 @@ private:
         ProjectileOwner owner = ProjectileOwner::Player;
         bool frozen = false;
         JPH::BodyID lastHitEnemy;
+        float turnRate = 0.0f;
     };
 
     struct Beam {
@@ -173,6 +176,7 @@ private:
         float actionTimer = 0.0f;
         float cooldownTimer = 0.0f;
         float burstTimer = 0.0f;
+        int burstCount = 0;
         int weaponSlot = 0;
         float weaponSwitchTimer = 0.0f;
         float telegraphTimer = 0.0f;
@@ -181,6 +185,7 @@ private:
         Vector3 externalVelocity = {};
         Vector3 storedVelocity = {};
         bool frozen = false;
+        int slimeGeneration = 0;
     };
 
     struct DamageNumber {
@@ -246,7 +251,7 @@ private:
         Color color = WHITE;
     };
 
-    struct RiftSlash {
+    struct NanoBlade {
         Vector3 center = {};
         Vector3 normal = {};
         Vector3 right = {};
@@ -271,6 +276,7 @@ private:
         float delay = 0.0f;
         float life = 0.0f;
         float maxLife = 0.0f;
+        JPH::BodyID platformBody;
     };
 
     enum class BethlehemLaserPhase { Inactive, Warning, Damaging };
@@ -287,6 +293,16 @@ private:
         bool active = false;
     };
 
+    struct SlimeSpawnPod {
+        Vector3 position = {};
+        Vector3 velocity = {};
+        float timer = 0.0f;
+        float maxTimer = 0.0f;
+        float health = 0.0f;
+        float radius = 0.0f;
+        int generation = 0;
+    };
+
     void Reset();
     void ClearWorld();
     void UpdatePlayer(float dt);
@@ -299,8 +315,9 @@ private:
     void UpdateShockwaves(float dt);
     void UpdateHeatwaves(float dt);
     void UpdateGravityWells(float dt);
-    void UpdateRifts(float dt);
+    void UpdateNanoBlades(float dt);
     void UpdateNanoPlatforms(float dt);
+    void UpdateSlimeSpawnPods(float dt);
     void UpdateEnemies(float dt);
     void UpdateWaveDirector(float dt);
     void UpdateProjectiles(float dt);
@@ -330,13 +347,14 @@ private:
     void FireEnemyProjectile(ProjectileKind kind, Vector3 position, Vector3 direction, float speed, float damage, float life, float radius, float maxRadius, Color color);
     void FireLaser(float charge);
     void FireEnemyShot(Vector3 position, Vector3 direction);
+    void FireHomingShot(Vector3 position, Vector3 direction, float speed, float turnRate, float life, float damage, Color color, ProjectileOwner owner);
     void FireHeatwave(Vector3 direction);
     void FireDuelistHeatwave(Vector3 origin, Vector3 direction);
-    void FireRiftCutter(Vector3 direction);
+    void FireNanoBlade(Vector3 direction);
     void FireNanoPlatform(Vector3 direction);
     void FireLanceThrust(Vector3 direction);
     void DetonateLance(Vector3 position, ProjectileOwner owner);
-    void SpawnEnemyRift(Vector3 origin, Vector3 direction);
+    void SpawnEnemyNanoBlade(Vector3 origin, Vector3 direction);
     void SpawnGravityWell(Vector3 position, bool blackHole = false);
     void BlinkDuelist(Enemy& enemy, Vector3 awayFrom);
     void ToggleTimeStop();
@@ -398,9 +416,10 @@ private:
     void DrawShockwaves() const;
     void DrawHeatwaves() const;
     void DrawGravityWells() const;
-    void DrawRifts() const;
+    void DrawNanoBlades() const;
     void DrawNanoPlatforms() const;
     void DrawNanoPlatformFrame(const NanoPlatform& platform, Color color, bool dashed) const;
+    void DrawSlimeSpawnPods() const;
     void DrawDrones() const;
     void DrawRallyMarker() const;
     void DrawDashedCircle3D(Vector3 center, float radius, Vector3 normal, Color color) const;
@@ -430,8 +449,9 @@ private:
     std::vector<Shockwave> shockwaves_;
     std::vector<HeatwavePulse> heatwaves_;
     std::vector<GravityWell> gravityWells_;
-    std::vector<RiftSlash> rifts_;
+    std::vector<NanoBlade> nanoBlades_;
     std::vector<NanoPlatform> nanoPlatforms_;
+    std::vector<SlimeSpawnPod> slimeSpawnPods_;
     std::vector<Drone> drones_;
     std::vector<Prop> props_;
     std::vector<Pickup> pickups_;
@@ -467,9 +487,9 @@ private:
     RocketLauncherMode rocketLauncherMode_ = RocketLauncherMode::Rocket;
     ShotgunMode shotgunMode_ = ShotgunMode::Pellet;
     GravityNailerMode gravityNailerMode_ = GravityNailerMode::Nail;
-    RiftCutterMode riftCutterMode_ = RiftCutterMode::BladeWave;
+    NanoConstructorMode nanoConstructorMode_ = NanoConstructorMode::NanoBlade;
     RecoilLanceMode recoilLanceMode_ = RecoilLanceMode::Throw;
-    float riftPlatformRangeScale_ = 1.0f;
+    float nanoPlatformRangeScale_ = 1.0f;
     GauntletMode gauntletMode_ = GauntletMode::TimeStop;
     float blinkDistanceScale_ = 1.0f;
     bool timeStopped_ = false;
@@ -501,6 +521,7 @@ private:
     bool spitterAmbushDone_ = false;
     bool pouncerRushDone_ = false;
     bool bossSpawned_ = false;
+    bool slimeKingSpawned_ = false;
     bool bethlehemSpawned_ = false;
     BethlehemBoss bethlehem_;
     Model bethlehemModel_;
@@ -514,4 +535,5 @@ private:
     float survivalTime_ = 0.0f;
     float cameraShake_ = 0.0f;
     int score_ = 0;
+    float totalDamageDealt_ = 0.0f;
 };
