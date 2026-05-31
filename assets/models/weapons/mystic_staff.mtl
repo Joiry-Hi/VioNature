@@ -1,0 +1,15 @@
+# Mystic Staff materials
+
+newmtl Wood
+Kd 0.55 0.35 0.15
+Ka 0.30 0.18 0.08
+Ks 0.10 0.08 0.04
+Ns 10.0
+d 1.0
+
+newmtl Gem
+Kd 0.60 0.25 0.85
+Ka 0.30 0.10 0.45
+Ks 0.80 0.60 0.95
+Ns 200.0
+d 1.0

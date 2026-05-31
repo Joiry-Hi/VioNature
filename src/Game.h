@@ -31,7 +31,13 @@ private:
         GravityNailer,
         InfinityGauntlet,
         RecoilLance,
-        NanoConstructor
+        NanoConstructor,
+        MysticStaff
+    };
+
+    enum class MysticStaffMode {
+        CurseOrb,
+        Shield
     };
 
     enum class FlamethrowerMode {
@@ -104,7 +110,9 @@ private:
         Lance,
         DroneCanister,
         DroneBullet,
-        HomingShot
+        HomingShot,
+        CurseOrb,
+        SoulOrb
     };
 
     enum class ProjectileOwner {
@@ -153,6 +161,7 @@ private:
         bool frozen = false;
         JPH::BodyID lastHitEnemy;
         float turnRate = 0.0f;
+        bool fromMagicCircle = false;
     };
 
     struct Beam {
@@ -186,6 +195,9 @@ private:
         Vector3 storedVelocity = {};
         bool frozen = false;
         int slimeGeneration = 0;
+        bool cursed = false;
+        float curseDps = 0.0f;
+        bool killedBySoulOrb = false;
     };
 
     struct DamageNumber {
@@ -303,6 +315,18 @@ private:
         int generation = 0;
     };
 
+    struct MagicCircle {
+        Vector3 position = {};
+        float life = 0.0f;
+        float maxLife = 0.0f;
+        float radius = 3.5f;
+        float fireCooldown = 0.0f;
+        float fireInterval = 0.15f;
+        std::vector<ProjectileKind> absorbedKinds;
+        std::vector<float> absorbedDamages;
+        std::vector<Color> absorbedColors;
+    };
+
     void Reset();
     void ClearWorld();
     void UpdatePlayer(float dt);
@@ -318,6 +342,7 @@ private:
     void UpdateNanoBlades(float dt);
     void UpdateNanoPlatforms(float dt);
     void UpdateSlimeSpawnPods(float dt);
+    void UpdateMagicCircles(float dt);
     void UpdateEnemies(float dt);
     void UpdateWaveDirector(float dt);
     void UpdateProjectiles(float dt);
@@ -352,6 +377,13 @@ private:
     void FireDuelistHeatwave(Vector3 origin, Vector3 direction);
     void FireNanoBlade(Vector3 direction);
     void FireNanoPlatform(Vector3 direction);
+    void FireCurseOrb(Vector3 direction);
+    void FireSoulOrb(Vector3 position, float damage, Vector3 direction);
+    void FireMagicProjectile(Vector3 position, Vector3 direction, float damage, Color color);
+    void DeployMysticStaffShield();
+    void BreakMysticStaffShield();
+    void SpawnMysticStaffShockwave(Vector3 position);
+    void CompleteMagicCircleChannel();
     void FireLanceThrust(Vector3 direction);
     void DetonateLance(Vector3 position, ProjectileOwner owner);
     void SpawnEnemyNanoBlade(Vector3 origin, Vector3 direction);
@@ -420,6 +452,8 @@ private:
     void DrawNanoPlatforms() const;
     void DrawNanoPlatformFrame(const NanoPlatform& platform, Color color, bool dashed) const;
     void DrawSlimeSpawnPods() const;
+    void DrawMagicCircles() const;
+    void DrawMysticStaffShield() const;
     void DrawDrones() const;
     void DrawRallyMarker() const;
     void DrawDashedCircle3D(Vector3 center, float radius, Vector3 normal, Color color) const;
@@ -452,6 +486,7 @@ private:
     std::vector<NanoBlade> nanoBlades_;
     std::vector<NanoPlatform> nanoPlatforms_;
     std::vector<SlimeSpawnPod> slimeSpawnPods_;
+    std::vector<MagicCircle> magicCircles_;
     std::vector<Drone> drones_;
     std::vector<Prop> props_;
     std::vector<Pickup> pickups_;
@@ -492,8 +527,15 @@ private:
     float nanoPlatformRangeScale_ = 1.0f;
     GauntletMode gauntletMode_ = GauntletMode::TimeStop;
     float blinkDistanceScale_ = 1.0f;
+    MysticStaffMode mysticStaffMode_ = MysticStaffMode::CurseOrb;
+    bool mysticStaffShieldActive_ = false;
+    Vector3 mysticStaffShieldPosition_ = {};
+    float mysticStaffShieldRadius_ = 2.8f;
+    float mysticStaffShieldCooldown_ = 0.0f;
+    bool mysticStaffChanneling_ = false;
+    float mysticStaffChannelProgress_ = 0.0f;
     bool timeStopped_ = false;
-    bool weaponTipShown_[8] = {};
+    bool weaponTipShown_[9] = {};
     bool showKeybindOverlay_ = false;
     char tutorialTip_[256] = {};
     float tutorialTipTimer_ = 0.0f;

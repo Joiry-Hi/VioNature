@@ -5,7 +5,7 @@
 #include <array>
 
 namespace {
-constexpr int kWeaponModelCount = 8;
+constexpr int kWeaponModelCount = 9;
 constexpr std::array<const char*, kWeaponModelCount> kWeaponModelPaths = {
     "assets/models/weapons/laser_rifle.obj",
     "assets/models/weapons/flamethrower.obj",
@@ -15,6 +15,7 @@ constexpr std::array<const char*, kWeaponModelCount> kWeaponModelPaths = {
     "assets/models/weapons/infinity_gauntlet.obj",
     "assets/models/weapons/recoil_lance.obj",
     "assets/models/weapons/rift_cutter.obj",
+    "assets/models/weapons/mystic_staff.obj",
 };
 constexpr float kWeaponScale = 0.42f;
 constexpr float kLanceScale = 0.58f;
@@ -42,6 +43,9 @@ int ModelIndex(WeaponVisualMode mode) {
     }
     if (mode == WeaponVisualMode::NanoConstructor) {
         return 7;
+    }
+    if (mode == WeaponVisualMode::MysticStaff) {
+        return 8; // mystic_staff model
     }
     return 0;
 }
@@ -71,6 +75,9 @@ Color ModeTint(WeaponVisualMode mode, float charge) {
     }
     if (mode == WeaponVisualMode::NanoConstructor) {
         return Color{255, 225, 120, 255};
+    }
+    if (mode == WeaponVisualMode::MysticStaff) {
+        return Color{240, 220, 255, 255}; // light lavender tint
     }
     return Color{230, 230, 220, 255};
 }

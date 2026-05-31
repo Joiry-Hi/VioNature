@@ -73,6 +73,8 @@ struct GameplayConfig {
     int slimeKingMaxGenerations = 2;
     float slimeKingMinHealth = 50.0f;
     float slimeKingChildScale = 0.7f;
+    float slimeKingSphericalGravity = 25.0f;
+    float slimeKingSurfaceDamping = 0.82f;
     float duelistHealth = 42.0f;
     float duelistWeaponSwitchMin = 2.0f;
     float duelistWeaponSwitchMax = 4.0f;
@@ -195,6 +197,27 @@ struct GameplayConfig {
     float bossHomingBurstInterval = 0.2f;
     float bossHomingLife = 6.0f;
     float bossHomingSpeedScale = 0.65f;
+
+    // Mystic Staff (weapon 9)
+    float curseOrbDirectDamage = 1.5f;
+    float curseOrbDps = 2.0f;
+    float curseOrbMaxStackMult = 3.0f;
+    float curseOrbSpeed = 28.0f;
+    float curseOrbTurnRate = 2.5f;
+    float curseOrbLifetime = 4.0f;
+    float curseOrbCooldown = 0.55f;
+    float soulOrbCount = 4.0f;
+    float soulOrbDamageScale = 0.35f;
+    float soulOrbSpeed = 24.0f;
+    float soulOrbTurnRate = 3.0f;
+    float soulOrbLifetime = 5.0f;
+    float mysticStaffShieldRadius = 2.8f;
+    float mysticStaffShieldCooldown = 4.0f;
+    float mysticStaffShockwaveRadius = 5.0f;
+    float mysticStaffShockwaveForce = 22.0f;
+    float magicCircleLifetime = 12.0f;
+    float magicCircleRadius = 3.5f;
+    float magicCircleFireInterval = 0.15f;
 };
 
 GameplayConfig LoadGameplayConfig(const char* path = "config/gameplay.cfg");

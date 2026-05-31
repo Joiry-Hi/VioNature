@@ -13,7 +13,8 @@ enum class WeaponVisualMode {
     GravityNailer,
     InfinityGauntlet,
     RecoilLance,
-    NanoConstructor
+    NanoConstructor,
+    MysticStaff
 };
 
 class WeaponViewModel {
@@ -35,7 +36,7 @@ private:
     Matrix ModelTransform(const Camera3D& camera, Vector3 position, float scale) const;
     Vector3 TransformLocalPoint(const Camera3D& camera, Vector3 position, Vector3 localPoint) const;
 
-    static constexpr int kModelCount = 8;
+    static constexpr int kModelCount = 9;
     std::array<Model, kModelCount> models_ = {};
     std::array<bool, kModelCount> modelLoaded_ = {};
 };

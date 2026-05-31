@@ -143,6 +143,8 @@ GameplayConfig LoadGameplayConfig(const char* path) {
         {"slime_king_cooldown", &config.slimeKingCooldown},
         {"slime_king_min_health", &config.slimeKingMinHealth},
         {"slime_king_child_scale", &config.slimeKingChildScale},
+        {"slime_king_spherical_gravity", &config.slimeKingSphericalGravity},
+        {"slime_king_surface_damping", &config.slimeKingSurfaceDamping},
         {"duelist_health", &config.duelistHealth},
         {"duelist_weapon_switch_min", &config.duelistWeaponSwitchMin},
         {"duelist_weapon_switch_max", &config.duelistWeaponSwitchMax},
@@ -252,6 +254,25 @@ GameplayConfig LoadGameplayConfig(const char* path) {
         {"boss_homing_burst_interval", &config.bossHomingBurstInterval},
         {"boss_homing_life", &config.bossHomingLife},
         {"boss_homing_speed_scale", &config.bossHomingSpeedScale},
+        {"curse_orb_direct_damage", &config.curseOrbDirectDamage},
+        {"curse_orb_dps", &config.curseOrbDps},
+        {"curse_orb_max_stack_mult", &config.curseOrbMaxStackMult},
+        {"curse_orb_speed", &config.curseOrbSpeed},
+        {"curse_orb_turn_rate", &config.curseOrbTurnRate},
+        {"curse_orb_lifetime", &config.curseOrbLifetime},
+        {"curse_orb_cooldown", &config.curseOrbCooldown},
+        {"soul_orb_count", &config.soulOrbCount},
+        {"soul_orb_damage_scale", &config.soulOrbDamageScale},
+        {"soul_orb_speed", &config.soulOrbSpeed},
+        {"soul_orb_turn_rate", &config.soulOrbTurnRate},
+        {"soul_orb_lifetime", &config.soulOrbLifetime},
+        {"mystic_staff_shield_radius", &config.mysticStaffShieldRadius},
+        {"mystic_staff_shield_cooldown", &config.mysticStaffShieldCooldown},
+        {"mystic_staff_shockwave_radius", &config.mysticStaffShockwaveRadius},
+        {"mystic_staff_shockwave_force", &config.mysticStaffShockwaveForce},
+        {"magic_circle_lifetime", &config.magicCircleLifetime},
+        {"magic_circle_radius", &config.magicCircleRadius},
+        {"magic_circle_fire_interval", &config.magicCircleFireInterval},
     };
 
     std::string line;
@@ -407,6 +428,8 @@ GameplayConfig LoadGameplayConfig(const char* path) {
     config.slimeKingMaxGenerations = std::max(0, config.slimeKingMaxGenerations);
     config.slimeKingMinHealth = std::max(1.0f, config.slimeKingMinHealth);
     config.slimeKingChildScale = std::clamp(config.slimeKingChildScale, 0.1f, 1.0f);
+    config.slimeKingSphericalGravity = std::clamp(config.slimeKingSphericalGravity, 0.0f, 60.0f);
+    config.slimeKingSurfaceDamping = std::clamp(config.slimeKingSurfaceDamping, 0.3f, 0.99f);
     config.duelistHealth = std::max(1.0f, config.duelistHealth);
     config.duelistWeaponSwitchMin = std::max(0.4f, config.duelistWeaponSwitchMin);
     config.duelistWeaponSwitchMax = std::max(config.duelistWeaponSwitchMin, config.duelistWeaponSwitchMax);
@@ -522,5 +545,24 @@ GameplayConfig LoadGameplayConfig(const char* path) {
     config.bossHomingBurstInterval = std::clamp(config.bossHomingBurstInterval, 0.05f, 1.0f);
     config.bossHomingLife = std::max(1.0f, config.bossHomingLife);
     config.bossHomingSpeedScale = std::clamp(config.bossHomingSpeedScale, 0.1f, 2.0f);
+    config.curseOrbDirectDamage = std::max(0.0f, config.curseOrbDirectDamage);
+    config.curseOrbDps = std::max(0.0f, config.curseOrbDps);
+    config.curseOrbMaxStackMult = std::max(1.0f, config.curseOrbMaxStackMult);
+    config.curseOrbSpeed = std::max(1.0f, config.curseOrbSpeed);
+    config.curseOrbTurnRate = std::clamp(config.curseOrbTurnRate, 0.5f, 12.0f);
+    config.curseOrbLifetime = std::max(0.5f, config.curseOrbLifetime);
+    config.curseOrbCooldown = std::max(0.02f, config.curseOrbCooldown);
+    config.soulOrbCount = std::max(1.0f, config.soulOrbCount);
+    config.soulOrbDamageScale = std::max(0.01f, config.soulOrbDamageScale);
+    config.soulOrbSpeed = std::max(1.0f, config.soulOrbSpeed);
+    config.soulOrbTurnRate = std::clamp(config.soulOrbTurnRate, 0.5f, 12.0f);
+    config.soulOrbLifetime = std::max(0.5f, config.soulOrbLifetime);
+    config.mysticStaffShieldRadius = std::max(0.5f, config.mysticStaffShieldRadius);
+    config.mysticStaffShieldCooldown = std::max(0.1f, config.mysticStaffShieldCooldown);
+    config.mysticStaffShockwaveRadius = std::max(0.3f, config.mysticStaffShockwaveRadius);
+    config.mysticStaffShockwaveForce = std::max(0.0f, config.mysticStaffShockwaveForce);
+    config.magicCircleLifetime = std::max(1.0f, config.magicCircleLifetime);
+    config.magicCircleRadius = std::max(0.5f, config.magicCircleRadius);
+    config.magicCircleFireInterval = std::max(0.02f, config.magicCircleFireInterval);
     return config;
 }

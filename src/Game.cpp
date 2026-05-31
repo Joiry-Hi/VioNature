@@ -201,6 +201,11 @@ void Game::Reset() {
     nanoPlatformRangeScale_ = 1.0f;
     gauntletMode_ = GauntletMode::TimeStop;
     blinkDistanceScale_ = 1.0f;
+    mysticStaffMode_ = MysticStaffMode::CurseOrb;
+    mysticStaffShieldActive_ = false;
+    mysticStaffShieldCooldown_ = 0.0f;
+    mysticStaffChanneling_ = false;
+    mysticStaffChannelProgress_ = 0.0f;
     timeStopped_ = false;
     timeStopTintTimer_ = 0.0f;
     fireCooldown_ = 0.0f;
@@ -218,7 +223,7 @@ void Game::Reset() {
     bossSpawned_ = false;
     slimeKingSpawned_ = false;
     bethlehemSpawned_ = false;
-    for (int i = 0; i < 8; ++i) weaponTipShown_[i] = false;
+    for (int i = 0; i < 9; ++i) weaponTipShown_[i] = false;
     tutorialTip_[0] = '\0';
     tutorialTipTimer_ = 0.0f;
     tutorialTipDuration_ = 0.0f;
@@ -272,6 +277,7 @@ void Game::ClearWorld() {
     }
     nanoPlatforms_.clear();
     slimeSpawnPods_.clear();
+    magicCircles_.clear();
 
     for (const Enemy& enemy : enemies_) {
         physics_.DestroyBody(enemy.body);
@@ -345,6 +351,7 @@ void Game::Update(float dt) {
             UpdateGravityWells(dt);
             UpdateNanoBlades(dt);
             UpdateNanoPlatforms(dt);
+            UpdateMagicCircles(dt);
         }
         UpdateSlimeSpawnPods(dt);
         if (!timeStopped_ && !DuelMode() && !TutorialMode()) {
@@ -363,6 +370,39 @@ void Game::Update(float dt) {
         if (!timeStopped_) {
             physics_.Step(kFixedFrame);
         }
+
+        // Mystic Staff shield update
+        if (mysticStaffShieldActive_) {
+            mysticStaffShieldPosition_ = camera_.position;
+            if (!timeStopped_) {
+                // Check enemy projectile hits on shield
+                for (size_t pi = 0; pi < projectiles_.size();) {
+                    Projectile& proj = projectiles_[pi];
+                    if (proj.owner != ProjectileOwner::Enemy && proj.kind != ProjectileKind::EnemyShot) { ++pi; continue; }
+                    Vector3 pp = BodyPosition(proj.body);
+                    float dist = Vector3Distance(mysticStaffShieldPosition_, pp);
+                    if (dist <= mysticStaffShieldRadius_ + proj.radius) {
+                        BreakMysticStaffShield();
+                        DestroyProjectile(pi);
+                        break;
+                    }
+                    ++pi;
+                }
+                // Push enemies away from shield
+                for (Enemy& enemy : enemies_) {
+                    Vector3 ep = BodyPosition(enemy.body);
+                    Vector3 toEnemy = Vector3Subtract(ep, mysticStaffShieldPosition_);
+                    float dist = Vector3Length(toEnemy);
+                    float pushDist = mysticStaffShieldRadius_ + enemy.radius;
+                    if (dist < pushDist && dist > 0.01f) {
+                        Vector3 pushDir = Vector3Scale(toEnemy, 1.0f / dist);
+                        float penetration = pushDist - dist;
+                        AddEnemyImpulse(enemy, Vector3Scale(pushDir, penetration * 18.0f));
+                    }
+                }
+            }
+        }
+        mysticStaffShieldCooldown_ = std::max(0.0f, mysticStaffShieldCooldown_ - dt);
     } else {
         UpdateFreeCamera(dt);
         camera_.target = Vector3Add(camera_.position, PlayerForward());
@@ -814,41 +854,47 @@ void Game::UpdateWeaponSwitching() {
         activeWeapon_ = WeaponType::RecoilLance;
     } else if (IsKeyPressed(KEY_EIGHT)) {
         activeWeapon_ = WeaponType::NanoConstructor;
+    } else if (IsKeyPressed(KEY_ZERO)) {
+        activeWeapon_ = WeaponType::MysticStaff;
     } else if (wheel != 0.0f && !wheelAdjustedPlatformRange) {
-        int index = 0;
-        if (activeWeapon_ == WeaponType::Flamethrower) {
-            index = 1;
-        } else if (activeWeapon_ == WeaponType::RocketLauncher) {
-            index = 2;
-        } else if (activeWeapon_ == WeaponType::Shotgun) {
-            index = 3;
-        } else if (activeWeapon_ == WeaponType::GravityNailer) {
-            index = 4;
-        } else if (activeWeapon_ == WeaponType::InfinityGauntlet) {
-            index = 5;
-        } else if (activeWeapon_ == WeaponType::RecoilLance) {
-            index = 6;
-        } else if (activeWeapon_ == WeaponType::NanoConstructor) {
-            index = 7;
-        }
-
-        index = (index + (wheel > 0.0f ? -1 : 1) + 8) % 8;
-        if (index == 0) {
-            activeWeapon_ = WeaponType::Laser;
-        } else if (index == 1) {
-            activeWeapon_ = WeaponType::Flamethrower;
-        } else if (index == 2) {
-            activeWeapon_ = WeaponType::RocketLauncher;
-        } else if (index == 3) {
-            activeWeapon_ = WeaponType::Shotgun;
-        } else if (index == 4) {
-            activeWeapon_ = WeaponType::GravityNailer;
-        } else if (index == 5) {
-            activeWeapon_ = WeaponType::InfinityGauntlet;
-        } else if (index == 6) {
-            activeWeapon_ = WeaponType::RecoilLance;
+        if (activeWeapon_ == WeaponType::MysticStaff) {
+            activeWeapon_ = wheel > 0.0f ? WeaponType::NanoConstructor : WeaponType::Laser;
         } else {
-            activeWeapon_ = WeaponType::NanoConstructor;
+            int index = 0;
+            if (activeWeapon_ == WeaponType::Flamethrower) {
+                index = 1;
+            } else if (activeWeapon_ == WeaponType::RocketLauncher) {
+                index = 2;
+            } else if (activeWeapon_ == WeaponType::Shotgun) {
+                index = 3;
+            } else if (activeWeapon_ == WeaponType::GravityNailer) {
+                index = 4;
+            } else if (activeWeapon_ == WeaponType::InfinityGauntlet) {
+                index = 5;
+            } else if (activeWeapon_ == WeaponType::RecoilLance) {
+                index = 6;
+            } else if (activeWeapon_ == WeaponType::NanoConstructor) {
+                index = 7;
+            }
+
+            index = (index + (wheel > 0.0f ? -1 : 1) + 8) % 8;
+            if (index == 0) {
+                activeWeapon_ = WeaponType::Laser;
+            } else if (index == 1) {
+                activeWeapon_ = WeaponType::Flamethrower;
+            } else if (index == 2) {
+                activeWeapon_ = WeaponType::RocketLauncher;
+            } else if (index == 3) {
+                activeWeapon_ = WeaponType::Shotgun;
+            } else if (index == 4) {
+                activeWeapon_ = WeaponType::GravityNailer;
+            } else if (index == 5) {
+                activeWeapon_ = WeaponType::InfinityGauntlet;
+            } else if (index == 6) {
+                activeWeapon_ = WeaponType::RecoilLance;
+            } else {
+                activeWeapon_ = WeaponType::NanoConstructor;
+            }
         }
     }
 
@@ -881,6 +927,10 @@ void Game::UpdateWeaponSwitching() {
             gauntletMode_ = gauntletMode_ == GauntletMode::TimeStop ? GauntletMode::Blink : GauntletMode::TimeStop;
             eventText_ = gauntletMode_ == GauntletMode::Blink ? "BLINK" : "TIME STOP";
             eventTextTimer_ = 1.4f;
+        } else if (activeWeapon_ == WeaponType::MysticStaff) {
+            mysticStaffMode_ = static_cast<MysticStaffMode>((static_cast<int>(mysticStaffMode_) + 1) % 2);
+            eventText_ = mysticStaffMode_ == MysticStaffMode::CurseOrb ? "CURSE ORB" : "MYSTIC SHIELD";
+            eventTextTimer_ = 1.4f;
         }
     }
 
@@ -890,7 +940,7 @@ void Game::UpdateWeaponSwitching() {
         fireCooldown_ = std::min(fireCooldown_, 0.12f);
         if (TutorialMode()) {
             int idx = static_cast<int>(activeWeapon_);
-            if (idx < 8) {
+            if (idx < 9) {
                 const char* tips[] = {
                     "外星激光枪\n左键高速连射  |  右键+左键蓄力穿透光束",
                     "火焰喷射器\n左键火球(半径膨胀)  |  右键热浪冲击波(锥形推飞弹幕)",
@@ -900,6 +950,7 @@ void Game::UpdateWeaponSwitching() {
                     "无限手套\n右键切换:时停(TS)/闪现(B)  |  闪现时滚轮调距离",
                     "反冲长矛\n左键投掷穿透+反冲位移  |  右键音速推进(锥形+后坐力)",
                     "纳米构造仪\n左键纳米刀波(50伤/秒)  |  右键纳米平台(可站立)  |  滚轮调距离",
+                    "神秘法杖\n左键诅咒法球(追踪+DoT) | 右键切换护盾(S) | 站定时长按双键召唤法阵",
                 };
                 ShowTutorialTip(tips[idx]);
                 tutorialHintTimer_ = 0.3f;
@@ -950,6 +1001,35 @@ void Game::UpdateShooting(float dt) {
             chargingLaser_ = false;
             laserCharge_ = 0.0f;
             fireCooldown_ = config_.laserBeamCooldown;
+        }
+        return;
+    }
+
+    // Mystic Staff Magic Circle channel: hold both LMB+RMB while grounded & stationary to summon
+    bool magicCircleChord = activeWeapon_ == WeaponType::MysticStaff
+        && IsMouseButtonDown(MOUSE_BUTTON_RIGHT)
+        && IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+    bool playerStationary = Vector3Length(playerVelocity_) < 1.5f;
+    if (magicCircleChord && !mysticStaffChanneling_ && grounded_ && playerStationary) {
+        mysticStaffChanneling_ = true;
+        mysticStaffChannelProgress_ = 0.0f;
+        eventText_ = "CHANNELING...";
+        eventTextTimer_ = 0.5f;
+    }
+    if (mysticStaffChanneling_) {
+        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && IsMouseButtonDown(MOUSE_BUTTON_RIGHT)
+            && grounded_ && Vector3Length(playerVelocity_) < 1.5f) {
+            mysticStaffChannelProgress_ = std::min(1.0f, mysticStaffChannelProgress_ + dt / 3.0f);
+            cameraShake_ = std::min(0.35f, cameraShake_ + dt * 0.12f);
+        } else {
+            if (mysticStaffChannelProgress_ >= 1.0f) {
+                CompleteMagicCircleChannel();
+            } else {
+                eventText_ = "CANCELLED";
+                eventTextTimer_ = 1.0f;
+            }
+            mysticStaffChanneling_ = false;
+            mysticStaffChannelProgress_ = 0.0f;
         }
         return;
     }
@@ -1040,6 +1120,17 @@ void Game::UpdateShooting(float dt) {
             FireNanoBlade(forward);
             fireCooldown_ = 0.78f;
             cameraShake_ = std::min(1.0f, cameraShake_ + 0.38f);
+        }
+    } else if (activeWeapon_ == WeaponType::MysticStaff) {
+        if (mysticStaffMode_ == MysticStaffMode::CurseOrb) {
+            FireCurseOrb(forward);
+            fireCooldown_ = config_.curseOrbCooldown;
+            cameraShake_ = std::min(1.0f, cameraShake_ + 0.22f);
+        } else if (mysticStaffMode_ == MysticStaffMode::Shield) {
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                DeployMysticStaffShield();
+                fireCooldown_ = 0.5f;
+            }
         }
     }
 
@@ -1496,7 +1587,7 @@ void Game::UpdateEnemies(float dt) {
                         }
                         Vector3 jumpVel = Vector3Add(
                             Vector3Scale(jumpDir, config_.slimeKingLongJumpSpeed),
-                            Vector3Scale(enemyUp, config_.slimeKingLongJumpSpeed * 0.45f));
+                            Vector3Scale(enemyUp, config_.slimeKingLongJumpSpeed * 1.0f));
                         physics_.Bodies().SetLinearVelocity(enemy.body, ToJoltVelocity(jumpVel));
                         enemy.burstCount = 1;
                         enemy.actionTimer = 1.2f;
@@ -1520,7 +1611,7 @@ void Game::UpdateEnemies(float dt) {
                 if (IsSphericalMap()) {
                     // Pull toward surface
                     float alt = SphericalAltitudeAt(position);
-                    float pull = (targetAlt - alt) * 14.0f;
+                    float pull = (targetAlt - alt) * 7.0f;
                     JPH::Vec3 vel = physics_.Bodies().GetLinearVelocity(enemy.body);
                     JPH::Vec3 radialVel = JPH::Vec3(enemyUp.x * pull, enemyUp.y * pull, enemyUp.z * pull);
                     physics_.Bodies().SetLinearVelocity(enemy.body, vel + radialVel * dt);
@@ -1595,6 +1686,32 @@ void Game::UpdateEnemies(float dt) {
                 }
                 skipVelocity = true;
             }
+
+            // SlimeKing spherical gravity: constant surface pull + damping (no teleport)
+            if (IsSphericalMap()) {
+                JPH::Vec3 vel = physics_.Bodies().GetLinearVelocity(enemy.body);
+                Vector3 worldVel = ToRayVector(vel);
+                float radialSpeed = Vector3DotProduct(worldVel, enemyUp);
+                float alt = SphericalAltitudeAt(position);
+
+                // Constant gravity toward surface (-enemyUp direction)
+                Vector3 tangentVel = Vector3Subtract(worldVel, Vector3Scale(enemyUp, radialSpeed));
+                radialSpeed -= config_.slimeKingSphericalGravity * dt;
+
+                // Damping near surface: reduce radial oscillation
+                float altError = alt - targetAlt;
+                if (std::abs(altError) < 1.5f && radialSpeed * altError > 0.0f) {
+                    radialSpeed *= config_.slimeKingSurfaceDamping;
+                }
+
+                // Hard floor: if below surface, bounce back with damped velocity
+                if (alt < targetAlt - 0.2f && radialSpeed < 0.0f) {
+                    radialSpeed *= -0.4f;
+                }
+
+                Vector3 correctedVel = Vector3Add(tangentVel, Vector3Scale(enemyUp, radialSpeed));
+                physics_.Bodies().SetLinearVelocity(enemy.body, ToJoltVelocity(correctedVel));
+            }
         } else if (enemy.type == EnemyType::Duelist) {
             UpdateDuelist(enemy, position, direction, dt, speed, skipVelocity);
         } else if (enemy.type == EnemyType::Dummy) {
@@ -1646,6 +1763,18 @@ void Game::UpdateEnemies(float dt) {
         enemy.externalVelocity = Vector3Scale(enemy.externalVelocity, std::pow(0.12f, dt));
         physics_.Bodies().SetLinearVelocity(enemy.body, ToJoltVelocity(velocity));
 
+        // Curse damage over time
+        if (enemy.cursed && !timeStopped_) {
+            enemy.health -= enemy.curseDps * dt;
+            totalDamageDealt_ += enemy.curseDps * dt;
+            if (enemy.type == EnemyType::Dummy || enemy.type == EnemyType::DummyBoss) {
+                RecordDummyDamage(enemy, enemy.curseDps * dt);
+            }
+            if (static_cast<int>(GetTime() * 10.0f) % 3 == 0) {
+                SpawnHitBurst(position, Color{160, 80, 240, 255}, 2);
+            }
+        }
+
         if (EnemyTouchesPlayer(position, enemy.radius)
             && enemy.type != EnemyType::Dummy
             && enemy.type != EnemyType::DummyBoss) {
@@ -1653,6 +1782,16 @@ void Game::UpdateEnemies(float dt) {
         }
     }
 
+    // Check for enemies killed by curse DoT
+    for (size_t i = enemies_.size(); i > 0; --i) {
+        size_t idx = i - 1;
+        if (enemies_[idx].health <= 0.0f) {
+            Vector3 deadPos = BodyPosition(enemies_[idx].body);
+            SpawnHitBurst(deadPos, Color{140, 60, 240, 255}, 20);
+            score_ += enemies_[idx].scoreValue;
+            DestroyEnemy(idx);
+        }
+    }
 }
 
 void Game::UpdateWaveDirector(float dt) {
@@ -1773,7 +1912,10 @@ void Game::UpdateProjectiles(float dt) {
             }
         }
 
-        if (projectile.kind == ProjectileKind::HomingShot && projectile.turnRate > 0.0f && !projectile.frozen) {
+        if ((projectile.kind == ProjectileKind::HomingShot
+             || projectile.kind == ProjectileKind::CurseOrb
+             || projectile.kind == ProjectileKind::SoulOrb)
+            && projectile.turnRate > 0.0f && !projectile.frozen) {
             JPH::Vec3 currentVel = physics_.Bodies().GetLinearVelocity(projectile.body);
             float speed = currentVel.Length();
             if (speed > 0.5f) {
@@ -2044,6 +2186,141 @@ void Game::UpdateSlimeSpawnPods(float dt) {
         }
         ++i;
     }
+}
+
+void Game::UpdateMagicCircles(float dt) {
+    for (size_t i = 0; i < magicCircles_.size();) {
+        MagicCircle& circle = magicCircles_[i];
+        circle.life -= dt;
+        if (circle.life <= 0.0f) {
+            SpawnShockwave(circle.position, circle.radius, Color{180, 130, 255, 240});
+            SpawnHitBurst(circle.position, Color{200, 160, 255, 255}, 20);
+            magicCircles_[i] = magicCircles_.back();
+            magicCircles_.pop_back();
+            continue;
+        }
+        circle.fireCooldown -= dt;
+        if (circle.fireCooldown <= 0.0f && !circle.absorbedKinds.empty() && !enemies_.empty()) {
+            circle.fireCooldown = circle.fireInterval;
+            float nearestDist = INFINITY;
+            Vector3 nearestPos = {};
+            for (const Enemy& enemy : enemies_) {
+                Vector3 ep = BodyPosition(enemy.body);
+                float d = Vector3Distance(circle.position, ep);
+                if (d < nearestDist) { nearestDist = d; nearestPos = ep; }
+            }
+            if (nearestDist < INFINITY) {
+                Vector3 up = IsSphericalMap() ? SphericalUpAt(circle.position) : Vector3{0.0f, 1.0f, 0.0f};
+                Vector3 octaCenter = Vector3Add(circle.position, Vector3Scale(up, 1.0f + circle.radius * 0.4f));
+                Vector3 dir = Vector3Subtract(nearestPos, octaCenter);
+                if (Vector3Length(dir) > 0.01f) dir = Vector3Normalize(dir);
+                ProjectileKind kind = circle.absorbedKinds.front();
+                float damage = circle.absorbedDamages.front();
+                Color color = circle.absorbedColors.empty() ? Color{220, 180, 255, 255} : circle.absorbedColors.front();
+                circle.absorbedKinds.erase(circle.absorbedKinds.begin());
+                circle.absorbedDamages.erase(circle.absorbedDamages.begin());
+                if (!circle.absorbedColors.empty()) {
+                    circle.absorbedColors.erase(circle.absorbedColors.begin());
+                }
+                circle.absorbedKinds.push_back(kind);
+                circle.absorbedDamages.push_back(damage);
+                circle.absorbedColors.push_back(color);
+                // Fade color to purple for demonized look
+                Color demonColor = Color{
+                    static_cast<unsigned char>((static_cast<int>(color.r) + 160) / 2),
+                    static_cast<unsigned char>((static_cast<int>(color.g) + 80) / 2),
+                    static_cast<unsigned char>((static_cast<int>(color.b) + 220) / 2),
+                    255
+                };
+                FireMagicProjectile(octaCenter, dir, damage, demonColor);
+            }
+        }
+        ++i;
+    }
+}
+
+void Game::DeployMysticStaffShield() {
+    if (mysticStaffShieldActive_ || mysticStaffShieldCooldown_ > 0.0f) return;
+    mysticStaffShieldActive_ = true;
+    mysticStaffShieldRadius_ = config_.mysticStaffShieldRadius;
+    SpawnShockwave(camera_.position, mysticStaffShieldRadius_ * 0.7f, Color{160, 100, 255, 255});
+    eventText_ = "SHIELD DEPLOYED";
+    eventTextTimer_ = 1.2f;
+}
+
+void Game::BreakMysticStaffShield() {
+    if (!mysticStaffShieldActive_) return;
+    mysticStaffShieldActive_ = false;
+    mysticStaffShieldCooldown_ = config_.mysticStaffShieldCooldown;
+    SpawnMysticStaffShockwave(camera_.position);
+    eventText_ = "SHIELD BROKEN";
+    eventTextTimer_ = 1.5f;
+}
+
+void Game::SpawnMysticStaffShockwave(Vector3 position) {
+    SpawnShockwave(position, config_.mysticStaffShockwaveRadius, Color{170, 110, 255, 255});
+    for (Enemy& enemy : enemies_) {
+        Vector3 ep = BodyPosition(enemy.body);
+        float dist = Vector3Distance(position, ep);
+        if (dist <= config_.mysticStaffShockwaveRadius + enemy.radius) {
+            Vector3 pushDir = Vector3Subtract(ep, position);
+            float pushDist = Vector3Length(pushDir);
+            if (pushDist > 0.01f) {
+                pushDir = Vector3Scale(pushDir, 1.0f / pushDist);
+                float falloff = 1.0f - std::clamp(dist / config_.mysticStaffShockwaveRadius, 0.0f, 1.0f);
+                AddEnemyImpulse(enemy, Vector3Scale(pushDir, config_.mysticStaffShockwaveForce * falloff));
+            }
+        }
+    }
+    for (Projectile& proj : projectiles_) {
+        if (proj.owner != ProjectileOwner::Enemy && proj.kind != ProjectileKind::EnemyShot) continue;
+        Vector3 pp = BodyPosition(proj.body);
+        float dist = Vector3Distance(position, pp);
+        if (dist <= config_.mysticStaffShockwaveRadius + proj.radius) {
+            Vector3 pushDir = Vector3Subtract(pp, position);
+            float pushDist = Vector3Length(pushDir);
+            if (pushDist > 0.01f) {
+                pushDir = Vector3Scale(pushDir, 1.0f / pushDist);
+                float falloff = 1.0f - std::clamp(dist / config_.mysticStaffShockwaveRadius, 0.0f, 1.0f);
+                AddProjectileImpulse(proj, Vector3Scale(pushDir, config_.mysticStaffShockwaveForce * falloff));
+            }
+        }
+    }
+    cameraShake_ = std::min(1.0f, cameraShake_ + 0.55f);
+}
+
+void Game::CompleteMagicCircleChannel() {
+    Vector3 forward = PlayerForward();
+    if (IsSphericalMap()) {
+        forward = ProjectOnSphericalTangent(forward, SphericalUpAt(camera_.position));
+    } else {
+        forward.y = 0.0f;
+    }
+    if (Vector3Length(forward) > 0.001f) forward = Vector3Normalize(forward);
+    Vector3 spawnPos = Vector3Add(camera_.position, Vector3Scale(forward, 2.0f));
+    if (IsSphericalMap()) {
+        spawnPos = SphericalSurfacePoint(spawnPos, SphericalAltitudeAt(camera_.position));
+    } else {
+        spawnPos.y = 0.05f;
+    }
+
+    MagicCircle circle;
+    circle.position = spawnPos;
+    circle.life = config_.magicCircleLifetime;
+    circle.maxLife = config_.magicCircleLifetime;
+    circle.radius = config_.magicCircleRadius;
+    circle.fireCooldown = 0.0f;
+    circle.fireInterval = config_.magicCircleFireInterval;
+    circle.absorbedKinds.clear();
+    circle.absorbedDamages.clear();
+    circle.absorbedColors.clear();
+
+    magicCircles_.push_back(circle);
+    SpawnShockwave(spawnPos, circle.radius * 1.5f, Color{200, 150, 255, 255});
+    SpawnHitBurst(spawnPos, Color{220, 180, 255, 255}, 30);
+    eventText_ = "MAGIC CIRCLE";
+    eventTextTimer_ = 2.0f;
+    cameraShake_ = std::min(1.0f, cameraShake_ + 0.65f);
 }
 
 void Game::UpdateParticles(float dt) {
@@ -2505,6 +2782,45 @@ void Game::UpdateCollisions() {
                         DestroyEnemy(enemyIndex);
                     }
                     continue;
+                } else if (projectiles_[projectileIndex].kind == ProjectileKind::CurseOrb) {
+                    enemy.health -= projectiles_[projectileIndex].damage;
+                    totalDamageDealt_ += projectiles_[projectileIndex].damage;
+                    if (enemy.type == EnemyType::Dummy || enemy.type == EnemyType::DummyBoss) {
+                        RecordDummyDamage(enemy, projectiles_[projectileIndex].damage);
+                    }
+                    if (!enemy.cursed) {
+                        enemy.cursed = true;
+                        enemy.curseDps = config_.curseOrbDps;
+                    } else {
+                        enemy.curseDps = std::min(enemy.curseDps * 1.15f, config_.curseOrbDps * config_.curseOrbMaxStackMult);
+                    }
+                    SpawnHitBurst(enemyPosition, Color{180, 100, 255, 255}, 14);
+                    DestroyProjectile(projectileIndex);
+                    projectileDestroyed = true;
+                    cameraShake_ = std::min(1.0f, cameraShake_ + 0.2f);
+                    if (enemy.health <= 0.0f) {
+                        SpawnHitBurst(enemyPosition, Color{140, 60, 240, 255}, 20);
+                        score_ += enemy.scoreValue;
+                        DestroyEnemy(enemyIndex);
+                    }
+                    break;
+                } else if (projectiles_[projectileIndex].kind == ProjectileKind::SoulOrb) {
+                    enemy.health -= projectiles_[projectileIndex].damage;
+                    totalDamageDealt_ += projectiles_[projectileIndex].damage;
+                    if (enemy.type == EnemyType::Dummy || enemy.type == EnemyType::DummyBoss) {
+                        RecordDummyDamage(enemy, projectiles_[projectileIndex].damage);
+                    }
+                    SpawnHitBurst(enemyPosition, Color{60, 20, 100, 255}, 10);
+                    DestroyProjectile(projectileIndex);
+                    projectileDestroyed = true;
+                    cameraShake_ = std::min(1.0f, cameraShake_ + 0.15f);
+                    if (enemy.health <= 0.0f) {
+                        enemy.killedBySoulOrb = true;
+                        SpawnHitBurst(enemyPosition, Color{40, 10, 70, 255}, 20);
+                        score_ += enemy.scoreValue;
+                        DestroyEnemy(enemyIndex);
+                    }
+                    break;
                 }
 
                 enemy.health -= projectiles_[projectileIndex].damage;
@@ -2534,6 +2850,25 @@ void Game::UpdateCollisions() {
             }
         }
 
+        if (!projectileDestroyed) {
+            // Check projectile absorption into magic circle octahedron
+            for (MagicCircle& circle : magicCircles_) {
+                Vector3 up = IsSphericalMap() ? SphericalUpAt(circle.position) : Vector3{0.0f, 1.0f, 0.0f};
+                Vector3 octaCenter = Vector3Add(circle.position, Vector3Scale(up, 1.0f + circle.radius * 0.4f));
+                float dist = Vector3Distance(projectilePosition, octaCenter);
+                if (dist <= circle.radius + projectiles_[projectileIndex].radius
+                    && !projectiles_[projectileIndex].fromMagicCircle) {
+                    circle.absorbedKinds.push_back(projectiles_[projectileIndex].kind);
+                    circle.absorbedDamages.push_back(projectiles_[projectileIndex].damage);
+                    circle.absorbedColors.push_back(projectiles_[projectileIndex].color);
+                    SpawnHitBurst(projectilePosition, Color{220, 180, 255, 255}, 8);
+                    SpawnShockwave(octaCenter, 0.8f, Color{200, 150, 255, 255});
+                    DestroyProjectile(projectileIndex);
+                    projectileDestroyed = true;
+                    break;
+                }
+            }
+        }
         if (!projectileDestroyed) {
             ++projectileIndex;
         }
@@ -3104,6 +3439,84 @@ void Game::FireHomingShot(Vector3 position, Vector3 direction, float speed, floa
     JPH::BodyID body = physics_.CreateBody(projectileShape_, ToJoltVector(position), JPH::Quat::sIdentity(), projectileConfig);
     Projectile proj{body, ProjectileKind::HomingShot, life, life, damage, 0.22f, 0.22f, color, 0, intendedVelocity, owner, timeStopped_};
     proj.turnRate = turnRate;
+    projectiles_.push_back(proj);
+}
+
+void Game::FireCurseOrb(Vector3 direction) {
+    Vector3 spawn = WeaponMuzzlePosition();
+    float speed = config_.curseOrbSpeed;
+    float turnRate = config_.curseOrbTurnRate;
+    float life = config_.curseOrbLifetime;
+    float damage = config_.curseOrbDirectDamage;
+    Color color{180, 100, 255, 255};
+
+    Vector3 intendedVelocity = Vector3Scale(direction, speed);
+    PhysicsWorld::BodyConfig projConfig;
+    projConfig.motionType = JPH::EMotionType::Dynamic;
+    projConfig.layer = Layers::PROJECTILE;
+    projConfig.linearVelocity = timeStopped_ ? JPH::Vec3::sZero()
+        : JPH::Vec3(intendedVelocity.x, intendedVelocity.y, intendedVelocity.z);
+    projConfig.gravityFactor = 0.0f;
+    projConfig.linearDamping = 0.0f;
+    projConfig.motionQuality = JPH::EMotionQuality::LinearCast;
+    projConfig.allowSleeping = false;
+
+    JPH::BodyID body = physics_.CreateBody(projectileShape_, ToJoltVector(spawn),
+        JPH::Quat::sIdentity(), projConfig);
+    Projectile proj{body, ProjectileKind::CurseOrb, life, life, damage, 0.24f, 0.24f,
+        color, 0, intendedVelocity, ProjectileOwner::Player, timeStopped_};
+    proj.turnRate = turnRate;
+    projectiles_.push_back(proj);
+}
+
+void Game::FireSoulOrb(Vector3 position, float damage, Vector3 direction) {
+    float speed = config_.soulOrbSpeed;
+    float turnRate = config_.soulOrbTurnRate;
+    float life = config_.soulOrbLifetime;
+    Color color{40, 10, 70, 255};
+
+    Vector3 intendedVelocity = Vector3Scale(direction, speed);
+    PhysicsWorld::BodyConfig projConfig;
+    projConfig.motionType = JPH::EMotionType::Dynamic;
+    projConfig.layer = Layers::PROJECTILE;
+    projConfig.linearVelocity = timeStopped_ ? JPH::Vec3::sZero()
+        : JPH::Vec3(intendedVelocity.x, intendedVelocity.y, intendedVelocity.z);
+    projConfig.gravityFactor = 0.0f;
+    projConfig.linearDamping = 0.0f;
+    projConfig.motionQuality = JPH::EMotionQuality::LinearCast;
+    projConfig.allowSleeping = false;
+
+    JPH::BodyID body = physics_.CreateBody(projectileShape_, ToJoltVector(position),
+        JPH::Quat::sIdentity(), projConfig);
+    Projectile proj{body, ProjectileKind::SoulOrb, life, life, damage, 0.18f, 0.18f,
+        color, 0, intendedVelocity, ProjectileOwner::Player, timeStopped_};
+    proj.turnRate = turnRate;
+    projectiles_.push_back(proj);
+}
+
+void Game::FireMagicProjectile(Vector3 position, Vector3 direction, float damage, Color color) {
+    float speed = 40.0f;
+    float life = 2.5f;
+    float radius = 0.22f;
+    float turnRate = 3.5f;
+
+    Vector3 intendedVelocity = Vector3Scale(direction, speed);
+    PhysicsWorld::BodyConfig projConfig;
+    projConfig.motionType = JPH::EMotionType::Dynamic;
+    projConfig.layer = Layers::PROJECTILE;
+    projConfig.linearVelocity = timeStopped_ ? JPH::Vec3::sZero()
+        : JPH::Vec3(intendedVelocity.x, intendedVelocity.y, intendedVelocity.z);
+    projConfig.gravityFactor = 0.0f;
+    projConfig.linearDamping = 0.0f;
+    projConfig.motionQuality = JPH::EMotionQuality::LinearCast;
+    projConfig.allowSleeping = false;
+
+    JPH::BodyID body = physics_.CreateBody(projectileShape_, ToJoltVector(position),
+        JPH::Quat::sIdentity(), projConfig);
+    Projectile proj{body, ProjectileKind::HomingShot, life, life, damage, radius, radius,
+        color, 0, intendedVelocity, ProjectileOwner::Player, timeStopped_};
+    proj.turnRate = turnRate;
+    proj.fromMagicCircle = true;
     projectiles_.push_back(proj);
 }
 
@@ -4133,6 +4546,21 @@ void Game::DestroyEnemy(size_t index) {
         cameraShake_ = std::min(1.0f, cameraShake_ + 0.4f);
     }
 
+    // Soul orb chain reaction: cursed or soul-orb-killed enemies spawn soul orbs
+    bool spawnSoulOrbs = enemies_[index].killedBySoulOrb || enemies_[index].cursed;
+    if (spawnSoulOrbs) {
+        float baseDamage = enemies_[index].maxHealth * config_.soulOrbDamageScale;
+        int count = static_cast<int>(config_.soulOrbCount);
+        for (int i = 0; i < count; ++i) {
+            float angle = static_cast<float>(i) / static_cast<float>(count) * 6.2831853f + RandomFloat(-0.3f, 0.3f);
+            Vector3 dir = Vector3{std::cos(angle), RandomFloat(0.2f, 0.6f), std::sin(angle)};
+            dir = Vector3Normalize(dir);
+            FireSoulOrb(position, baseDamage, dir);
+        }
+        SpawnShockwave(position, 2.5f, Color{90, 30, 140, 255});
+        SpawnHitBurst(position, Color{130, 50, 220, 255}, 18);
+    }
+
     physics_.DestroyBody(enemies_[index].body);
     enemies_[index] = enemies_.back();
     enemies_.pop_back();
@@ -4542,6 +4970,8 @@ const char* Game::WeaponName() const {
             return "LANCE";
         case WeaponType::NanoConstructor:
             return "NANO";
+        case WeaponType::MysticStaff:
+            return "STAFF";
         default:
             return "UNKNOWN";
     }
@@ -4569,6 +4999,13 @@ const char* Game::WeaponModeName() const {
     }
     if (activeWeapon_ == WeaponType::RecoilLance) {
         return recoilLanceMode_ == RecoilLanceMode::Thrust ? "T" : "L";
+    }
+    if (activeWeapon_ == WeaponType::MysticStaff) {
+        if (mysticStaffMode_ == MysticStaffMode::CurseOrb) return "C";
+        if (mysticStaffMode_ == MysticStaffMode::Shield) {
+            return mysticStaffShieldActive_ ? "SA" : (mysticStaffShieldCooldown_ > 0.0f ? "SC" : "S");
+        }
+        return "";
     }
     return "";
 }
@@ -4647,6 +5084,8 @@ void Game::Draw() const {
     DrawHeatwaves();
     DrawGravityWells();
     DrawNanoBlades();
+    DrawMagicCircles();
+    DrawMysticStaffShield();
     DrawParticles();
     DrawRallyMarker();
     DrawBlinkIndicator();
@@ -5153,6 +5592,18 @@ void Game::DrawProjectiles() const {
             DrawSphereWires(position, projectile.radius * (1.9f + std::sin(spin) * 0.22f), 8, 5, FadeColor(Color{255, 200, 140, 255}, 0.75f));
             DrawCylinderWires(position, projectile.radius * 2.0f, projectile.radius * 1.2f, 0.03f, 10, FadeColor(Color{255, 180, 110, 255}, 0.6f));
             DrawLine3D(position, Vector3Add(position, Vector3Scale(trail, 1.5f)), FadeColor(projectile.color, 0.8f));
+        } else if (projectile.kind == ProjectileKind::CurseOrb) {
+            float spin = static_cast<float>(GetTime()) * 6.0f;
+            DrawSphereEx(position, projectile.radius * 1.2f, 8, 6, projectile.color);
+            DrawSphereWires(position, projectile.radius * (1.6f + std::sin(spin) * 0.25f), 10, 6,
+                FadeColor(Color{220, 140, 255, 255}, 0.7f));
+            DrawLine3D(position, Vector3Add(position, Vector3Scale(trail, 0.8f)),
+                FadeColor(projectile.color, 0.8f));
+        } else if (projectile.kind == ProjectileKind::SoulOrb) {
+            float spin = static_cast<float>(GetTime()) * 5.0f;
+            DrawSphereEx(position, projectile.radius * 0.9f, 5, 4, projectile.color);
+            DrawSphereWires(position, projectile.radius * (1.4f + std::sin(spin) * 0.2f), 8, 5,
+                FadeColor(Color{80, 40, 120, 255}, 0.6f));
         } else {
             DrawLine3D(position, Vector3Add(position, trail), FadeColor(projectile.color, 0.7f));
             DrawSphereEx(position, projectile.radius, 5, 4, projectile.color);
@@ -5623,6 +6074,90 @@ void Game::DrawParticles() const {
     }
 }
 
+void Game::DrawMagicCircles() const {
+    for (const MagicCircle& circle : magicCircles_) {
+        float alpha = circle.maxLife > 0.0f ? circle.life / circle.maxLife : 0.0f;
+        Color ringColor = FadeColor(Color{180, 130, 255, 255}, alpha * 0.8f);
+        Color frameColor = FadeColor(Color{220, 180, 255, 255}, alpha * 0.7f);
+        Vector3 up = IsSphericalMap() ? SphericalUpAt(circle.position) : Vector3{0.0f, 1.0f, 0.0f};
+
+        // Ground magic circle: concentric rings + pentagram
+        // Slight lift above ground on flat maps to prevent z-fighting
+        Vector3 groundPos = IsSphericalMap() ? circle.position
+            : Vector3Add(circle.position, Vector3Scale(up, 0.1f));
+        // Concentric rings
+        for (int ri = 0; ri < 3; ++ri) {
+            float r = circle.radius * (1.0f - ri * 0.25f);
+            Color rc = FadeColor(ringColor, alpha * (0.9f - ri * 0.2f));
+            DrawDashedCircle3D(groundPos, r, up, rc);
+        }
+        // Pentagram (5-pointed star)
+        float starR = circle.radius * 0.65f;
+        Vector3 rightA = {1, 0, 0}, fwdA = {0, 0, 1};
+        if (IsSphericalMap()) {
+            rightA = SafeNormalize(ProjectOnSphericalTangent(Vector3{1,0,0}, up), Vector3{1,0,0});
+            fwdA = SafeNormalize(Vector3CrossProduct(up, rightA), Vector3{0,0,1});
+        }
+        Vector3 starPts[5];
+        for (int vi = 0; vi < 5; ++vi) {
+            float angle = 2.0f * 3.14159265f * vi / 5.0f - 3.14159265f / 2.0f;
+            starPts[vi] = Vector3Add(groundPos,
+                Vector3Add(Vector3Scale(rightA, std::cos(angle) * starR),
+                          Vector3Scale(fwdA, std::sin(angle) * starR)));
+        }
+        Color starColor = FadeColor(Color{200, 150, 255, 255}, alpha * 0.75f);
+        for (int vi = 0; vi < 5; ++vi) {
+            int next = (vi + 2) % 5;
+            DrawLine3D(starPts[vi], starPts[next], starColor);
+        }
+        // Small center glow dot
+        DrawSphere(groundPos, 0.08f, FadeColor(Color{220, 200, 255, 255}, alpha * 0.9f));
+
+        // Octahedron wireframe above
+        float s = circle.radius * 0.3f;
+        float octaHeight = 1.0f + circle.radius * 0.4f;
+        Vector3 center = Vector3Add(circle.position, Vector3Scale(up, octaHeight));
+        Vector3 vx = {s, 0, 0}, nvx = {-s, 0, 0};
+        Vector3 vy = {0, s, 0}, nvy = {0, -s, 0};
+        Vector3 vz = {0, 0, s}, nvz = {0, 0, -s};
+        if (IsSphericalMap()) {
+            Vector3 rightA = SafeNormalize(ProjectOnSphericalTangent(Vector3{1,0,0}, up), Vector3{1,0,0});
+            Vector3 fwdA = SafeNormalize(Vector3CrossProduct(up, rightA), Vector3{0,0,1});
+            vx = Vector3Scale(rightA, s); nvx = Vector3Scale(rightA, -s);
+            vy = Vector3Scale(up, s); nvy = Vector3Scale(up, -s);
+            vz = Vector3Scale(fwdA, s); nvz = Vector3Scale(fwdA, -s);
+        }
+        auto p = [&](Vector3 v) { return Vector3Add(center, v); };
+        DrawLine3D(p(vx), p(vy), frameColor);
+        DrawLine3D(p(vx), p(nvy), frameColor);
+        DrawLine3D(p(vx), p(vz), frameColor);
+        DrawLine3D(p(vx), p(nvz), frameColor);
+        DrawLine3D(p(nvx), p(vy), frameColor);
+        DrawLine3D(p(nvx), p(nvy), frameColor);
+        DrawLine3D(p(nvx), p(vz), frameColor);
+        DrawLine3D(p(nvx), p(nvz), frameColor);
+        DrawLine3D(p(vy), p(vz), frameColor);
+        DrawLine3D(p(vy), p(nvz), frameColor);
+        DrawLine3D(p(nvy), p(vz), frameColor);
+        DrawLine3D(p(nvy), p(nvz), frameColor);
+
+        // Absorbed indicator
+        if (!circle.absorbedKinds.empty() && circle.fireCooldown <= 0.0f) {
+            float pulse = 0.6f + std::sin(static_cast<float>(GetTime()) * 6.0f) * 0.3f;
+            DrawSphere(center, 0.18f + pulse * 0.12f, Color{255, 200, 255, 180});
+        }
+    }
+}
+
+void Game::DrawMysticStaffShield() const {
+    if (!mysticStaffShieldActive_) return;
+    float pulse = 0.85f + std::sin(static_cast<float>(GetTime()) * 4.5f) * 0.08f;
+    Color shieldColor = Color{160, 100, 255, 160};
+    DrawSphereWires(mysticStaffShieldPosition_, mysticStaffShieldRadius_ * pulse, 20, 14,
+        FadeColor(shieldColor, 0.7f));
+    DrawSphere(mysticStaffShieldPosition_, 0.35f, FadeColor(Color{200, 140, 255, 255}, 0.4f));
+}
+
 void Game::DrawWeapon() const {
     WeaponVisualMode mode = WeaponVisualMode::Laser;
     if (chargingLaser_) {
@@ -5641,6 +6176,8 @@ void Game::DrawWeapon() const {
         mode = WeaponVisualMode::RecoilLance;
     } else if (activeWeapon_ == WeaponType::NanoConstructor) {
         mode = WeaponVisualMode::NanoConstructor;
+    } else if (activeWeapon_ == WeaponType::MysticStaff) {
+        mode = WeaponVisualMode::MysticStaff;
     }
     weaponViewModel_.Draw(camera_, mode, laserCharge_);
 }
@@ -5662,6 +6199,12 @@ void Game::DrawCrosshair() const {
         DrawCircle(centerX, centerY, 1.0f + laserCharge_ * 2.0f, FadeColor(Color{230, 255, 255, 255}, 0.8f));
         DrawRectangle(screenWidth / 2 - 24, screenHeight - 18, 48, 3, Color{18, 30, 36, 210});
         DrawRectangle(screenWidth / 2 - 24, screenHeight - 18, chargeWidth, 3, chargeColor);
+    }
+    if (mysticStaffChanneling_) {
+        int chargeWidth = static_cast<int>(48.0f * mysticStaffChannelProgress_);
+        Color chargeColor = Color{200, 160, 255, 240};
+        DrawRectangle(screenWidth / 2 - 24, screenHeight - 24, 48, 4, Color{18, 30, 36, 210});
+        DrawRectangle(screenWidth / 2 - 24, screenHeight - 24, chargeWidth, 4, chargeColor);
     }
 }
 
@@ -5706,6 +6249,11 @@ void Game::DrawHud() const {
     if (activeWeapon_ == WeaponType::InfinityGauntlet && gauntletMode_ == GauntletMode::Blink) {
         const char* blinkText = TextFormat("BLINK %.1fm", config_.blinkDistance * blinkDistanceScale_);
         DrawText(blinkText, 100, 117, 8, Color{190, 160, 255, 255});
+    }
+    if (activeWeapon_ == WeaponType::MysticStaff && mysticStaffMode_ == MysticStaffMode::Shield
+        && mysticStaffShieldCooldown_ > 0.0f) {
+        const char* cdText = TextFormat("SHIELD CD %.1fs", mysticStaffShieldCooldown_);
+        DrawText(cdText, 100, 117, 8, Color{180, 140, 255, 255});
     }
     const char* fpsText = TextFormat("FPS %d", GetFPS());
     DrawText(fpsText, pixelWidth_ - MeasureText(fpsText, 8) - 6, 7, 8, Color{170, 230, 170, 255});
