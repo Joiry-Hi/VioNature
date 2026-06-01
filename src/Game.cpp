@@ -4878,7 +4878,12 @@ Vector3 Game::PlayerUp() const {
 }
 
 Vector3 Game::WeaponMuzzlePosition() const {
-    return weaponViewModel_.MuzzlePosition(camera_);
+    Vector3 muzzle = weaponViewModel_.MuzzlePosition(camera_);
+    if (activeWeapon_ == WeaponType::MysticStaff) {
+        Vector3 up = IsSphericalMap() ? SphericalUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
+        muzzle = Vector3Add(muzzle, Vector3Scale(up, 0.5f));
+    }
+    return muzzle;
 }
 
 Game::NanoPlatform Game::MakeNanoPlatformTarget(Vector3 direction) const {

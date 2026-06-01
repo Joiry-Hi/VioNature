@@ -19,6 +19,9 @@ constexpr std::array<const char*, kWeaponModelCount> kWeaponModelPaths = {
 };
 constexpr float kWeaponScale = 0.42f;
 constexpr float kSpearScale = 0.58f;
+constexpr float kStaffScale = 0.12f;
+constexpr float kStaffHandleThickX = 2.0f;  // handle thickness horizontal
+constexpr float kStaffHandleThickZ = 1.0f;  // handle thickness vertical
 constexpr int kMaterialMapCount = MATERIAL_MAP_BRDF + 1;
 constexpr Vector3 kMuzzleLocal = {0.0f, 0.0f, 0.70f};
 
@@ -77,7 +80,7 @@ Color ModeTint(WeaponVisualMode mode, float charge) {
         return Color{255, 225, 120, 255};
     }
     if (mode == WeaponVisualMode::MysticStaff) {
-        return Color{240, 220, 255, 255}; // light lavender tint
+        return Color{255, 255, 255, 255}; // let MTL colors show through
     }
     return Color{230, 230, 220, 255};
 }
@@ -166,8 +169,22 @@ void WeaponViewModel::Draw(const Camera3D& camera, WeaponVisualMode mode, float 
     position = Vector3Add(position, Vector3Scale(Right(camera), std::sin(sway) * 0.01f));
     position = Vector3Add(position, Vector3Scale(Up(camera), std::cos(sway * 0.8f) * 0.012f));
 
+    // Lower staff so the grip aligns with hand
+    if (mode == WeaponVisualMode::MysticStaff) {
+        position = Vector3Add(position, Vector3Scale(Up(camera), -0.25f));
+    }
+
     Color tint = ModeTint(mode, charge);
-    Matrix transform = ModelTransform(camera, position, mode == WeaponVisualMode::LonginusSpear ? kSpearScale : kWeaponScale);
+    float scale = mode == WeaponVisualMode::LonginusSpear ? kSpearScale
+                : mode == WeaponVisualMode::MysticStaff ? kStaffScale
+                : kWeaponScale;
+    Matrix transform = ModelTransform(camera, position, scale);
+
+    // Orient staff: model +Y → camera forward (+Z)
+    if (mode == WeaponVisualMode::MysticStaff) {
+        Matrix rot = MatrixRotateX(-90.0f * DEG2RAD);
+        transform = MatrixMultiply(rot, transform);
+    }
 
     for (int i = 0; i < model.meshCount; ++i) {
         Material material = model.materials[model.meshMaterial[i]];
@@ -184,7 +201,14 @@ void WeaponViewModel::Draw(const Camera3D& camera, WeaponVisualMode mode, float 
             static_cast<unsigned char>((static_cast<int>(base.b) * tint.b) / 255),
             static_cast<unsigned char>((static_cast<int>(base.a) * tint.a) / 255),
         };
-        DrawMesh(model.meshes[i], material, transform);
+
+        Matrix meshTransform = transform;
+        // Thicken handle without stretching length: scale only in X/Z (perpendicular to shaft)
+        if (mode == WeaponVisualMode::MysticStaff && base.r < 80 && base.g < 60 && base.b < 60 && base.r > base.b) {
+            Matrix thicken = MatrixScale(kStaffHandleThickX, 1.0f, kStaffHandleThickZ);
+            meshTransform = MatrixMultiply(thicken, transform);
+        }
+        DrawMesh(model.meshes[i], material, meshTransform);
     }
 
     if (mode == WeaponVisualMode::LaserCharge) {
