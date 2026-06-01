@@ -81,6 +81,8 @@ struct GameplayConfig {
     float duelistWeaponSwitchMin = 2.0f;
     float duelistWeaponSwitchMax = 4.0f;
     float duelistFireRateScale = 1.0f;
+    int duelistCount = 1;
+    bool duelistSmartAi = false;
     int duelPlayerArmor = 2;
     float duelArmorHitInvuln = 0.75f;
     float harrierFireInterval = 1.65f;

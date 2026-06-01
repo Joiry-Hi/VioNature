@@ -6,7 +6,7 @@ CXX_DEFINES = -DJPH_DEBUG_RENDERER -DJPH_OBJECT_STREAM -DJPH_PROFILE_ENABLED -DJ
 
 CXX_INCLUDES = -I/mnt/Data/Projects/VioNature/external/joltphysics-src/Build/..
 
-CXX_FLAGS =  -Wall -Werror -g -fno-rtti -fno-exceptions -Wno-stringop-overflow -Wno-psabi -ffp-contract=off -O3 -std=c++17 -flto=auto -fno-fat-lto-objects -mavx2 -mbmi -mpopcnt -mlzcnt -mf16c -mfma -mfpmath=sse -pthread
+CXX_FLAGS = -g -O0 -Wall -Werror -g -fno-rtti -fno-exceptions -Wno-stringop-overflow -Wno-psabi -ffp-contract=off -O3 -std=c++17 -flto=auto -fno-fat-lto-objects -mavx2 -mbmi -mpopcnt -mlzcnt -mf16c -mfma -mfpmath=sse -pthread
 
 # PCH options: external/joltphysics-src/Build/CMakeFiles/Jolt.dir/cmake_pch.hxx.gch_OPTIONS = -Winvalid-pch;-x;c++-header;-include;/mnt/Data/Projects/VioNature/build-sandbox/external/joltphysics-src/Build/CMakeFiles/Jolt.dir/cmake_pch.hxx
 

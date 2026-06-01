@@ -199,6 +199,13 @@ private:
         bool cursed = false;
         float curseDps = 0.0f;
         bool killedBySoulOrb = false;
+        int aiTier = 0;  // 0=random barrage, 1=strategic mirror
+        float equipmentTimer = 0.0f;  // cooldown for gear toggling
+        bool usingSpaceSuit = false;
+        bool usingFlightRig = false;
+        bool usingSkates = false;
+        bool shieldActive = false;
+        float shieldCooldown = 0.0f;
     };
 
     struct DamageNumber {
@@ -579,6 +586,7 @@ private:
     int duelArmor_ = 0;
     float duelArmorInvulnTimer_ = 0.0f;
     float longinusSpearThrustInvulnTimer_ = 0.0f;
+    float damageFlash_ = 0.0f;
     int essence_ = 0;
     float essenceInvulnTimer_ = 0.0f;
     float essenceSpawnTimer_ = 0.0f;

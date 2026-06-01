@@ -1,0 +1,5 @@
+newmtl StellaMaterial
+Ka 0.25 0.25 0.25
+Kd 0.80 0.80 0.80
+Ks 0.70 0.70 0.70
+Ns 100

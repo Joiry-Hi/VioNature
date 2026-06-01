@@ -254,6 +254,7 @@ void Game::Reset() {
     essenceSpawnTimer_ = 8.0f;  // first essence spawns quickly
     survivalTime_ = 0.0f;
     cameraShake_ = 0.0f;
+    damageFlash_ = 0.0f;
     score_ = 0;
     totalDamageDealt_ = 0.0f;
 
@@ -269,8 +270,17 @@ void Game::Reset() {
         eventTextTimer_ = 5.0f;
     }
     if (DuelMode()) {
-        SpawnEnemyOfType(EnemyType::Duelist);
-        eventText_ = "DUEL";
+        int count = config_.duelistCount;
+        for (int d = 0; d < count; ++d) {
+            SpawnEnemyOfType(EnemyType::Duelist);
+            // Assign AI tiers: first duelist uses smart AI if enabled, rest random
+            if (!enemies_.empty()) {
+                Enemy& duelist = enemies_.back();
+                duelist.aiTier = (d == 0 && config_.duelistSmartAi) ? 1 : 0;
+                duelist.equipmentTimer = RandomFloat(8.0f, 15.0f);
+            }
+        }
+        eventText_ = count > 1 ? TextFormat("DUEL x%d", count) : "DUEL";
         eventTextTimer_ = 2.0f;
     }
 }
@@ -515,6 +525,7 @@ void Game::Update(float dt) {
     duelArmorInvulnTimer_ = std::max(0.0f, duelArmorInvulnTimer_ - dt);
     longinusSpearThrustInvulnTimer_ = std::max(0.0f, longinusSpearThrustInvulnTimer_ - dt);
     essenceInvulnTimer_ = std::max(0.0f, essenceInvulnTimer_ - dt);
+    damageFlash_ = std::max(0.0f, damageFlash_ - dt * 4.0f);
     cameraShake_ = std::max(0.0f, cameraShake_ - dt * 5.0f);
 }
 
@@ -3705,12 +3716,46 @@ bool Game::DuelWon() const {
 
 void Game::SwitchDuelistWeapon(Enemy& enemy, float distance) {
     int roll = GetRandomValue(0, 99);
-    if (distance > 18.0f) {
-        enemy.weaponSlot = roll < 24 ? 0 : roll < 44 ? 6 : roll < 65 ? 2 : roll < 84 ? 7 : 4;
-    } else if (distance > 8.0f) {
-        enemy.weaponSlot = roll < 18 ? 0 : roll < 34 ? 3 : roll < 51 ? 4 : roll < 67 ? 2 : roll < 83 ? 7 : 5;
+    if (enemy.aiTier >= 1) {
+        // --- Strategic AI: counter-pick based on player's weapon ---
+        int playerSlot = static_cast<int>(activeWeapon_);
+        if (playerSlot == 8) playerSlot = 8; // MysticStaff
+
+        // Counter matrix: {playerWeapon → preferred counter slots}
+        // Laser(0)→Spear(6)/Gauntlet(5) | Flame(1)→Rocket(2)/Spear(6)
+        // Rocket(2)→Gauntlet(5)/Shield(Staff 8) | Shotgun(3)→Flame(1)/Staff(8)
+        // Nail(4)→Gauntlet(5)/Nano(7) | Gauntlet(5)→Laser(0)/Flame(1)
+        // Spear(6)→Shotgun(3)/Staff(8) | Nano(7)→Spear(6)/Rocket(2)
+        // Staff(8)→Rocket(2)/Laser(0)
+        static const int counters[9][3] = {
+            {6,5,2},  // vs Laser: Spear, Gauntlet, Rocket
+            {2,6,5},  // vs Flame: Rocket, Spear, Gauntlet
+            {5,8,0},  // vs Rocket: Gauntlet, Staff, Laser
+            {1,8,6},  // vs Shotgun: Flame, Staff, Spear
+            {5,7,2},  // vs Nail: Gauntlet, Nano, Rocket
+            {0,1,3},  // vs Gauntlet: Laser, Flame, Shotgun
+            {3,8,1},  // vs Spear: Shotgun, Staff, Flame
+            {6,2,0},  // vs Nano: Spear, Rocket, Laser
+            {2,0,6},  // vs Staff: Rocket, Laser, Spear
+        };
+        int picks[3] = {counters[playerSlot][0], counters[playerSlot][1], counters[playerSlot][2]};
+        // 60% pick best counter, 25% second, 15% third (with distance adjustment)
+        int idx = roll < 60 ? 0 : roll < 85 ? 1 : 2;
+        // Blend with distance logic: close range → favor close-range weapons
+        if (distance < 7.0f && roll > 70) {
+            int closeOpts[] = {3, 1, 5, 6}; // Shotgun, Flame, Gauntlet, Spear
+            picks[idx] = closeOpts[roll % 4];
+        }
+        enemy.weaponSlot = picks[idx];
     } else {
-        enemy.weaponSlot = roll < 28 ? 3 : roll < 50 ? 1 : roll < 72 ? 5 : roll < 88 ? 4 : 6;
+        // --- Random Barrage AI (original logic) ---
+        if (distance > 18.0f) {
+            enemy.weaponSlot = roll < 24 ? 0 : roll < 44 ? 6 : roll < 65 ? 2 : roll < 84 ? 7 : 4;
+        } else if (distance > 8.0f) {
+            enemy.weaponSlot = roll < 18 ? 0 : roll < 34 ? 3 : roll < 51 ? 4 : roll < 67 ? 2 : roll < 83 ? 7 : 5;
+        } else {
+            enemy.weaponSlot = roll < 28 ? 3 : roll < 50 ? 1 : roll < 72 ? 5 : roll < 88 ? 4 : 6;
+        }
     }
     enemy.weaponSwitchTimer = RandomFloat(config_.duelistWeaponSwitchMin, config_.duelistWeaponSwitchMax);
     enemy.telegraphTimer = enemy.weaponSlot == 2 || enemy.weaponSlot == 4 || enemy.weaponSlot == 6 || enemy.weaponSlot == 7 ? 0.35f : 0.16f;
@@ -3721,9 +3766,63 @@ void Game::UpdateDuelist(Enemy& enemy, Vector3 position, Vector3 direction, floa
     float distance = Vector3Length(toPlayer);
     Vector3 localUp = IsSphericalMap() ? SphericalUpAt(position) : Vector3{0.0f, 1.0f, 0.0f};
     Vector3 tangent = IsSphericalMap() ? SafeNormalize(Vector3CrossProduct(localUp, direction), PlayerRight()) : Vector3{-direction.z, 0.0f, direction.x};
-    float rangeBias = distance < 9.0f ? -0.75f : distance > 18.0f ? 0.55f : 0.1f;
-    direction = Vector3Normalize(Vector3Add(Vector3Scale(direction, rangeBias), Vector3Scale(tangent, std::sin(enemy.bobTimer * 1.7f) * 0.8f)));
-    speed = enemy.speed;
+
+    // Strategic AI: adaptive movement
+    if (enemy.aiTier >= 1) {
+        float playerSpeed = Vector3Length(playerVelocity_);
+        bool playerRushing = distance < 8.0f && playerSpeed > 12.0f;
+        bool playerFar = distance > 22.0f;
+
+        if (playerRushing) {
+            // Evasive: backstep hard, wide strafe
+            float rangeBias = -0.9f;
+            direction = Vector3Normalize(Vector3Add(Vector3Scale(direction, rangeBias), Vector3Scale(tangent, std::sin(enemy.bobTimer * 2.5f) * 1.0f)));
+        } else if (playerFar) {
+            // Rush: close distance aggressively + spear thrust later if weapon=6
+            float rangeBias = 0.8f;
+            direction = Vector3Normalize(Vector3Add(Vector3Scale(direction, rangeBias), Vector3Scale(tangent, std::sin(enemy.bobTimer * 1.2f) * 0.3f)));
+            if (enemy.weaponSlot == 6 && enemy.cooldownTimer <= 0.0f && distance < 25.0f) {
+                // Spear thrust boost toward player
+                AddEnemyImpulse(enemy, Vector3Scale(Vector3Normalize(toPlayer), config_.longinusSpearThrustImpulse * 0.5f));
+                enemy.cooldownTimer = 0.5f;
+            }
+        } else {
+            // Mid-range: circle strafe
+            float rangeBias = 0.05f;
+            direction = Vector3Normalize(Vector3Add(Vector3Scale(direction, rangeBias), Vector3Scale(tangent, std::sin(enemy.bobTimer * 1.9f) * 0.7f)));
+        }
+
+        // Equipment toggling (every 15s)
+        enemy.equipmentTimer -= dt;
+        if (enemy.equipmentTimer <= 0.0f) {
+            enemy.equipmentTimer = RandomFloat(12.0f, 20.0f);
+            int gearRoll = GetRandomValue(0, 2);
+            if (gearRoll == 0 && !enemy.usingSpaceSuit) {
+                enemy.usingSpaceSuit = true;
+                enemy.usingFlightRig = enemy.usingSkates = false;
+            } else if (gearRoll == 1 && !enemy.usingFlightRig) {
+                enemy.usingFlightRig = true;
+                enemy.usingSpaceSuit = enemy.usingSkates = false;
+            } else {
+                enemy.usingSkates = true;
+                enemy.usingSpaceSuit = enemy.usingFlightRig = false;
+            }
+        }
+
+        // Equipment effects on speed
+        if (enemy.usingSpaceSuit) speed = enemy.speed * 1.35f;  // faster aerial movement
+        else if (enemy.usingSkates) speed = enemy.speed * 1.5f;   // faster ground speed
+        else if (enemy.usingFlightRig) speed = enemy.speed * 1.2f; // moderate hover speed
+        else speed = enemy.speed;
+
+        // Shield cooldown tick (for staff shield)
+        enemy.shieldCooldown = std::max(0.0f, enemy.shieldCooldown - dt);
+    } else {
+        // Original movement: simple range bias + sine strafe
+        float rangeBias = distance < 9.0f ? -0.75f : distance > 18.0f ? 0.55f : 0.1f;
+        direction = Vector3Normalize(Vector3Add(Vector3Scale(direction, rangeBias), Vector3Scale(tangent, std::sin(enemy.bobTimer * 1.7f) * 0.8f)));
+        speed = enemy.speed;
+    }
 
     enemy.weaponSwitchTimer -= dt;
     enemy.telegraphTimer = std::max(0.0f, enemy.telegraphTimer - dt);
@@ -3731,7 +3830,13 @@ void Game::UpdateDuelist(Enemy& enemy, Vector3 position, Vector3 direction, floa
         SwitchDuelistWeapon(enemy, distance);
     }
 
-    if (enemy.weaponSlot == 5 && distance < 8.0f && enemy.cooldownTimer <= 0.0f) {
+    // Blink defense (both tiers, strategic triggers more aggressively)
+    bool shouldBlink = enemy.weaponSlot == 5 && distance < 8.0f && enemy.cooldownTimer <= 0.0f;
+    if (enemy.aiTier >= 1 && !shouldBlink && distance < 5.0f && enemy.cooldownTimer <= 0.0f && GetRandomValue(0, 99) < 30) {
+        // Strategic AI: emergency blink at very close range regardless of weapon
+        shouldBlink = true;
+    }
+    if (shouldBlink) {
         BlinkDuelist(enemy, Vector3Normalize(Vector3Subtract(position, camera_.position)));
         enemy.cooldownTimer = 2.6f / config_.duelistFireRateScale;
         skipVelocity = true;
@@ -3745,15 +3850,17 @@ void Game::UpdateDuelist(Enemy& enemy, Vector3 position, Vector3 direction, floa
     enemy.externalVelocity = Vector3Scale(enemy.externalVelocity, std::pow(0.12f, dt));
     Vector3 velocity = {};
     if (IsSphericalMap()) {
-        float radialCorrection = std::clamp((SphericalSignedRadius(SphericalEnemyAltitude(EnemyType::Duelist)) - Vector3Length(position)) * 7.0f, -12.0f, 8.0f);
-        if (IsHollowWorldMap()) {
-            radialCorrection = -radialCorrection;
-        }
+        float targetAlt = SphericalEnemyAltitude(EnemyType::Duelist);
+        if (enemy.usingFlightRig) targetAlt += 4.0f;
+        float radialCorrection = std::clamp((SphericalSignedRadius(targetAlt) - Vector3Length(position)) * 7.0f, -12.0f, 8.0f);
+        if (IsHollowWorldMap()) radialCorrection = -radialCorrection;
         velocity = Vector3Add(Vector3Add(Vector3Scale(direction, speed), Vector3Scale(localUp, radialCorrection)), enemy.externalVelocity);
     } else {
+        float targetY = enemy.usingFlightRig ? 5.0f : 1.2f;
+        float gravScale = enemy.usingSpaceSuit ? 0.24f : 1.0f;
         velocity = Vector3{
             direction.x * speed + enemy.externalVelocity.x,
-            std::clamp((1.2f - position.y) * 7.0f, -12.0f, 8.0f) + enemy.externalVelocity.y,
+            std::clamp((targetY - position.y) * 7.0f * gravScale, -12.0f, 8.0f) + enemy.externalVelocity.y,
             direction.z * speed + enemy.externalVelocity.z
         };
     }
@@ -4529,6 +4636,7 @@ void Game::ApplyPlayerHit(Vector3 position, Color color, const char* text) {
         duelArmor_ -= 1;
         duelArmorInvulnTimer_ = config_.duelArmorHitInvuln;
         cameraShake_ = std::min(1.0f, cameraShake_ + 0.65f);
+        damageFlash_ = 1.0f;
         SpawnHitBurst(position, color, 30);
         SpawnShockwave(camera_.position, 3.4f, Color{255, 215, 120, 255});
         eventText_ = duelArmor_ > 0 ? "ARMOR HIT" : "ARMOR BROKEN";
@@ -4540,6 +4648,7 @@ void Game::ApplyPlayerHit(Vector3 position, Color color, const char* text) {
         essence_--;
         essenceInvulnTimer_ = config_.essenceHitInvuln;
         cameraShake_ = std::min(1.0f, cameraShake_ + 0.7f);
+        damageFlash_ = 1.0f;
         SpawnHitBurst(position, Color{255, 200, 60, 255}, 30);
         SpawnShockwave(camera_.position, 3.4f, Color{255, 200, 60, 255});
         // Knockback enemies and enemy projectiles (shield-break-like)
@@ -4577,6 +4686,7 @@ void Game::ApplyPlayerHit(Vector3 position, Color color, const char* text) {
 
     state_ = State::Dead;
     cameraShake_ = 1.0f;
+    damageFlash_ = 1.0f;
     SpawnHitBurst(position, color, 28);
     if (text != nullptr) {
         eventText_ = text;
@@ -6395,6 +6505,12 @@ void Game::DrawHud() const {
         }
     }
 
+    // Damage flash overlay
+    if (damageFlash_ > 0.0f) {
+        unsigned char alpha = static_cast<unsigned char>(damageFlash_ * 80.0f);
+        DrawRectangle(0, 0, pixelWidth_, pixelHeight_, Color{220, 40, 20, alpha});
+    }
+
     DrawRectangle(0, 0, pixelWidth_, 22, Color{0, 0, 0, 150});
     DrawText(TextFormat("TIME %.1f", survivalTime_), 6, 7, 8, RAYWHITE);
     DrawText(TextFormat("DMG %.0f", totalDamageDealt_), 72, 7, 8, RAYWHITE);
@@ -6409,9 +6525,30 @@ void Game::DrawHud() const {
     DrawText(stateText, 316, 7, 8, stateColor);
     DrawText(eventTextTimer_ > 0.0f ? eventText_ : WaveLabel(), 6, 29, 8,
         eventTextTimer_ > 0.0f ? Color{255, 220, 135, 255} : Color{180, 180, 180, 255});
-    if (DuelMode() && state_ == State::Playing) {
-        Color armorColor = duelArmorInvulnTimer_ > 0.0f ? Color{255, 230, 140, 255} : duelArmor_ > 0 ? Color{160, 220, 255, 255} : Color{255, 105, 95, 255};
-        DrawText(TextFormat("ARMOR %d", duelArmor_), 6, 39, 8, armorColor);
+    if (DuelMode() && state_ == State::Playing && duelArmor_ > 0) {
+        Color armorStatus = duelArmorInvulnTimer_ > 0.0f ? Color{255, 230, 140, 255} : Color{160, 220, 255, 255};
+        Color shieldFill = Color{190, 200, 210, 255};
+        Color shieldDark = Color{130, 140, 150, 255};
+        int ax = 6, ay = 43;
+        for (int i = 0; i < duelArmor_; ++i) {
+            // Body: rounded rectangle fill + manual outline
+            DrawRectangleRounded(Rectangle{static_cast<float>(ax + 1), static_cast<float>(ay), 7.0f, 6.0f}, 0.6f, 5, shieldFill);
+            DrawRectangleLinesEx(Rectangle{static_cast<float>(ax + 1), static_cast<float>(ay), 7.0f, 6.0f}, 1.0f, shieldDark);
+            // Point: triangle below body
+            DrawTriangle(
+                Vector2{static_cast<float>(ax + 2), ay + 6.0f},
+                Vector2{static_cast<float>(ax + 7), ay + 6.0f},
+                Vector2{static_cast<float>(ax + 4.5f), ay + 9.5f},
+                shieldFill);
+            DrawLineEx(Vector2{static_cast<float>(ax + 2), ay + 6.0f},
+                       Vector2{static_cast<float>(ax + 4.5f), ay + 9.5f}, 1.0f, shieldDark);
+            DrawLineEx(Vector2{static_cast<float>(ax + 7), ay + 6.0f},
+                       Vector2{static_cast<float>(ax + 4.5f), ay + 9.5f}, 1.0f, shieldDark);
+            // Status glow outline
+            DrawLineEx(Vector2{static_cast<float>(ax + 1), ay + 6.0f},
+                       Vector2{static_cast<float>(ax + 2), ay + 6.0f}, 1.5f, armorStatus);
+            ax += 12;
+        }
     }
     // Essence life hexagram indicator
     if (essence_ > 0 && state_ == State::Playing) {
@@ -6502,8 +6639,14 @@ void Game::DrawHud() const {
             else if (enemy.weaponSlot == 5) duelistWeapon = "GAUNT";
             else if (enemy.weaponSlot == 6) duelistWeapon = "SPEAR";
             else if (enemy.weaponSlot == 7) duelistWeapon = "NANO";
-            bossLabel = TextFormat("DUELIST %s", duelistWeapon);
-            labelColor = Color{255, 230, 150, 255};
+            else if (enemy.weaponSlot == 8) duelistWeapon = "STAFF";
+            if (enemy.aiTier >= 1) {
+                bossLabel = TextFormat("DUELIST* %s", duelistWeapon);
+                labelColor = Color{255, 180, 60, 255};
+            } else {
+                bossLabel = TextFormat("DUELIST %s", duelistWeapon);
+                labelColor = Color{255, 230, 150, 255};
+            }
         } else if (enemy.type == EnemyType::DummyBoss) {
             bossLabel = "DUMMY LORD";
             labelColor = Color{180, 180, 195, 255};

@@ -311,6 +311,9 @@ GameplayConfig LoadGameplayConfig(const char* path) {
             config.gameMode = Lower(Trim(value));
         } else if (key == "map_type") {
             config.mapType = Lower(Trim(value));
+        } else if (key == "duelist_count") {
+            int parsed = 1;
+            if (ParseInt(value, parsed)) { config.duelistCount = parsed; }
         } else if (key == "duel_player_armor") {
             int parsed = 0;
             if (ParseInt(value, parsed)) {
@@ -367,6 +370,9 @@ GameplayConfig LoadGameplayConfig(const char* path) {
             if (ParseBool(value, parsed)) {
                 config.blinkEnabled = parsed;
             }
+        } else if (key == "duelist_smart_ai") {
+            bool parsed = false;
+            if (ParseBool(value, parsed)) { config.duelistSmartAi = parsed; }
         } else if (key == "boss_rush_mode") {
             bool parsed = false;
             if (ParseBool(value, parsed)) {
@@ -447,6 +453,7 @@ GameplayConfig LoadGameplayConfig(const char* path) {
     config.duelistWeaponSwitchMin = std::max(0.4f, config.duelistWeaponSwitchMin);
     config.duelistWeaponSwitchMax = std::max(config.duelistWeaponSwitchMin, config.duelistWeaponSwitchMax);
     config.duelistFireRateScale = std::max(0.1f, config.duelistFireRateScale);
+    config.duelistCount = std::clamp(config.duelistCount, 1, 4);
     config.duelPlayerArmor = std::max(0, config.duelPlayerArmor);
     config.duelArmorHitInvuln = std::max(0.0f, config.duelArmorHitInvuln);
     config.harrierFireInterval = std::max(0.15f, config.harrierFireInterval);

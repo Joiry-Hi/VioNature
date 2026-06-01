@@ -1,0 +1,18 @@
+newmtl Handle
+Kd 0.20 0.14 0.10
+Ka 0.12 0.08 0.05
+
+newmtl Metal
+Kd 0.35 0.32 0.35
+Ks 0.60 0.60 0.60
+Ns 80
+
+newmtl Core
+Kd 0.28 0.00 0.40
+Ks 0.90 0.50 1.00
+Ns 180
+
+newmtl Orb
+Kd 0.70 0.25 0.95
+Ks 1.00 0.90 1.00
+Ns 220
