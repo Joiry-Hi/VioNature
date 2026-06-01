@@ -3938,7 +3938,13 @@ void Game::FireDuelistWeapon(Enemy& enemy, Vector3 position, Vector3 toPlayer) {
         AddEnemyImpulse(enemy, Vector3Scale(aimDirection, -5.0f));
         enemy.cooldownTimer = (glass ? 1.05f : 0.82f) / rate;
     } else if (enemy.weaponSlot == 4) {
-        bool blackHole = GetRandomValue(0, 99) < 45;
+        // Strategic AI avoids self-damaging black hole; random AI only uses it at long range
+        bool blackHole = false;
+        if (enemy.aiTier >= 1) {
+            blackHole = false;  // never self-damage
+        } else {
+            blackHole = distanceToPlayer > 22.0f && GetRandomValue(0, 99) < 1;
+        }
         FireEnemyProjectile(blackHole ? ProjectileKind::BlackHoleGrenade : ProjectileKind::GravityNail, origin, aimDirection, blackHole ? 22.0f : 58.0f, blackHole ? config_.blackHoleGrenadeDamage : config_.gravityNailDamage, blackHole ? 1.55f : 1.0f, blackHole ? 0.28f : 0.15f, blackHole ? 0.28f : 0.15f, blackHole ? Color{120, 70, 190, 255} : Color{170, 200, 255, 255});
         enemy.cooldownTimer = (blackHole ? 1.55f : 0.9f) / rate;
         enemy.telegraphTimer = 0.3f;

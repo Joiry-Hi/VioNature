@@ -16,6 +16,7 @@ build-sandbox/Makefile
 build-sandbox/*.dir/
 build-sandbox/*.o
 build-sandbox/*.obj
+build-sandbox/external/
 
 # Compiled binaries in build directories
 build-windows/*.exe
