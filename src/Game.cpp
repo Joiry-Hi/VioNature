@@ -11,6 +11,7 @@ namespace {
 constexpr float kFixedFrame = 1.0f / 60.0f;
 constexpr float kMouseSensitivity = 0.085f;
 constexpr float kDegToRad = 0.017453292519943295f;
+constexpr float kFlatBackWorldDepth = 1.0f;
 
 Vector3 ToRayVector(JPH::RVec3Arg value) {
     return Vector3{static_cast<float>(value.GetX()), static_cast<float>(value.GetY()), static_cast<float>(value.GetZ())};
@@ -162,6 +163,7 @@ void Game::Reset() {
     pitch_ = 0.0f;
     playerVelocity_ = Vector3Zero();
     grounded_ = true;
+    playerWorld_ = 0;
     coyoteTimer_ = 0.0f;
     jumpBufferTimer_ = 0.0f;
     hasSpaceSuit_ = false;
@@ -179,7 +181,7 @@ void Game::Reset() {
     footstepBob_ = 0.0f;
     thrustControlLockTimer_ = 0.0f;
     asteroidReferenceForward_ = Vector3{0.0f, 0.0f, -1.0f};
-    camera_.up = IsSphericalMap() ? SphericalUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
+    camera_.up = UpForWorldAt(camera_.position, playerWorld_);
     camera_.target = Vector3Add(camera_.position, PlayerForward());
 
     PhysicsWorld::BodyConfig floorConfig;
@@ -302,6 +304,7 @@ void Game::ClearWorld() {
     nanoPlatforms_.clear();
     slimeSpawnPods_.clear();
     magicCircles_.clear();
+    wormholes_.clear();
 
     for (const Enemy& enemy : enemies_) {
         physics_.DestroyBody(enemy.body);
@@ -369,6 +372,7 @@ void Game::Update(float dt) {
         UpdateWeaponSwitching();
         UpdateShooting(dt);
         UpdateBeam(dt);
+        UpdateWormholes(dt);
         UpdateShockwaves(dt);
         UpdateHeatwaves(dt);
         if (!timeStopped_) {
@@ -546,7 +550,7 @@ void Game::UpdatePlayer(float dt) {
             playerVelocity_.z = 0.0f;
         }
         ResolveMapCollision(previousPosition);
-    } else {
+    } else if (IsSquareMap()) {
         Vector3 flatPosition = Vector3{camera_.position.x, 0.0f, camera_.position.z};
         float distanceFromCenter = Vector3Length(flatPosition);
         float maxDistance = arenaRadius_ - playerRadius_;
@@ -564,6 +568,34 @@ void Game::UpdatePlayer(float dt) {
             }
         }
         ResolveMapCollision(previousPosition);
+    } else {
+        Vector3 flatPosition = Vector3{camera_.position.x, 0.0f, camera_.position.z};
+        float distanceFromCenter = Vector3Length(flatPosition);
+        float maxDistance = arenaRadius_ - playerRadius_;
+        if (distanceFromCenter > maxDistance) {
+            Vector3 clamped = Vector3Scale(Vector3Normalize(flatPosition), maxDistance);
+            Vector3 offset = Vector3Subtract(clamped, flatPosition);
+            camera_.position.x += offset.x;
+            camera_.position.z += offset.z;
+
+            Vector3 inward = Vector3Normalize(Vector3{-camera_.position.x, 0.0f, -camera_.position.z});
+            float outwardSpeed = Vector3DotProduct(playerVelocity_, Vector3{-inward.x, 0.0f, -inward.z});
+            if (outwardSpeed > 0.0f) {
+                playerVelocity_.x += inward.x * outwardSpeed;
+                playerVelocity_.z += inward.z * outwardSpeed;
+            }
+        }
+        float floorY = FlatGroundYForWorld(playerWorld_) + FlatUpForWorld(playerWorld_).y * playerHeight_;
+        if (playerWorld_ == 0) {
+            if (camera_.position.y < floorY) {
+                camera_.position.y = floorY;
+                if (playerVelocity_.y < 0.0f) playerVelocity_.y = 0.0f;
+            }
+        } else if (camera_.position.y > floorY) {
+            camera_.position.y = floorY;
+            if (playerVelocity_.y > 0.0f) playerVelocity_.y = 0.0f;
+        }
+        ResolveMapCollision(previousPosition);
     }
 
     if (cameraShake_ > 0.0f) {
@@ -572,14 +604,14 @@ void Game::UpdatePlayer(float dt) {
         camera_.position.y += RandomFloat(-shake, shake);
     }
 
-    camera_.up = IsSphericalMap() ? SphericalUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
+    camera_.up = UpForWorldAt(camera_.position, playerWorld_);
     camera_.target = Vector3Add(camera_.position, PlayerForward());
 }
 
 void Game::UpdateLook(float dt) {
     Vector2 delta = GetMouseDelta();
     if (IsSphericalMap()) {
-        Vector3 up = SphericalUpAt(camera_.position);
+        Vector3 up = SphericalUpAt(camera_.position, playerWorld_);
         asteroidReferenceForward_ = ProjectOnSphericalTangent(asteroidReferenceForward_, up);
         if (Vector3Length(asteroidReferenceForward_) <= 0.001f) {
             asteroidReferenceForward_ = ProjectOnSphericalTangent(PlayerForward(), up);
@@ -591,7 +623,7 @@ void Game::UpdateLook(float dt) {
         }
         asteroidReferenceForward_ = Vector3Normalize(RotateAroundAxis(asteroidReferenceForward_, up, -delta.x * kMouseSensitivity * kDegToRad));
     } else {
-        yaw_ += delta.x * kMouseSensitivity;
+        yaw_ += delta.x * kMouseSensitivity * (playerWorld_ == 0 ? 1.0f : -1.0f);
     }
     pitch_ -= delta.y * kMouseSensitivity;
     pitch_ = std::clamp(pitch_, -89.0f, 89.0f);
@@ -601,7 +633,7 @@ void Game::UpdateLook(float dt) {
 void Game::UpdateFreeCamera(float dt) {
     Vector3 forward = PlayerForward();
     Vector3 right = PlayerRight();
-    Vector3 up = IsSphericalMap() ? SphericalUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
+    Vector3 up = UpForWorldAt(camera_.position, playerWorld_);
 
     Vector3 move = Vector3Zero();
     if (IsKeyDown(KEY_W)) {
@@ -648,7 +680,7 @@ void Game::UpdateMovement(float dt) {
     }
 
     if (IsSphericalMap()) {
-        Vector3 up = SphericalUpAt(camera_.position);
+        Vector3 up = SphericalUpAt(camera_.position, playerWorld_);
         camera_.up = up;
         asteroidReferenceForward_ = ProjectOnSphericalTangent(asteroidReferenceForward_, up);
         Vector3 forward = asteroidReferenceForward_;
@@ -701,7 +733,7 @@ void Game::UpdateMovement(float dt) {
                 flightTargetAltitude_ -= config_.flightVerticalSpeed * dt;
             }
             flightTargetAltitude_ = std::clamp(flightTargetAltitude_, config_.flightMinAltitude, config_.flightMaxAltitude);
-            float currentAltitude = SphericalAltitudeAt(camera_.position);
+            float currentAltitude = SphericalAltitudeAt(camera_.position, playerWorld_);
             float altitudeError = flightTargetAltitude_ - currentAltitude;
             float radialSpeed = Vector3DotProduct(playerVelocity_, up);
             float altitudeSpeed = radialSpeed;
@@ -723,14 +755,14 @@ void Game::UpdateMovement(float dt) {
             playerVelocity_ = Vector3Subtract(playerVelocity_, Vector3Scale(up, CurrentGravity() * dt));
         }
         camera_.position = Vector3Add(camera_.position, Vector3Scale(playerVelocity_, dt));
-        up = SphericalUpAt(camera_.position);
-        float desiredRadius = SphericalSignedRadius(SphericalPlayerAltitude());
+        up = SphericalUpAt(camera_.position, playerWorld_);
+        float desiredRadius = SphericalSignedRadius(SphericalPlayerAltitude(), playerWorld_);
         float distance = Vector3Length(camera_.position);
         float radialSpeed = Vector3DotProduct(playerVelocity_, up);
         constexpr float kGroundTolerance = 0.2f;
-        bool nearSurface = IsHollowWorldMap() ? distance >= desiredRadius - kGroundTolerance : distance <= desiredRadius + kGroundTolerance;
+        bool nearSurface = IsHollowPhysicsForWorld(playerWorld_) ? distance >= desiredRadius - kGroundTolerance : distance <= desiredRadius + kGroundTolerance;
         if (!flightRigEnabled_ && nearSurface && radialSpeed <= 0.0f) {
-            camera_.position = SphericalSurfacePoint(camera_.position, SphericalPlayerAltitude());
+            camera_.position = SphericalSurfacePoint(camera_.position, SphericalPlayerAltitude(), playerWorld_);
             if (radialSpeed < 0.0f) {
                 playerVelocity_ = ProjectOnSphericalTangent(playerVelocity_, up);
             }
@@ -755,8 +787,9 @@ void Game::UpdateMovement(float dt) {
         forward = Vector3Normalize(forward);
     }
 
+    Vector3 flatUp = FlatUpForWorld(playerWorld_);
     Vector3 right = PlayerRight();
-    right.y = 0.0f;
+    right = ProjectOnSphericalTangent(right, flatUp);
     if (Vector3Length(right) > 0.001f) {
         right = Vector3Normalize(right);
     }
@@ -803,14 +836,16 @@ void Game::UpdateMovement(float dt) {
             flightTargetAltitude_ -= config_.flightVerticalSpeed * dt;
         }
         flightTargetAltitude_ = std::clamp(flightTargetAltitude_, config_.flightMinAltitude, config_.flightMaxAltitude);
-        float altitudeError = flightTargetAltitude_ - camera_.position.y;
-        float verticalAcceleration = altitudeError * config_.flightHoverStrength - playerVelocity_.y * config_.flightHoverDamping;
-        playerVelocity_.y += verticalAcceleration * dt;
+        float currentAltitude = Vector3DotProduct(camera_.position, flatUp);
+        float radialSpeed = Vector3DotProduct(playerVelocity_, flatUp);
+        float altitudeError = flightTargetAltitude_ - currentAltitude;
+        float verticalAcceleration = altitudeError * config_.flightHoverStrength - radialSpeed * config_.flightHoverDamping;
+        playerVelocity_ = Vector3Add(ProjectOnSphericalTangent(playerVelocity_, flatUp), Vector3Scale(flatUp, radialSpeed + verticalAcceleration * dt));
         grounded_ = false;
         coyoteTimer_ = 0.0f;
         jumpBufferTimer_ = 0.0f;
     } else if (jumpBufferTimer_ > 0.0f && coyoteTimer_ > 0.0f) {
-        playerVelocity_.y = config_.jumpSpeed;
+        playerVelocity_ = Vector3Add(ProjectOnSphericalTangent(playerVelocity_, flatUp), Vector3Scale(flatUp, config_.jumpSpeed));
         grounded_ = false;
         coyoteTimer_ = 0.0f;
         jumpBufferTimer_ = 0.0f;
@@ -818,15 +853,19 @@ void Game::UpdateMovement(float dt) {
     }
 
     if (!flightRigEnabled_) {
-        playerVelocity_.y -= CurrentGravity() * dt;
+        playerVelocity_ = Vector3Subtract(playerVelocity_, Vector3Scale(flatUp, CurrentGravity() * dt));
     }
     camera_.position = Vector3Add(camera_.position, Vector3Scale(playerVelocity_, dt));
 
-    float floorHeight = playerHeight_;
+    float floorHeight = FlatGroundYForWorld(playerWorld_) + FlatUpForWorld(playerWorld_).y * playerHeight_;
     constexpr float kGroundTolerance = 0.2f;
-    if (!flightRigEnabled_ && playerVelocity_.y <= 0.0f && camera_.position.y <= floorHeight + kGroundTolerance) {
+    float verticalSpeed = Vector3DotProduct(playerVelocity_, flatUp);
+    float floorDistance = Vector3DotProduct(Vector3Subtract(camera_.position, Vector3{0.0f, floorHeight, 0.0f}), flatUp);
+    if (!flightRigEnabled_ && verticalSpeed <= 0.0f && floorDistance <= kGroundTolerance) {
         camera_.position.y = floorHeight;
-        if (playerVelocity_.y < 0.0f) playerVelocity_.y = 0.0f;
+        if (verticalSpeed < 0.0f) {
+            playerVelocity_ = Vector3Subtract(playerVelocity_, Vector3Scale(flatUp, verticalSpeed));
+        }
         grounded_ = true;
         coyoteTimer_ = kCoyoteTime;
     } else {
@@ -836,7 +875,7 @@ void Game::UpdateMovement(float dt) {
     float horizontalSpeed = std::sqrt(playerVelocity_.x * playerVelocity_.x + playerVelocity_.z * playerVelocity_.z);
     footstepBob_ += horizontalSpeed * dt * (running ? 1.5f : 1.0f);
     if (grounded_ && horizontalSpeed > 0.5f) {
-        camera_.position.y += std::sin(footstepBob_ * 7.0f) * 0.035f;
+        camera_.position = Vector3Add(camera_.position, Vector3Scale(flatUp, std::sin(footstepBob_ * 7.0f) * 0.035f));
     }
 }
 
@@ -1223,13 +1262,13 @@ void Game::UpdateGravityWells(float dt) {
 
         if (well.blackHole && state_ == State::Playing) {
             Vector3 player = camera_.position;
-            Vector3 up = IsSphericalMap() ? SphericalUpAt(player) : Vector3{0.0f, 1.0f, 0.0f};
+            Vector3 up = UpForWorldAt(player, playerWorld_);
             Vector3 capsuleBottom = IsSphericalMap()
                 ? Vector3Subtract(player, Vector3Scale(up, SphericalPlayerAltitude() - playerRadius_))
-                : Vector3{player.x, player.y - playerHeight_ + playerRadius_, player.z};
+                : Vector3Subtract(player, Vector3Scale(up, playerHeight_ - playerRadius_));
             Vector3 capsuleTop = IsSphericalMap()
                 ? Vector3Subtract(player, Vector3Scale(up, playerRadius_ * 0.35f))
-                : Vector3{player.x, player.y - playerRadius_ * 0.35f, player.z};
+                : Vector3Subtract(player, Vector3Scale(up, playerRadius_ * 0.35f));
             if (DistancePointToSegment(well.position, capsuleBottom, capsuleTop) <= config_.blackHoleEventHorizonRadius + playerRadius_ * 0.25f) {
                 ApplyPlayerHit(player, Color{95, 45, 155, 255}, "EVENT HORIZON");
             }
@@ -1307,10 +1346,7 @@ void Game::UpdateNanoBlades(float dt) {
 
         bool outsideBounds = false;
         if (IsSphericalMap()) {
-            float distance = Vector3Length(blade.center);
-            outsideBounds = IsHollowWorldMap()
-                ? (distance > SphericalRadius() + blade.radius || distance < std::max(1.0f, SphericalRadius() - SphericalCleanupDistance()))
-                : (distance > SphericalCleanupDistance() || distance < SphericalRadius() - blade.radius);
+            outsideBounds = SphericalOutOfBounds(blade.center, blade.radius, blade.world);
         } else {
             outsideBounds = IsSquareMap()
                 ? (std::abs(blade.center.x) > squareHalfExtent_ + blade.radius || std::abs(blade.center.z) > squareHalfExtent_ + blade.radius)
@@ -1432,12 +1468,17 @@ void Game::UpdateEnemies(float dt) {
 
     for (Enemy& enemy : enemies_) {
         Vector3 position = BodyPosition(enemy.body);
-        Vector3 direction = Vector3Subtract(player, position);
-        Vector3 enemyUp = IsSphericalMap() ? SphericalUpAt(position) : Vector3{0.0f, 1.0f, 0.0f};
+        Vector3 target = player;
+        bool sameWorldAsPlayer = enemy.world == playerWorld_;
+        if (HasWormhole() && !sameWorldAsPlayer) {
+            target = WormholeCenterForWorld(wormholes_.front(), enemy.world);
+        }
+        Vector3 direction = Vector3Subtract(target, position);
+        Vector3 enemyUp = UpForWorldAt(position, enemy.world);
         if (IsSphericalMap()) {
             direction = ProjectOnSphericalTangent(direction, enemyUp);
         } else {
-            direction.y = 0.0f;
+            direction = ProjectOnSphericalTangent(direction, enemyUp);
         }
 
         if (Vector3Length(direction) > 0.001f) {
@@ -1455,14 +1496,14 @@ void Game::UpdateEnemies(float dt) {
             direction = Vector3Normalize(Vector3Add(Vector3Scale(direction, 0.72f), Vector3Scale(tangent, std::sin(enemy.bobTimer * 2.8f) * 0.5f)));
         } else if (enemy.type == EnemyType::Spitter) {
             Vector3 tangent = SafeNormalize(Vector3CrossProduct(enemyUp, direction), PlayerRight());
-            float distance = IsSphericalMap() ? Vector3Length(ProjectOnSphericalTangent(Vector3Subtract(player, position), enemyUp)) : DistanceXZ(position, player);
+            float distance = IsSphericalMap() ? Vector3Length(ProjectOnSphericalTangent(Vector3Subtract(target, position), enemyUp)) : DistanceXZ(position, target);
             float rangeBias = distance < 10.0f ? -0.65f : 0.35f;
             direction = Vector3Normalize(Vector3Add(Vector3Scale(direction, rangeBias), Vector3Scale(tangent, 0.9f)));
             speed = enemy.speed;
-            if (enemy.cooldownTimer <= 0.0f) {
+            if (sameWorldAsPlayer && enemy.cooldownTimer <= 0.0f) {
                 Vector3 shotOrigin = Vector3Add(position, Vector3Scale(enemyUp, enemy.radius * 0.35f));
-                Vector3 shotDirection = Vector3Normalize(Vector3Subtract(camera_.position, shotOrigin));
-                FireEnemyShot(shotOrigin, shotDirection);
+                Vector3 shotDirection = Vector3Normalize(Vector3Subtract(target, shotOrigin));
+                FireEnemyShot(shotOrigin, shotDirection, enemy.world);
                 enemy.cooldownTimer = config_.spitterFireInterval;
             }
         } else if (enemy.type == EnemyType::Pouncer) {
@@ -1479,18 +1520,18 @@ void Game::UpdateEnemies(float dt) {
             }
         } else if (enemy.type == EnemyType::Harrier) {
             Vector3 tangent = SafeNormalize(Vector3CrossProduct(enemyUp, direction), PlayerRight());
-            float distance = IsSphericalMap() ? Vector3Length(ProjectOnSphericalTangent(Vector3Subtract(player, position), enemyUp)) : DistanceXZ(position, player);
+            float distance = IsSphericalMap() ? Vector3Length(ProjectOnSphericalTangent(Vector3Subtract(target, position), enemyUp)) : DistanceXZ(position, target);
             float rangeBias = distance < 13.0f ? -0.45f : 0.35f;
             float sway = std::sin(enemy.bobTimer * 2.1f) * 0.35f;
             direction = Vector3Normalize(Vector3Add(Vector3Scale(direction, rangeBias), Vector3Scale(tangent, 1.0f + sway)));
             speed = enemy.speed;
-            if (enemy.cooldownTimer <= 0.0f) {
+            if (sameWorldAsPlayer && enemy.cooldownTimer <= 0.0f) {
                 Vector3 shotOrigin = Vector3Subtract(position, Vector3Scale(enemyUp, enemy.radius * 0.15f));
-                Vector3 shotDirection = Vector3Normalize(Vector3Subtract(camera_.position, shotOrigin));
-                FireEnemyProjectile(ProjectileKind::EnemyShot, shotOrigin, shotDirection, config_.enemyShotSpeed * 0.82f, config_.enemyShotDamage, 3.4f, 0.22f, 0.22f, Color{150, 245, 255, 255});
+                Vector3 shotDirection = Vector3Normalize(Vector3Subtract(target, shotOrigin));
+                FireEnemyProjectile(ProjectileKind::EnemyShot, shotOrigin, shotDirection, config_.enemyShotSpeed * 0.82f, config_.enemyShotDamage, 3.4f, 0.22f, 0.22f, Color{150, 245, 255, 255}, enemy.world);
                 enemy.cooldownTimer = config_.harrierFireInterval;
             }
-        } else if (enemy.type == EnemyType::Blinker) {
+        } else if (enemy.type == EnemyType::Blinker && sameWorldAsPlayer) {
             speed = enemy.speed;
             if (enemy.telegraphTimer > 0.0f) {
                 enemy.telegraphTimer = std::max(0.0f, enemy.telegraphTimer - dt);
@@ -1498,7 +1539,7 @@ void Game::UpdateEnemies(float dt) {
                 if (enemy.telegraphTimer <= 0.0f) {
                     Vector3 playerForward = PlayerForward();
                     if (IsSphericalMap()) {
-                        playerForward = ProjectOnSphericalTangent(playerForward, SphericalUpAt(camera_.position));
+                        playerForward = ProjectOnSphericalTangent(playerForward, SphericalUpAt(camera_.position, playerWorld_));
                     } else {
                         playerForward.y = 0.0f;
                     }
@@ -1507,19 +1548,19 @@ void Game::UpdateEnemies(float dt) {
                     } else {
                         playerForward = Vector3Normalize(playerForward);
                     }
-                    Vector3 playerUp = IsSphericalMap() ? SphericalUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
+                    Vector3 playerUp = UpForWorldAt(camera_.position, playerWorld_);
                     Vector3 playerRight = SafeNormalize(Vector3CrossProduct(playerForward, playerUp), PlayerRight());
                     float side = GetRandomValue(0, 1) == 0 ? -1.0f : 1.0f;
                     Vector3 target = Vector3Add(camera_.position, Vector3Add(Vector3Scale(playerRight, side * RandomFloat(3.2f, 5.6f)), Vector3Scale(playerForward, RandomFloat(-4.2f, 2.0f))));
                     if (IsSphericalMap()) {
-                        target = SphericalSurfacePoint(target, SphericalEnemyAltitude(enemy.type));
+                        target = SphericalSurfacePoint(target, SphericalEnemyAltitude(enemy.type), enemy.world);
                     } else if (IsSquareMap()) {
-                        target.y = 1.0f;
+                        target.y = FlatGroundYForWorld(enemy.world) + FlatUpForWorld(enemy.world).y * 1.0f;
                         float limit = squareHalfExtent_ - enemy.radius - 0.8f;
                         target.x = std::clamp(target.x, -limit, limit);
                         target.z = std::clamp(target.z, -limit, limit);
                     } else {
-                        target.y = 1.0f;
+                        target.y = FlatGroundYForWorld(enemy.world) + FlatUpForWorld(enemy.world).y * 1.0f;
                         Vector3 flat = Vector3{target.x, 0.0f, target.z};
                         float limit = arenaRadius_ - enemy.radius - 0.8f;
                         if (Vector3Length(flat) > limit) {
@@ -1532,17 +1573,17 @@ void Game::UpdateEnemies(float dt) {
                     position = target;
                     Vector3 dash = Vector3Subtract(camera_.position, target);
                     if (IsSphericalMap()) {
-                        Vector3 targetUp = SphericalUpAt(target);
+                        Vector3 targetUp = SphericalUpAt(target, enemy.world);
                         dash = Vector3Add(ProjectOnSphericalTangent(dash, targetUp), Vector3Scale(targetUp, 0.1f));
                     } else {
-                        dash.y = 0.1f;
+                        dash = Vector3Add(ProjectOnSphericalTangent(dash, FlatUpForWorld(enemy.world)), Vector3Scale(FlatUpForWorld(enemy.world), 0.1f));
                     }
                     if (Vector3Length(dash) > 0.001f) {
                         dash = Vector3Normalize(dash);
                     }
                     Vector3 dashVelocity = IsSphericalMap()
-                        ? Vector3Add(Vector3Scale(dash, config_.blinkerDashSpeed), Vector3Scale(SphericalUpAt(target), 1.6f))
-                        : Vector3{dash.x * config_.blinkerDashSpeed, 1.6f, dash.z * config_.blinkerDashSpeed};
+                        ? Vector3Add(Vector3Scale(dash, config_.blinkerDashSpeed), Vector3Scale(SphericalUpAt(target, enemy.world), 1.6f))
+                        : Vector3Add(Vector3Scale(dash, config_.blinkerDashSpeed), Vector3Scale(FlatUpForWorld(enemy.world), 1.6f));
                     physics_.Bodies().SetLinearVelocity(enemy.body, ToJoltVelocity(dashVelocity));
                     enemy.externalVelocity = Vector3Scale(dash, config_.blinkerDashSpeed * 0.2f);
                     enemy.cooldownTimer = config_.blinkerCooldown;
@@ -1559,7 +1600,7 @@ void Game::UpdateEnemies(float dt) {
             }
         } else if (enemy.type == EnemyType::Boss) {
             Vector3 tangent = SafeNormalize(Vector3CrossProduct(enemyUp, direction), PlayerRight());
-            float distance = IsSphericalMap() ? Vector3Length(ProjectOnSphericalTangent(Vector3Subtract(player, position), enemyUp)) : DistanceXZ(position, player);
+            float distance = IsSphericalMap() ? Vector3Length(ProjectOnSphericalTangent(Vector3Subtract(target, position), enemyUp)) : DistanceXZ(position, target);
             float rangeBias = distance < 16.0f ? -0.45f : 0.35f;
             direction = Vector3Normalize(Vector3Add(Vector3Scale(direction, rangeBias), Vector3Scale(tangent, 0.85f)));
             speed = enemy.speed;
@@ -1569,11 +1610,11 @@ void Game::UpdateEnemies(float dt) {
             float burstInterval = config_.bossHomingBurstInterval * (enraged ? 0.7f : 1.0f);
 
             if (enemy.cooldownTimer <= 0.0f && enemy.burstCount == 0) {
-                FireBossRing(Vector3Add(position, Vector3Scale(enemyUp, enemy.radius * 0.35f)), enraged ? 12 : 8, 0.85f);
+                FireBossRing(Vector3Add(position, Vector3Scale(enemyUp, enemy.radius * 0.35f)), enraged ? 12 : 8, 0.85f, enemy.world);
                 Vector3 shotOrigin = Vector3Add(position, Vector3Scale(enemyUp, enemy.radius * 0.55f));
-                Vector3 shotDir = Vector3Normalize(Vector3Subtract(camera_.position, shotOrigin));
+                Vector3 shotDir = Vector3Normalize(Vector3Subtract(target, shotOrigin));
                 float speed = config_.enemyShotSpeed * config_.bossHomingSpeedScale;
-                FireHomingShot(shotOrigin, shotDir, speed, config_.bossHomingTurnRate, config_.bossHomingLife, config_.enemyShotDamage, Color{180, 125, 255, 255}, ProjectileOwner::Enemy);
+                FireHomingShot(shotOrigin, shotDir, speed, config_.bossHomingTurnRate, config_.bossHomingLife, config_.enemyShotDamage, Color{180, 125, 255, 255}, ProjectileOwner::Enemy, enemy.world);
                 enemy.burstCount = 1;
                 if (enemy.burstCount >= config_.bossHomingBurstCount) {
                     enemy.cooldownTimer = cooldownAfter;
@@ -1584,9 +1625,9 @@ void Game::UpdateEnemies(float dt) {
                 cameraShake_ = std::min(1.0f, cameraShake_ + 0.08f);
             } else if (enemy.burstCount > 0 && enemy.burstTimer <= 0.0f) {
                 Vector3 shotOrigin = Vector3Add(position, Vector3Scale(enemyUp, enemy.radius * 0.55f));
-                Vector3 shotDir = Vector3Normalize(Vector3Subtract(camera_.position, shotOrigin));
+                Vector3 shotDir = Vector3Normalize(Vector3Subtract(target, shotOrigin));
                 float speed = config_.enemyShotSpeed * config_.bossHomingSpeedScale;
-                FireHomingShot(shotOrigin, shotDir, speed, config_.bossHomingTurnRate, config_.bossHomingLife, config_.enemyShotDamage, Color{180, 125, 255, 255}, ProjectileOwner::Enemy);
+                FireHomingShot(shotOrigin, shotDir, speed, config_.bossHomingTurnRate, config_.bossHomingLife, config_.enemyShotDamage, Color{180, 125, 255, 255}, ProjectileOwner::Enemy, enemy.world);
                 enemy.burstCount++;
                 if (enemy.burstCount >= config_.bossHomingBurstCount) {
                     enemy.cooldownTimer = cooldownAfter;
@@ -1596,21 +1637,23 @@ void Game::UpdateEnemies(float dt) {
                 }
                 cameraShake_ = std::min(1.0f, cameraShake_ + 0.08f);
             }
-        } else if (enemy.type == EnemyType::SlimeKing) {
+        } else if (enemy.type == EnemyType::SlimeKing && sameWorldAsPlayer) {
             speed = enemy.speed;
-            Vector3 enemyUp = IsSphericalMap() ? SphericalUpAt(position) : Vector3{0.0f, 1.0f, 0.0f};
+            Vector3 enemyUp = UpForWorldAt(position, enemy.world);
             Vector3 playerGround = camera_.position;
             if (IsSphericalMap()) {
-                playerGround = SphericalSurfacePoint(camera_.position, SphericalPlayerAltitude());
+                playerGround = SphericalSurfacePoint(camera_.position, SphericalPlayerAltitude(), playerWorld_);
             } else {
-                playerGround.y -= playerHeight_;
+                playerGround = Vector3Subtract(camera_.position, Vector3Scale(FlatUpForWorld(playerWorld_), playerHeight_));
             }
             float dist = Vector3Length(Vector3Subtract(position, camera_.position));
             float targetAlt = IsSphericalMap() ? SphericalEnemyAltitude(EnemyType::SlimeKing) : 0.0f;
-            float currentAlt = IsSphericalMap() ? SphericalAltitudeAt(position) : 0.0f;
+            float currentAlt = IsSphericalMap() ? SphericalAltitudeAt(position, enemy.world) : 0.0f;
+            float flatEnemySurfaceY = FlatGroundYForWorld(enemy.world) + FlatUpForWorld(enemy.world).y * (0.6f + enemy.radius * 0.5f);
+            float flatEnemySlamY = FlatGroundYForWorld(enemy.world) + FlatUpForWorld(enemy.world).y * (0.6f + enemy.radius * 0.3f);
             bool nearSurface = IsSphericalMap()
                 ? currentAlt <= targetAlt + enemy.radius * 0.55f
-                : position.y <= 0.6f + enemy.radius * 0.5f;
+                : (enemy.world == 0 ? position.y <= flatEnemySurfaceY : position.y >= flatEnemySurfaceY);
 
             // State machine using burstCount: 0=ground, 1=long_jump, 2=high_jump_rise, 3=high_jump_fall, 4=shooting
             if (enemy.burstCount == 0) {
@@ -1648,7 +1691,7 @@ void Game::UpdateEnemies(float dt) {
                 enemy.actionTimer -= dt;
                 if (IsSphericalMap()) {
                     // Pull toward surface
-                    float alt = SphericalAltitudeAt(position);
+                    float alt = SphericalAltitudeAt(position, enemy.world);
                     float pull = (targetAlt - alt) * 7.0f;
                     JPH::Vec3 vel = physics_.Bodies().GetLinearVelocity(enemy.body);
                     JPH::Vec3 radialVel = JPH::Vec3(enemyUp.x * pull, enemyUp.y * pull, enemyUp.z * pull);
@@ -1663,7 +1706,7 @@ void Game::UpdateEnemies(float dt) {
                 // High jump rising: detect apex via radial velocity reversal
                 enemy.actionTimer -= dt;
                 if (IsSphericalMap()) {
-                    float alt = SphericalAltitudeAt(position);
+                    float alt = SphericalAltitudeAt(position, enemy.world);
                     float pull = (targetAlt - alt) * 12.0f;
                     JPH::Vec3 vel = physics_.Bodies().GetLinearVelocity(enemy.body);
                     JPH::Vec3 radialVel = JPH::Vec3(enemyUp.x * pull, enemyUp.y * pull, enemyUp.z * pull);
@@ -1675,8 +1718,8 @@ void Game::UpdateEnemies(float dt) {
                     : vel.GetY() <= 0.0f;
                 if (enemy.actionTimer <= 0.0f || falling) {
                     Vector3 slamTarget = IsSphericalMap()
-                        ? SphericalSurfacePoint(camera_.position, SphericalPlayerAltitude())
-                        : Vector3{camera_.position.x, 0.6f, camera_.position.z};
+                        ? SphericalSurfacePoint(camera_.position, SphericalPlayerAltitude(), playerWorld_)
+                        : Vector3{camera_.position.x, FlatGroundYForWorld(enemy.world) + FlatUpForWorld(enemy.world).y * 0.6f, camera_.position.z};
                     Vector3 slamDir = Vector3Normalize(Vector3Subtract(slamTarget, position));
                     Vector3 slamVel = Vector3Scale(slamDir, config_.slimeKingSlamSpeed);
                     physics_.Bodies().SetLinearVelocity(enemy.body, ToJoltVelocity(slamVel));
@@ -1688,16 +1731,16 @@ void Game::UpdateEnemies(float dt) {
                 // Slamming down
                 enemy.actionTimer -= dt;
                 bool hitGround = IsSphericalMap()
-                    ? SphericalAltitudeAt(position) <= targetAlt + enemy.radius * 0.35f
-                    : position.y <= 0.6f + enemy.radius * 0.3f;
+                    ? SphericalAltitudeAt(position, enemy.world) <= targetAlt + enemy.radius * 0.35f
+                    : (enemy.world == 0 ? position.y <= flatEnemySlamY : position.y >= flatEnemySlamY);
                 if (hitGround || enemy.actionTimer <= 0.0f) {
                     Vector3 impactPos = IsSphericalMap()
-                        ? SphericalSurfacePoint(position, targetAlt)
-                        : Vector3{position.x, 0.6f, position.z};
+                        ? SphericalSurfacePoint(position, targetAlt, enemy.world)
+                        : Vector3{position.x, FlatGroundYForWorld(enemy.world) + FlatUpForWorld(enemy.world).y * 0.6f, position.z};
                     SpawnShockwave(impactPos, config_.slimeKingSlamRadius, Color{120, 240, 160, 255});
                     SpawnHitBurst(impactPos, Color{100, 220, 140, 255}, 24);
                     cameraShake_ = std::min(1.0f, cameraShake_ + 0.35f);
-                    if (EnemyTouchesPlayer(impactPos, config_.slimeKingSlamRadius)) {
+                    if (sameWorldAsPlayer && EnemyTouchesPlayer(impactPos, config_.slimeKingSlamRadius)) {
                         ApplyPlayerHit(impactPos, Color{100, 220, 140, 255}, "SLIME SLAM");
                     }
                     enemy.burstCount = 0;
@@ -1714,7 +1757,7 @@ void Game::UpdateEnemies(float dt) {
                     spreadDir = Vector3Normalize(spreadDir);
                     FireEnemyProjectile(ProjectileKind::EnemyShot, position, spreadDir,
                         config_.slimeKingShootSpeed, config_.slimeKingSlamDamage,
-                        4.0f, 0.28f, 0.28f, Color{100, 230, 150, 255});
+                        4.0f, 0.28f, 0.28f, Color{100, 230, 150, 255}, enemy.world);
                     enemy.burstTimer = config_.slimeKingShootInterval;
                     enemy.actionTimer += 1.0f;
                 }
@@ -1730,7 +1773,7 @@ void Game::UpdateEnemies(float dt) {
                 JPH::Vec3 vel = physics_.Bodies().GetLinearVelocity(enemy.body);
                 Vector3 worldVel = ToRayVector(vel);
                 float radialSpeed = Vector3DotProduct(worldVel, enemyUp);
-                float alt = SphericalAltitudeAt(position);
+                float alt = SphericalAltitudeAt(position, enemy.world);
 
                 // Constant gravity toward surface (-enemyUp direction)
                 Vector3 tangentVel = Vector3Subtract(worldVel, Vector3Scale(enemyUp, radialSpeed));
@@ -1750,7 +1793,7 @@ void Game::UpdateEnemies(float dt) {
                 Vector3 correctedVel = Vector3Add(tangentVel, Vector3Scale(enemyUp, radialSpeed));
                 physics_.Bodies().SetLinearVelocity(enemy.body, ToJoltVelocity(correctedVel));
             }
-        } else if (enemy.type == EnemyType::Duelist) {
+        } else if (enemy.type == EnemyType::Duelist && sameWorldAsPlayer) {
             UpdateDuelist(enemy, position, direction, dt, speed, skipVelocity);
         } else if (enemy.type == EnemyType::Dummy) {
             // Reuses generic approach movement (falls through below)
@@ -1758,8 +1801,8 @@ void Game::UpdateEnemies(float dt) {
             // Reuse Boss strafe movement, no attacks
             Vector3 tangent = SafeNormalize(Vector3CrossProduct(enemyUp, direction), PlayerRight());
             float dist = IsSphericalMap()
-                ? Vector3Length(ProjectOnSphericalTangent(Vector3Subtract(player, position), enemyUp))
-                : DistanceXZ(position, player);
+                ? Vector3Length(ProjectOnSphericalTangent(Vector3Subtract(target, position), enemyUp))
+                : DistanceXZ(position, target);
             float rangeBias = dist < 16.0f ? -0.45f : 0.35f;
             direction = Vector3Normalize(Vector3Add(
                 Vector3Scale(direction, rangeBias),
@@ -1774,9 +1817,9 @@ void Game::UpdateEnemies(float dt) {
         Vector3 velocity = {};
         if (IsSphericalMap()) {
             float targetAltitude = enemy.type == EnemyType::Harrier ? config_.harrierTargetHeight + std::sin(enemy.bobTimer * 2.6f) * 1.2f : SphericalEnemyAltitude(enemy.type);
-            float targetDistance = SphericalSignedRadius(targetAltitude);
+            float targetDistance = SphericalSignedRadius(targetAltitude, enemy.world);
             float radialCorrection = std::clamp((targetDistance - Vector3Length(position)) * 7.0f, -12.0f, 8.0f);
-            if (IsHollowWorldMap()) {
+            if (IsHollowPhysicsForWorld(enemy.world)) {
                 radialCorrection = -radialCorrection;
             }
             if (enemy.type == EnemyType::Pouncer || enemy.type == EnemyType::SlimeKing) {
@@ -1790,7 +1833,8 @@ void Game::UpdateEnemies(float dt) {
                 verticalVelocity = physics_.Bodies().GetLinearVelocity(enemy.body).GetY();
             } else {
                 float targetHeight = enemy.type == EnemyType::Harrier ? config_.harrierTargetHeight + std::sin(enemy.bobTimer * 2.6f) * 1.2f : enemy.type == EnemyType::Blinker ? 1.0f : enemy.type == EnemyType::Wisp || enemy.type == EnemyType::Spitter ? 1.35f : enemy.type == EnemyType::Boss ? 2.2f : enemy.type == EnemyType::Duelist ? 1.2f : 0.8f;
-                verticalVelocity = std::clamp((targetHeight - position.y) * 7.0f, -12.0f, 8.0f);
+                float targetY = FlatGroundYForWorld(enemy.world) + FlatUpForWorld(enemy.world).y * targetHeight;
+                verticalVelocity = std::clamp((targetY - position.y) * 7.0f, -12.0f, 8.0f);
             }
             velocity = Vector3{
                 direction.x * speed + enemy.externalVelocity.x,
@@ -1813,7 +1857,8 @@ void Game::UpdateEnemies(float dt) {
             }
         }
 
-        if (EnemyTouchesPlayer(position, enemy.radius)
+        if (sameWorldAsPlayer
+            && EnemyTouchesPlayer(position, enemy.radius)
             && enemy.type != EnemyType::Dummy
             && enemy.type != EnemyType::DummyBoss) {
             ApplyPlayerHit(player, Color{255, 35, 25, 255});
@@ -1929,9 +1974,37 @@ void Game::UpdateProjectiles(float dt) {
         Projectile& projectile = projectiles_[i];
         projectile.life -= dt;
         Vector3 position = BodyPosition(projectile.body);
+        int projectileWorld = projectile.world;
 
-        if (IsSphericalMap() && (projectile.kind == ProjectileKind::Rocket || projectile.kind == ProjectileKind::BlackHoleGrenade)) {
-            Vector3 gravity = Vector3Scale(SphericalUpAt(position), -CurrentGravity() * (projectile.kind == ProjectileKind::BlackHoleGrenade ? 0.45f : 0.02f) * dt);
+        Vector3 projectileVelocity = projectile.frozen
+            ? projectile.storedVelocity
+            : ToRayVector(physics_.Bodies().GetLinearVelocity(projectile.body));
+        Vector3 previousPosition = Vector3Subtract(position, Vector3Scale(projectileVelocity, dt));
+
+        if (projectile.kind == ProjectileKind::Lance
+            && projectile.owner == ProjectileOwner::Player
+            && CloseWormholeAlongSegment(previousPosition, position, projectile.radius)) {
+            DestroyProjectile(i);
+            continue;
+        }
+
+        if (projectile.owner == ProjectileOwner::Enemy && HasWormhole() && projectileWorld != playerWorld_) {
+            const WormholePortal& portal = wormholes_.front();
+            Vector3 gate = WormholeCenterForWorld(portal, projectileWorld);
+            if (Vector3Distance(position, gate) <= config_.wormholeTriggerRadius + projectile.radius) {
+                SpawnHitBurst(position, Color{170, 70, 255, 255}, 6);
+                DestroyProjectile(i);
+                continue;
+            }
+        }
+
+        if ((projectile.kind == ProjectileKind::Rocket
+             || projectile.kind == ProjectileKind::BlackHoleGrenade
+             || projectile.kind == ProjectileKind::DroneCanister)
+            && (IsSphericalMap() || projectileWorld == 1)) {
+            Vector3 up = IsSphericalMap() ? SphericalUpAt(position, projectileWorld) : FlatUpForWorld(projectileWorld);
+            float gravityFactor = projectile.kind == ProjectileKind::BlackHoleGrenade ? 0.45f : projectile.kind == ProjectileKind::Rocket ? 0.02f : 0.65f;
+            Vector3 gravity = Vector3Scale(up, -CurrentGravity() * gravityFactor * dt);
             AddProjectileImpulse(projectile, gravity);
         }
 
@@ -1952,7 +2025,8 @@ void Game::UpdateProjectiles(float dt) {
 
         if ((projectile.kind == ProjectileKind::HomingShot
              || projectile.kind == ProjectileKind::CurseOrb
-             || projectile.kind == ProjectileKind::SoulOrb)
+             || projectile.kind == ProjectileKind::SoulOrb
+             || projectile.fromMagicCircle)
             && projectile.turnRate > 0.0f && !projectile.frozen) {
             JPH::Vec3 currentVel = physics_.Bodies().GetLinearVelocity(projectile.body);
             float speed = currentVel.Length();
@@ -1961,6 +2035,9 @@ void Game::UpdateProjectiles(float dt) {
                 Vector3 target;
                 if (projectile.owner == ProjectileOwner::Enemy) {
                     target = camera_.position;
+                    if (HasWormhole() && projectile.world != playerWorld_) {
+                        target = WormholeCenterForWorld(wormholes_.front(), projectile.world);
+                    }
                 } else {
                     float nearestDist = INFINITY;
                     for (const Enemy& enemy : enemies_) {
@@ -2004,18 +2081,17 @@ void Game::UpdateProjectiles(float dt) {
         }
 
         bool detonatesOnGround = projectile.kind == ProjectileKind::Rocket || projectile.kind == ProjectileKind::GravityNail || projectile.kind == ProjectileKind::BlackHoleGrenade || projectile.kind == ProjectileKind::Lance || projectile.kind == ProjectileKind::DroneCanister;
-        bool touchesGround = IsSphericalMap()
-            ? (IsHollowWorldMap()
-                ? Vector3Length(position) >= SphericalRadius() - projectile.radius
-                : Vector3Length(position) <= SphericalRadius() + projectile.radius)
-            : position.y <= 0.22f;
+        bool touchesGround = false;
+        if (IsSphericalMap()) {
+            touchesGround = SphericalTouchesSurface(position, projectile.radius, projectileWorld);
+        } else {
+            float groundY = FlatGroundYForWorld(projectileWorld) + FlatUpForWorld(projectileWorld).y * 0.22f;
+            touchesGround = projectileWorld == 0 ? position.y <= groundY : position.y >= groundY;
+        }
         bool hitGround = IsSphericalMap() ? touchesGround : detonatesOnGround && touchesGround;
         bool outOfBounds = false;
         if (IsSphericalMap()) {
-            float distance = Vector3Length(position);
-            outOfBounds = IsHollowWorldMap()
-                ? (distance > SphericalRadius() + 6.0f || distance < std::max(1.0f, SphericalRadius() - SphericalCleanupDistance()))
-                : distance > SphericalCleanupDistance();
+            outOfBounds = SphericalOutOfBounds(position, 6.0f, projectileWorld);
         } else {
             outOfBounds = IsSquareMap()
                 ? (std::abs(position.x) > squareHalfExtent_ + 6.0f || std::abs(position.z) > squareHalfExtent_ + 6.0f)
@@ -2024,12 +2100,12 @@ void Game::UpdateProjectiles(float dt) {
         bool expired = projectile.life <= 0.0f || outOfBounds || hitGround;
 
         if (IsSphericalMap() && touchesGround && projectile.kind == ProjectileKind::LaserShot) {
-            Vector3 normal = SphericalUpAt(position);
+            Vector3 normal = SphericalUpAt(position, projectileWorld);
             Vector3 velocity = projectile.frozen ? projectile.storedVelocity : ToRayVector(physics_.Bodies().GetLinearVelocity(projectile.body));
             float inwardSpeed = Vector3DotProduct(velocity, normal);
             if (inwardSpeed < 0.0f) {
                 velocity = Vector3Subtract(velocity, Vector3Scale(normal, inwardSpeed * 2.0f));
-                Vector3 corrected = SphericalSurfacePoint(position, projectile.radius + 0.04f);
+                Vector3 corrected = SphericalSurfacePoint(position, projectile.radius + 0.04f, projectileWorld);
                 physics_.Bodies().SetPosition(projectile.body, ToJoltVector(corrected), JPH::EActivation::Activate);
                 if (projectile.frozen) {
                     projectile.storedVelocity = velocity;
@@ -2072,13 +2148,17 @@ void Game::UpdateProjectiles(float dt) {
         }
 
         if (expired && projectile.kind == ProjectileKind::Lance) {
+            if (CloseWormhole(position)) {
+                DestroyProjectile(i);
+                continue;
+            }
             DetonateSpear(position, projectile.owner);
             DestroyProjectile(i);
             continue;
         }
 
         if (expired && projectile.kind == ProjectileKind::DroneCanister) {
-            drones_.push_back(Drone{position, Vector3Zero(), config_.droneDeployTime, 0.0f, config_.droneRocketInterval, RandomFloat(0.0f, 6.28f), config_.droneLifetime, DroneState::Deploying});
+            drones_.push_back(Drone{position, Vector3Zero(), config_.droneDeployTime, 0.0f, config_.droneRocketInterval, RandomFloat(0.0f, 6.28f), config_.droneLifetime, DroneState::Deploying, projectileWorld});
             SpawnHitBurst(position, Color{200, 210, 220, 255}, 22);
             SpawnShockwave(position, 1.8f, Color{140, 155, 170, 255});
             DestroyProjectile(i);
@@ -2229,17 +2309,23 @@ void Game::UpdateSlimeSpawnPods(float dt) {
 void Game::UpdateMagicCircles(float dt) {
     for (size_t i = 0; i < magicCircles_.size();) {
         MagicCircle& circle = magicCircles_[i];
-        circle.life -= dt;
-        if (circle.life <= 0.0f) {
-            SpawnShockwave(circle.position, circle.radius, Color{180, 130, 255, 240});
-            SpawnHitBurst(circle.position, Color{200, 160, 255, 255}, 20);
-            magicCircles_[i] = magicCircles_.back();
-            magicCircles_.pop_back();
-            continue;
+        if (!circle.isWormhole) {
+            circle.life -= dt;
+            if (circle.life <= 0.0f) {
+                SpawnShockwave(circle.position, circle.radius, Color{180, 130, 255, 240});
+                SpawnHitBurst(circle.position, Color{200, 160, 255, 255}, 20);
+                magicCircles_[i] = magicCircles_.back();
+                magicCircles_.pop_back();
+                continue;
+            }
+        } else {
+            circle.life = circle.maxLife;
         }
         circle.fireCooldown -= dt;
-        if (circle.fireCooldown <= 0.0f && !circle.absorbedKinds.empty() && !enemies_.empty()) {
-            circle.fireCooldown = circle.fireInterval;
+        if (!circle.isWormhole && circle.activated
+            && circle.fireCooldown <= 0.0f && !enemies_.empty()) {
+            float baseCooldown = MagicCircleBaseCooldown(circle);
+            circle.fireCooldown = baseCooldown / std::max(0.1f, circle.fireRateMult);
             float nearestDist = INFINITY;
             Vector3 nearestPos = {};
             for (const Enemy& enemy : enemies_) {
@@ -2248,32 +2334,334 @@ void Game::UpdateMagicCircles(float dt) {
                 if (d < nearestDist) { nearestDist = d; nearestPos = ep; }
             }
             if (nearestDist < INFINITY) {
-                Vector3 up = IsSphericalMap() ? SphericalUpAt(circle.position) : Vector3{0.0f, 1.0f, 0.0f};
+                Vector3 up = UpForWorldAt(circle.position, 0);
                 Vector3 octaCenter = Vector3Add(circle.position, Vector3Scale(up, 1.0f + circle.radius * 0.4f));
                 Vector3 dir = Vector3Subtract(nearestPos, octaCenter);
                 if (Vector3Length(dir) > 0.01f) dir = Vector3Normalize(dir);
-                ProjectileKind kind = circle.absorbedKinds.front();
-                float damage = circle.absorbedDamages.front();
-                Color color = circle.absorbedColors.empty() ? Color{220, 180, 255, 255} : circle.absorbedColors.front();
-                circle.absorbedKinds.erase(circle.absorbedKinds.begin());
-                circle.absorbedDamages.erase(circle.absorbedDamages.begin());
-                if (!circle.absorbedColors.empty()) {
-                    circle.absorbedColors.erase(circle.absorbedColors.begin());
+                if (circle.activatedByLaserBeam) {
+                    FireMagicLaserBeam(octaCenter, dir);
+                    continue;
                 }
-                circle.absorbedKinds.push_back(kind);
-                circle.absorbedDamages.push_back(damage);
-                circle.absorbedColors.push_back(color);
-                // Fade color to purple for demonized look
-                Color demonColor = Color{
-                    static_cast<unsigned char>((static_cast<int>(color.r) + 160) / 2),
-                    static_cast<unsigned char>((static_cast<int>(color.g) + 80) / 2),
-                    static_cast<unsigned char>((static_cast<int>(color.b) + 220) / 2),
-                    255
-                };
-                FireMagicProjectile(octaCenter, dir, damage, demonColor);
+                Vector3 right = SafeNormalize(Vector3CrossProduct(dir, up), Vector3{1.0f, 0.0f, 0.0f});
+
+                float speed = config_.plasmaSpeed;
+                float damage = config_.plasmaDamage;
+                float life = config_.plasmaLifetime;
+                float radius = config_.plasmaRadius;
+                float maxR = config_.plasmaRadius;
+                switch (circle.activatedKind) {
+                    case ProjectileKind::LaserShot:
+                        speed = config_.plasmaSpeed;
+                        damage = config_.plasmaDamage;
+                        life = config_.plasmaLifetime;
+                        radius = config_.plasmaRadius;
+                        maxR = config_.plasmaRadius;
+                        break;
+                    case ProjectileKind::Flame:
+                        speed = RandomFloat(19.0f, 23.0f);
+                        damage = config_.flameDamage;
+                        life = config_.flameLifetime;
+                        radius = 0.12f;
+                        maxR = config_.flameMaxRadius;
+                        break;
+                    case ProjectileKind::Rocket:
+                        speed = 34.0f;
+                        damage = config_.rocketImpactDamage;
+                        life = 2.8f;
+                        radius = 0.34f;
+                        maxR = 0.34f;
+                        break;
+                    case ProjectileKind::Pellet:
+                        speed = RandomFloat(48.0f, 58.0f);
+                        damage = config_.shotgunPelletDamage;
+                        life = 0.62f;
+                        radius = 0.11f;
+                        maxR = 0.11f;
+                        break;
+                    default: continue;
+                }
+                int shotCount = circle.activatedKind == ProjectileKind::Pellet ? config_.shotgunPelletCount : 1;
+                for (int shot = 0; shot < shotCount; ++shot) {
+                    Vector3 shotDir = dir;
+                    if (circle.activatedKind == ProjectileKind::Pellet) {
+                        float side = RandomFloat(-0.18f, 0.18f);
+                        float lift = RandomFloat(-0.12f, 0.12f);
+                        shotDir = Vector3Normalize(Vector3Add(dir, Vector3Add(Vector3Scale(right, side), Vector3Scale(up, lift))));
+                        speed = RandomFloat(48.0f, 58.0f);
+                    } else if (circle.activatedKind == ProjectileKind::Flame) {
+                        speed = RandomFloat(19.0f, 23.0f);
+                    }
+                    FireMagicProjectile(circle.activatedKind, octaCenter, shotDir, speed, damage, life, radius, maxR,
+                        MagicCircleTint(circle), circle.homingTurnRate);
+                }
             }
         }
         ++i;
+    }
+}
+
+bool Game::HasWormhole() const {
+    return !wormholes_.empty();
+}
+
+Vector3 Game::MirrorPosition(Vector3 position, const WormholePortal& portal) const {
+    Vector3 normal = SafeNormalize(portal.mirrorNormal, Vector3{0.0f, 1.0f, 0.0f});
+    float d = Vector3DotProduct(Vector3Subtract(position, portal.mirrorAnchor), normal);
+    return Vector3Subtract(position, Vector3Scale(normal, 2.0f * d));
+}
+
+Vector3 Game::TeleportThroughWormhole(Vector3 position, int targetWorld, float altitude) const {
+    if (wormholes_.empty()) {
+        return position;
+    }
+    Vector3 mirrored = MirrorPosition(position, wormholes_.front());
+    if (IsSphericalMap()) {
+        return SphericalSurfacePoint(mirrored, altitude, targetWorld);
+    }
+    float signedHeight = std::max(playerHeight_, std::abs(altitude));
+    mirrored.y = FlatGroundYForWorld(targetWorld) + FlatUpForWorld(targetWorld).y * signedHeight;
+    return mirrored;
+}
+
+Vector3 Game::ReflectVelocityThroughWormhole(Vector3 velocity, Vector3 targetPosition, int targetWorld) const {
+    if (wormholes_.empty()) {
+        return velocity;
+    }
+    Vector3 normal = SafeNormalize(wormholes_.front().mirrorNormal, Vector3{0.0f, 1.0f, 0.0f});
+    float along = Vector3DotProduct(velocity, normal);
+    Vector3 reflected = Vector3Subtract(velocity, Vector3Scale(normal, along * 2.0f));
+    if (IsSphericalMap()) {
+        Vector3 up = SphericalUpAt(targetPosition, targetWorld);
+        reflected = Vector3Add(ProjectOnSphericalTangent(reflected, up), Vector3Scale(up, std::max(0.0f, Vector3DotProduct(reflected, up))));
+    } else if (targetWorld == 1) {
+        reflected.y = -std::abs(reflected.y);
+    } else {
+        reflected.y = std::abs(reflected.y);
+    }
+    return reflected;
+}
+
+Vector3 Game::WormholeCenterForWorld(const WormholePortal& portal, int world) const {
+    return world == 0 ? portal.frontPosition : portal.backPosition;
+}
+
+float Game::FlatGroundYForWorld(int world) const {
+    return world == 0 ? 0.0f : -kFlatBackWorldDepth;
+}
+
+Vector3 Game::FlatUpForWorld(int world) const {
+    return world == 0 ? Vector3{0.0f, 1.0f, 0.0f} : Vector3{0.0f, -1.0f, 0.0f};
+}
+
+Vector3 Game::UpForWorldAt(Vector3 position, int world) const {
+    return IsSphericalMap() ? SphericalUpAt(position, world) : FlatUpForWorld(world);
+}
+
+bool Game::ActivateWormhole(MagicCircle& circle, int circleIndex, Vector3 octaCenter) {
+    if (HasWormhole()) {
+        SpawnShockwave(octaCenter, circle.radius * 0.8f, Color{170, 70, 255, 255});
+        SpawnHitBurst(octaCenter, Color{190, 80, 255, 255}, 18);
+        return false;
+    }
+
+    Vector3 normal = IsSphericalMap() ? SphericalUpAt(circle.position, 0) : Vector3{0.0f, 1.0f, 0.0f};
+    Vector3 backCenter = MirrorPosition(octaCenter, WormholePortal{octaCenter, {}, circle.position, normal, 0.0f, 0.0f, circleIndex});
+    if (IsSphericalMap()) {
+        backCenter = SphericalSurfacePoint(backCenter, SphericalAltitudeAt(octaCenter, 0), 1);
+        backCenter = Vector3Add(backCenter, Vector3Scale(SphericalUpAt(backCenter, 1), 1.0f + circle.radius * 0.4f));
+    } else {
+        backCenter = octaCenter;
+        backCenter.y = FlatGroundYForWorld(1) + FlatUpForWorld(1).y * std::max(playerHeight_, std::abs(octaCenter.y));
+    }
+
+    WormholePortal portal;
+    portal.frontPosition = octaCenter;
+    portal.backPosition = backCenter;
+    portal.mirrorAnchor = circle.position;
+    portal.mirrorNormal = normal;
+    portal.circleIndex = circleIndex;
+    wormholes_.push_back(portal);
+
+    circle.isWormhole = true;
+    circle.life = circle.maxLife = 999999.0f;
+    circle.activated = false;
+    circle.activatedByLaserBeam = false;
+    SpawnShockwave(octaCenter, circle.radius * 1.35f, Color{150, 45, 255, 255});
+    SpawnShockwave(backCenter, circle.radius * 1.15f, Color{150, 45, 255, 210});
+    SpawnHitBurst(octaCenter, Color{190, 70, 255, 255}, 32);
+    eventText_ = "WORMHOLE";
+    eventTextTimer_ = 2.0f;
+    return true;
+}
+
+bool Game::CloseWormhole(Vector3 position) {
+    if (wormholes_.empty()) {
+        return false;
+    }
+
+    WormholePortal portal = wormholes_.front();
+    float closeRadius = std::max(config_.wormholeTriggerRadius, config_.wormholeVisualRadius) + 0.75f;
+    bool hitFront = Vector3Distance(position, portal.frontPosition) <= closeRadius;
+    bool hitBack = Vector3Distance(position, portal.backPosition) <= closeRadius;
+    if (!hitFront && !hitBack) {
+        return false;
+    }
+
+    if (playerWorld_ == 1) {
+        float altitude = IsSphericalMap() ? SphericalPlayerAltitude() : std::abs(camera_.position.y);
+        camera_.position = TeleportThroughWormhole(camera_.position, 0, altitude);
+        playerVelocity_ = ReflectVelocityThroughWormhole(playerVelocity_, camera_.position, 0);
+        playerWorld_ = 0;
+        camera_.up = UpForWorldAt(camera_.position, 0);
+        camera_.target = Vector3Add(camera_.position, PlayerForward());
+    }
+
+    SpawnShockwave(portal.frontPosition, config_.wormholeVisualRadius * 2.2f, Color{255, 150, 60, 255});
+    SpawnShockwave(portal.backPosition, config_.wormholeVisualRadius * 3.4f, Color{170, 70, 255, 240});
+    SpawnHitBurst(portal.frontPosition, Color{255, 175, 70, 255}, 28);
+    SpawnHitBurst(portal.backPosition, Color{210, 80, 255, 255}, 70);
+
+    for (size_t i = 0; i < enemies_.size();) {
+        if (enemies_[i].world == 1) {
+            Vector3 enemyPosition = BodyPosition(enemies_[i].body);
+            SpawnHitBurst(enemyPosition, Color{185, 60, 255, 255}, 22);
+            physics_.DestroyBody(enemies_[i].body);
+            enemies_[i] = enemies_.back();
+            enemies_.pop_back();
+            continue;
+        }
+        enemies_[i].world = 0;
+        ++i;
+    }
+
+    for (size_t i = 0; i < projectiles_.size();) {
+        if (projectiles_[i].world == 1) {
+            SpawnHitBurst(BodyPosition(projectiles_[i].body), Color{180, 70, 255, 255}, 6);
+            DestroyProjectile(i);
+            continue;
+        }
+        ++i;
+    }
+
+    for (size_t i = 0; i < nanoBlades_.size();) {
+        if (nanoBlades_[i].world == 1) {
+            SpawnHitBurst(nanoBlades_[i].center, Color{230, 190, 80, 255}, 8);
+            nanoBlades_[i] = nanoBlades_.back();
+            nanoBlades_.pop_back();
+            continue;
+        }
+        ++i;
+    }
+
+    for (size_t i = 0; i < nanoPlatforms_.size();) {
+        if (nanoPlatforms_[i].world == 1) {
+            SpawnHitBurst(nanoPlatforms_[i].position, Color{255, 220, 120, 255}, 10);
+            physics_.DestroyBody(nanoPlatforms_[i].platformBody);
+            nanoPlatforms_[i] = nanoPlatforms_.back();
+            nanoPlatforms_.pop_back();
+            continue;
+        }
+        ++i;
+    }
+
+    for (size_t i = 0; i < drones_.size();) {
+        if (drones_[i].world == 1) {
+            SpawnHitBurst(drones_[i].position, Color{170, 215, 255, 255}, 12);
+            drones_[i] = drones_.back();
+            drones_.pop_back();
+            continue;
+        }
+        ++i;
+    }
+
+    for (GravityWell& well : gravityWells_) {
+        if (Vector3Distance(well.position, portal.backPosition) <= config_.wormholeTriggerRadius * 4.0f) {
+            well.life = std::min(well.life, 0.15f);
+        }
+    }
+
+    wormholes_.clear();
+    playerWorld_ = 0;
+    for (MagicCircle& circle : magicCircles_) {
+        if (circle.isWormhole) {
+            circle.isWormhole = false;
+            circle.life = 0.0f;
+        }
+    }
+    eventText_ = "BACKSIDE ANNIHILATED";
+    eventTextTimer_ = 2.0f;
+    return true;
+}
+
+bool Game::CloseWormholeAlongSegment(Vector3 start, Vector3 end, float extraRadius) {
+    if (wormholes_.empty()) {
+        return false;
+    }
+
+    const WormholePortal& portal = wormholes_.front();
+    float closeRadius = std::max(config_.wormholeTriggerRadius, config_.wormholeVisualRadius) + 0.75f + extraRadius;
+    if (DistancePointToSegment(portal.frontPosition, start, end) <= closeRadius) {
+        return CloseWormhole(portal.frontPosition);
+    }
+    if (DistancePointToSegment(portal.backPosition, start, end) <= closeRadius) {
+        return CloseWormhole(portal.backPosition);
+    }
+    return false;
+}
+
+void Game::UpdateWormholes(float dt) {
+    for (WormholePortal& portal : wormholes_) {
+        portal.playerCooldown = std::max(0.0f, portal.playerCooldown - dt);
+        portal.enemyCooldown = std::max(0.0f, portal.enemyCooldown - dt);
+    }
+    if (wormholes_.empty()) {
+        return;
+    }
+
+    WormholePortal& portal = wormholes_.front();
+    Vector3 playerGate = WormholeCenterForWorld(portal, playerWorld_);
+    if (portal.playerCooldown <= 0.0f && Vector3Distance(camera_.position, playerGate) <= config_.wormholeTriggerRadius + playerRadius_) {
+        int nextWorld = 1 - playerWorld_;
+        float altitude = IsSphericalMap() ? SphericalPlayerAltitude() : std::abs(camera_.position.y);
+        camera_.position = TeleportThroughWormhole(camera_.position, nextWorld, altitude);
+        playerVelocity_ = ReflectVelocityThroughWormhole(playerVelocity_, camera_.position, nextWorld);
+        playerWorld_ = nextWorld;
+        portal.playerCooldown = config_.wormholePlayerCooldown;
+        camera_.up = UpForWorldAt(camera_.position, playerWorld_);
+        camera_.target = Vector3Add(camera_.position, PlayerForward());
+        SpawnShockwave(camera_.position, config_.wormholeVisualRadius * 1.6f, Color{170, 70, 255, 255});
+        eventText_ = playerWorld_ == 0 ? "WORLD FRONT" : "WORLD BACK";
+        eventTextTimer_ = 1.2f;
+    }
+
+    if (portal.enemyCooldown > 0.0f) {
+        return;
+    }
+    for (Enemy& enemy : enemies_) {
+        if (enemy.world == playerWorld_) {
+            continue;
+        }
+        Vector3 gate = WormholeCenterForWorld(portal, enemy.world);
+        Vector3 position = BodyPosition(enemy.body);
+        if (Vector3Distance(position, gate) > config_.wormholeTriggerRadius + enemy.radius) {
+            continue;
+        }
+        int nextWorld = 1 - enemy.world;
+        float altitude = IsSphericalMap()
+            ? SphericalEnemyAltitude(enemy.type)
+            : std::max(0.8f, std::abs(Vector3DotProduct(Vector3Subtract(position, Vector3{0.0f, FlatGroundYForWorld(enemy.world), 0.0f}), FlatUpForWorld(enemy.world))));
+        Vector3 target = WormholeCenterForWorld(portal, nextWorld);
+        target = IsSphericalMap()
+            ? SphericalSurfacePoint(target, altitude, nextWorld)
+            : Vector3{target.x, FlatGroundYForWorld(nextWorld) + FlatUpForWorld(nextWorld).y * altitude, target.z};
+        JPH::Vec3 currentVelocity = physics_.Bodies().GetLinearVelocity(enemy.body);
+        Vector3 reflected = ReflectVelocityThroughWormhole(ToRayVector(currentVelocity), target, nextWorld);
+        physics_.Bodies().SetPosition(enemy.body, ToJoltVector(target), JPH::EActivation::Activate);
+        physics_.Bodies().SetLinearVelocity(enemy.body, ToJoltVelocity(reflected));
+        enemy.world = nextWorld;
+        portal.enemyCooldown = config_.wormholeEnemyCooldown;
+        SpawnHitBurst(target, Color{180, 80, 255, 255}, 16);
+        break;
     }
 }
 
@@ -2330,16 +2718,16 @@ void Game::SpawnMysticStaffShockwave(Vector3 position) {
 void Game::CompleteMagicCircleChannel() {
     Vector3 forward = PlayerForward();
     if (IsSphericalMap()) {
-        forward = ProjectOnSphericalTangent(forward, SphericalUpAt(camera_.position));
+        forward = ProjectOnSphericalTangent(forward, SphericalUpAt(camera_.position, playerWorld_));
     } else {
         forward.y = 0.0f;
     }
     if (Vector3Length(forward) > 0.001f) forward = Vector3Normalize(forward);
     Vector3 spawnPos = Vector3Add(camera_.position, Vector3Scale(forward, 2.0f));
     if (IsSphericalMap()) {
-        spawnPos = SphericalSurfacePoint(spawnPos, SphericalAltitudeAt(camera_.position));
+        spawnPos = SphericalSurfacePoint(spawnPos, SphericalAltitudeAt(camera_.position, playerWorld_), playerWorld_);
     } else {
-        spawnPos.y = 0.05f;
+        spawnPos.y = FlatGroundYForWorld(playerWorld_) + FlatUpForWorld(playerWorld_).y * 0.05f;
     }
 
     MagicCircle circle;
@@ -2349,9 +2737,6 @@ void Game::CompleteMagicCircleChannel() {
     circle.radius = config_.magicCircleRadius;
     circle.fireCooldown = 0.0f;
     circle.fireInterval = config_.magicCircleFireInterval;
-    circle.absorbedKinds.clear();
-    circle.absorbedDamages.clear();
-    circle.absorbedColors.clear();
 
     magicCircles_.push_back(circle);
     SpawnShockwave(spawnPos, circle.radius * 1.5f, Color{200, 150, 255, 255});
@@ -2536,7 +2921,7 @@ void Game::UpdateDrones(float dt) {
         }
 
         // Project force to horizontal plane (or tangent on spherical maps)
-        Vector3 up = IsSphericalMap() ? SphericalUpAt(drones_[i].position) : Vector3{0.0f, 1.0f, 0.0f};
+        Vector3 up = UpForWorldAt(drones_[i].position, drones_[i].world);
         Vector3 horizForce = IsSphericalMap()
             ? ProjectOnSphericalTangent(force, up)
             : Vector3{force.x, 0.0f, force.z};
@@ -2568,7 +2953,7 @@ void Game::UpdateDrones(float dt) {
 
         // Active state
         drone.bobTimer += dt;
-        Vector3 up = IsSphericalMap() ? SphericalUpAt(drone.position) : Vector3{0.0f, 1.0f, 0.0f};
+        Vector3 up = UpForWorldAt(drone.position, drone.world);
 
         // Find nearest enemy
         Vector3 targetPos = drone.position;
@@ -2638,7 +3023,9 @@ void Game::UpdateDrones(float dt) {
 
         // Hover altitude
         float targetAltitude = config_.droneHoverAltitude;
-        float currentAlt = IsSphericalMap() ? SphericalAltitudeAt(drone.position) : drone.position.y;
+        float currentAlt = IsSphericalMap()
+            ? SphericalAltitudeAt(drone.position, drone.world)
+            : Vector3DotProduct(drone.position, FlatUpForWorld(drone.world));
         float altError = targetAltitude - currentAlt;
         float verticalSpeed = Vector3DotProduct(drone.velocity, up);
         float verticalAccel = altError * 12.0f - verticalSpeed * 5.0f;
@@ -2650,13 +3037,14 @@ void Game::UpdateDrones(float dt) {
 
         // Keep in bounds
         if (IsSphericalMap()) {
-            drone.position = SphericalSurfacePoint(drone.position, config_.droneHoverAltitude);
-            drone.velocity = ProjectOnSphericalTangent(drone.velocity, SphericalUpAt(drone.position));
+            drone.position = SphericalSurfacePoint(drone.position, config_.droneHoverAltitude, drone.world);
+            drone.velocity = ProjectOnSphericalTangent(drone.velocity, SphericalUpAt(drone.position, drone.world));
         } else if (IsSquareMap()) {
             float limit = squareHalfExtent_ - 1.5f;
             drone.position.x = std::clamp(drone.position.x, -limit, limit);
             drone.position.z = std::clamp(drone.position.z, -limit, limit);
-            drone.position.y = std::clamp(drone.position.y, 1.2f, 16.0f);
+            float altitude = std::clamp(std::abs(Vector3DotProduct(Vector3Subtract(drone.position, Vector3{0.0f, FlatGroundYForWorld(drone.world), 0.0f}), FlatUpForWorld(drone.world))), 1.2f, 16.0f);
+            drone.position.y = FlatGroundYForWorld(drone.world) + FlatUpForWorld(drone.world).y * altitude;
         } else {
             Vector3 flat = Vector3{drone.position.x, 0.0f, drone.position.z};
             float limit = arenaRadius_ - 1.5f;
@@ -2665,7 +3053,8 @@ void Game::UpdateDrones(float dt) {
                 drone.position.x = flat.x;
                 drone.position.z = flat.z;
             }
-            drone.position.y = std::clamp(drone.position.y, 1.2f, 16.0f);
+            float altitude = std::clamp(std::abs(Vector3DotProduct(Vector3Subtract(drone.position, Vector3{0.0f, FlatGroundYForWorld(drone.world), 0.0f}), FlatUpForWorld(drone.world))), 1.2f, 16.0f);
+            drone.position.y = FlatGroundYForWorld(drone.world) + FlatUpForWorld(drone.world).y * altitude;
         }
 
         // Machine gun (disabled while assembling)
@@ -2691,7 +3080,7 @@ void Game::UpdateDrones(float dt) {
             bulletConfig.allowSleeping = false;
 
             JPH::BodyID bulletBody = physics_.CreateBody(projectileShape_, ToJoltVector(spawnPos), JPH::Quat::sIdentity(), bulletConfig);
-            projectiles_.push_back(Projectile{bulletBody, ProjectileKind::DroneBullet, 1.2f, 1.2f, config_.droneBulletDamage, 0.06f, 0.06f, Color{255, 240, 140, 255}, 0, intendedVel, ProjectileOwner::Player, false});
+            projectiles_.push_back(Projectile{bulletBody, ProjectileKind::DroneBullet, 1.2f, 1.2f, config_.droneBulletDamage, 0.06f, 0.06f, Color{255, 240, 140, 255}, 0, intendedVel, ProjectileOwner::Player, false, {}, 0.0f, false, drone.world});
 
             drone.shootTimer = config_.droneShootInterval;
         }
@@ -2714,7 +3103,7 @@ void Game::UpdateDrones(float dt) {
             rocketConfig.allowSleeping = false;
 
             JPH::BodyID rocketBody = physics_.CreateBody(projectileShape_, ToJoltVector(spawnPos), JPH::Quat::sIdentity(), rocketConfig);
-            projectiles_.push_back(Projectile{rocketBody, ProjectileKind::Rocket, 2.8f, 2.8f, config_.rocketImpactDamage, 0.34f, 0.34f, Color{230, 235, 210, 255}, 0, rocketVel, ProjectileOwner::Player, false});
+            projectiles_.push_back(Projectile{rocketBody, ProjectileKind::Rocket, 2.8f, 2.8f, config_.rocketImpactDamage, 0.34f, 0.34f, Color{230, 235, 210, 255}, 0, rocketVel, ProjectileOwner::Player, false, {}, 0.0f, false, drone.world});
 
             drone.rocketTimer = config_.droneRocketInterval + RandomFloat(-0.3f, 0.3f);
             SpawnHitBurst(spawnPos, Color{255, 180, 60, 255}, 8);
@@ -2899,21 +3288,76 @@ void Game::UpdateCollisions() {
         }
 
         if (!projectileDestroyed) {
-            // Check projectile absorption into magic circle octahedron
             for (MagicCircle& circle : magicCircles_) {
-                Vector3 up = IsSphericalMap() ? SphericalUpAt(circle.position) : Vector3{0.0f, 1.0f, 0.0f};
+                Vector3 up = UpForWorldAt(circle.position, 0);
                 Vector3 octaCenter = Vector3Add(circle.position, Vector3Scale(up, 1.0f + circle.radius * 0.4f));
                 float dist = Vector3Distance(projectilePosition, octaCenter);
                 if (dist <= circle.radius + projectiles_[projectileIndex].radius
                     && !projectiles_[projectileIndex].fromMagicCircle) {
-                    circle.absorbedKinds.push_back(projectiles_[projectileIndex].kind);
-                    circle.absorbedDamages.push_back(projectiles_[projectileIndex].damage);
-                    circle.absorbedColors.push_back(projectiles_[projectileIndex].color);
-                    SpawnHitBurst(projectilePosition, Color{220, 180, 255, 255}, 8);
-                    SpawnShockwave(octaCenter, 0.8f, Color{200, 150, 255, 255});
-                    DestroyProjectile(projectileIndex);
-                    projectileDestroyed = true;
-                    break;
+                    ProjectileKind kind = projectiles_[projectileIndex].kind;
+
+                    // BlackHoleGrenade → activate wormhole
+                    if (kind == ProjectileKind::BlackHoleGrenade) {
+                        int circleIndex = static_cast<int>(&circle - magicCircles_.data());
+                        ActivateWormhole(circle, circleIndex, octaCenter);
+                        DestroyProjectile(projectileIndex);
+                        projectileDestroyed = true;
+                        break;
+                    }
+
+                    // Lance → deactivate circle
+                    if (kind == ProjectileKind::Lance && projectiles_[projectileIndex].owner == ProjectileOwner::Player) {
+                        if (circle.isWormhole && CloseWormhole(projectilePosition)) {
+                            DestroyProjectile(projectileIndex);
+                            projectileDestroyed = true;
+                            break;
+                        }
+                        if (!circle.isWormhole) {
+                            circle.activated = false;
+                            circle.activatedByLaserBeam = false;
+                            circle.fireCooldown = 0.0f;
+                            SpawnShockwave(octaCenter, circle.radius * 1.2f, Color{255, 200, 60, 255});
+                            SpawnHitBurst(projectilePosition, Color{255, 220, 80, 255}, 20);
+                            eventText_ = "CIRCLE CLEARED";
+                            eventTextTimer_ = 1.1f;
+                            DestroyProjectile(projectileIndex);
+                            projectileDestroyed = true;
+                            break;
+                        }
+                    }
+
+                    // Wormhole absorbs everything except Lance (handled above)
+                    if (circle.isWormhole) {
+                        SpawnHitBurst(projectilePosition, Color{170, 70, 255, 255}, 5);
+                        DestroyProjectile(projectileIndex);
+                        projectileDestroyed = true;
+                        break;
+                    }
+
+                    if (MagicCircleCanActivate(kind)) {
+                        if (!circle.activated) {
+                            circle.activatedKind = kind;
+                            circle.activated = true;
+                            circle.activatedByLaserBeam = false;
+                            circle.fireRateMult = config_.magicCircleFireRateMult;
+                            circle.homingTurnRate = config_.magicCircleHomingTurnRate;
+                            circle.fireCooldown = 0.0f;
+                            SpawnShockwave(octaCenter, circle.radius * 1.8f, MagicCircleTint(circle));
+                            SpawnHitBurst(projectilePosition, MagicCircleTint(circle), 30);
+                            eventText_ = MagicCircleKindName(circle);
+                            eventTextTimer_ = 1.2f;
+                        } else if (circle.activatedKind != kind) {
+                            SpawnShockwave(octaCenter, 0.5f, Color{120, 100, 140, 255});
+                            DestroyProjectile(projectileIndex);
+                            projectileDestroyed = true;
+                            break;
+                        }
+                        SpawnHitBurst(projectilePosition, Color{220, 180, 255, 255}, 6);
+                        DestroyProjectile(projectileIndex);
+                        projectileDestroyed = true;
+                        break;
+                    }
+                    // Non-activator projectile → ignored (passes through)
                 }
             }
         }
@@ -2948,11 +3392,11 @@ void Game::UpdateArenaBounds() {
         Vector3 position = BodyPosition(enemy.body);
         if (IsSphericalMap()) {
             float distance = Vector3Length(position);
-            bool outside = IsHollowWorldMap()
+            bool outside = IsHollowPhysicsForWorld(enemy.world)
                 ? (distance > SphericalRadius() + 3.0f || distance < std::max(1.0f, SphericalRadius() - SphericalCleanupDistance()))
                 : (distance > SphericalCleanupDistance() || distance < SphericalRadius() * 0.55f);
             if (outside) {
-                Vector3 target = SphericalSurfacePoint(position, SphericalEnemyAltitude(enemy.type));
+                Vector3 target = SphericalSurfacePoint(position, SphericalEnemyAltitude(enemy.type), enemy.world);
                 physics_.Bodies().SetPosition(enemy.body, ToJoltVector(target), JPH::EActivation::Activate);
                 physics_.Bodies().SetLinearVelocity(enemy.body, JPH::Vec3::sZero());
                 enemy.externalVelocity = Vector3Zero();
@@ -3417,7 +3861,9 @@ void Game::FireProjectile(ProjectileKind kind, Vector3 direction, float speed, f
     projectileConfig.motionType = JPH::EMotionType::Dynamic;
     projectileConfig.layer = Layers::PROJECTILE;
     projectileConfig.linearVelocity = timeStopped_ ? JPH::Vec3::sZero() : JPH::Vec3(intendedVelocity.x, intendedVelocity.y, intendedVelocity.z);
-    projectileConfig.gravityFactor = IsSphericalMap() ? 0.0f : kind == ProjectileKind::Rocket ? 0.02f : kind == ProjectileKind::BlackHoleGrenade ? 0.45f : 0.0f;
+    projectileConfig.gravityFactor = (IsSphericalMap() || playerWorld_ == 1)
+        ? 0.0f
+        : kind == ProjectileKind::Rocket ? 0.02f : kind == ProjectileKind::BlackHoleGrenade ? 0.45f : kind == ProjectileKind::DroneCanister ? 0.65f : 0.0f;
     projectileConfig.linearDamping = 0.0f;
     projectileConfig.motionQuality = JPH::EMotionQuality::LinearCast;
     projectileConfig.allowSleeping = false;
@@ -3428,23 +3874,25 @@ void Game::FireProjectile(ProjectileKind kind, Vector3 direction, float speed, f
         JPH::Quat::sIdentity(),
         projectileConfig);
 
-    projectiles_.push_back(Projectile{body, kind, life, life, damage, radius, maxRadius, color, 0, intendedVelocity, ProjectileOwner::Player, timeStopped_});
+    projectiles_.push_back(Projectile{body, kind, life, life, damage, radius, maxRadius, color, 0, intendedVelocity, ProjectileOwner::Player, timeStopped_, {}, 0.0f, false, playerWorld_});
 }
 
-void Game::FireEnemyProjectile(ProjectileKind kind, Vector3 position, Vector3 direction, float speed, float damage, float life, float radius, float maxRadius, Color color) {
+void Game::FireEnemyProjectile(ProjectileKind kind, Vector3 position, Vector3 direction, float speed, float damage, float life, float radius, float maxRadius, Color color, int world) {
     Vector3 intendedVelocity = Vector3Scale(direction, speed);
 
     PhysicsWorld::BodyConfig projectileConfig;
     projectileConfig.motionType = JPH::EMotionType::Dynamic;
     projectileConfig.layer = Layers::PROJECTILE;
     projectileConfig.linearVelocity = timeStopped_ ? JPH::Vec3::sZero() : JPH::Vec3(intendedVelocity.x, intendedVelocity.y, intendedVelocity.z);
-    projectileConfig.gravityFactor = IsSphericalMap() ? 0.0f : kind == ProjectileKind::Rocket ? 0.02f : kind == ProjectileKind::BlackHoleGrenade ? 0.45f : 0.0f;
+    projectileConfig.gravityFactor = (IsSphericalMap() || world == 1)
+        ? 0.0f
+        : kind == ProjectileKind::Rocket ? 0.02f : kind == ProjectileKind::BlackHoleGrenade ? 0.45f : kind == ProjectileKind::DroneCanister ? 0.65f : 0.0f;
     projectileConfig.linearDamping = 0.0f;
     projectileConfig.motionQuality = JPH::EMotionQuality::LinearCast;
     projectileConfig.allowSleeping = false;
 
     JPH::BodyID body = physics_.CreateBody(projectileShape_, ToJoltVector(position), JPH::Quat::sIdentity(), projectileConfig);
-    projectiles_.push_back(Projectile{body, kind, life, life, damage, radius, maxRadius, color, 0, intendedVelocity, ProjectileOwner::Enemy, timeStopped_});
+    projectiles_.push_back(Projectile{body, kind, life, life, damage, radius, maxRadius, color, 0, intendedVelocity, ProjectileOwner::Enemy, timeStopped_, {}, 0.0f, false, world});
 }
 
 void Game::FireLaser(float charge) {
@@ -3483,10 +3931,31 @@ void Game::FireLaser(float charge) {
         ++i;
     }
 
+    for (MagicCircle& circle : magicCircles_) {
+        if (circle.isWormhole) {
+            continue;
+        }
+        Vector3 circleUp = UpForWorldAt(circle.position, 0);
+        Vector3 octaCenter = Vector3Add(circle.position, Vector3Scale(circleUp, 1.0f + circle.radius * 0.4f));
+        if (DistancePointToSegment(octaCenter, start, end) > circle.radius + beamRadius) {
+            continue;
+        }
+        circle.activated = true;
+        circle.activatedKind = ProjectileKind::LaserShot;
+        circle.activatedByLaserBeam = true;
+        circle.fireRateMult = config_.magicCircleFireRateMult;
+        circle.homingTurnRate = config_.magicCircleHomingTurnRate;
+        circle.fireCooldown = 0.0f;
+        SpawnShockwave(octaCenter, circle.radius * 1.8f, MagicCircleTint(circle));
+        SpawnHitBurst(octaCenter, MagicCircleTint(circle), 30);
+        eventText_ = MagicCircleKindName(circle);
+        eventTextTimer_ = 1.2f;
+    }
+
     cameraShake_ = std::min(1.0f, cameraShake_ + 0.55f + normalizedCharge * 0.35f);
 }
 
-void Game::FireEnemyShot(Vector3 position, Vector3 direction) {
+void Game::FireEnemyShot(Vector3 position, Vector3 direction, int world) {
     Vector3 intendedVelocity = Vector3Scale(direction, config_.enemyShotSpeed);
     PhysicsWorld::BodyConfig projectileConfig;
     projectileConfig.motionType = JPH::EMotionType::Dynamic;
@@ -3503,10 +3972,10 @@ void Game::FireEnemyShot(Vector3 position, Vector3 direction) {
         JPH::Quat::sIdentity(),
         projectileConfig);
 
-    projectiles_.push_back(Projectile{body, ProjectileKind::EnemyShot, 3.0f, 3.0f, config_.enemyShotDamage, 0.2f, 0.2f, Color{105, 255, 220, 255}, 0, intendedVelocity, ProjectileOwner::Enemy, timeStopped_});
+    projectiles_.push_back(Projectile{body, ProjectileKind::EnemyShot, 3.0f, 3.0f, config_.enemyShotDamage, 0.2f, 0.2f, Color{105, 255, 220, 255}, 0, intendedVelocity, ProjectileOwner::Enemy, timeStopped_, {}, 0.0f, false, world});
 }
 
-void Game::FireHomingShot(Vector3 position, Vector3 direction, float speed, float turnRate, float life, float damage, Color color, ProjectileOwner owner) {
+void Game::FireHomingShot(Vector3 position, Vector3 direction, float speed, float turnRate, float life, float damage, Color color, ProjectileOwner owner, int world) {
     Vector3 intendedVelocity = Vector3Scale(direction, speed);
     PhysicsWorld::BodyConfig projectileConfig;
     projectileConfig.motionType = JPH::EMotionType::Dynamic;
@@ -3518,7 +3987,7 @@ void Game::FireHomingShot(Vector3 position, Vector3 direction, float speed, floa
     projectileConfig.allowSleeping = false;
 
     JPH::BodyID body = physics_.CreateBody(projectileShape_, ToJoltVector(position), JPH::Quat::sIdentity(), projectileConfig);
-    Projectile proj{body, ProjectileKind::HomingShot, life, life, damage, 0.22f, 0.22f, color, 0, intendedVelocity, owner, timeStopped_};
+    Projectile proj{body, ProjectileKind::HomingShot, life, life, damage, 0.22f, 0.22f, color, 0, intendedVelocity, owner, timeStopped_, {}, 0.0f, false, owner == ProjectileOwner::Player ? playerWorld_ : world};
     proj.turnRate = turnRate;
     projectiles_.push_back(proj);
 }
@@ -3545,7 +4014,7 @@ void Game::FireCurseOrb(Vector3 direction) {
     JPH::BodyID body = physics_.CreateBody(projectileShape_, ToJoltVector(spawn),
         JPH::Quat::sIdentity(), projConfig);
     Projectile proj{body, ProjectileKind::CurseOrb, life, life, damage, 0.24f, 0.24f,
-        color, 0, intendedVelocity, ProjectileOwner::Player, timeStopped_};
+        color, 0, intendedVelocity, ProjectileOwner::Player, timeStopped_, {}, 0.0f, false, playerWorld_};
     proj.turnRate = turnRate;
     projectiles_.push_back(proj);
 }
@@ -3570,35 +4039,137 @@ void Game::FireSoulOrb(Vector3 position, float damage, Vector3 direction) {
     JPH::BodyID body = physics_.CreateBody(projectileShape_, ToJoltVector(position),
         JPH::Quat::sIdentity(), projConfig);
     Projectile proj{body, ProjectileKind::SoulOrb, life, life, damage, 0.18f, 0.18f,
-        color, 0, intendedVelocity, ProjectileOwner::Player, timeStopped_};
+        color, 0, intendedVelocity, ProjectileOwner::Player, timeStopped_, {}, 0.0f, false, playerWorld_};
     proj.turnRate = turnRate;
     projectiles_.push_back(proj);
 }
 
-void Game::FireMagicProjectile(Vector3 position, Vector3 direction, float damage, Color color) {
-    float speed = 40.0f;
-    float life = 2.5f;
-    float radius = 0.22f;
-    float turnRate = 3.5f;
-
+void Game::FireMagicProjectile(ProjectileKind kind, Vector3 position, Vector3 direction, float speed, float damage,
+    float life, float radius, float maxRadius, Color color, float turnRate) {
     Vector3 intendedVelocity = Vector3Scale(direction, speed);
     PhysicsWorld::BodyConfig projConfig;
     projConfig.motionType = JPH::EMotionType::Dynamic;
     projConfig.layer = Layers::PROJECTILE;
     projConfig.linearVelocity = timeStopped_ ? JPH::Vec3::sZero()
         : JPH::Vec3(intendedVelocity.x, intendedVelocity.y, intendedVelocity.z);
-    projConfig.gravityFactor = 0.0f;
+    projConfig.gravityFactor = (IsSphericalMap())
+        ? 0.0f
+        : kind == ProjectileKind::Rocket ? 0.02f : 0.0f;
     projConfig.linearDamping = 0.0f;
     projConfig.motionQuality = JPH::EMotionQuality::LinearCast;
     projConfig.allowSleeping = false;
 
     JPH::BodyID body = physics_.CreateBody(projectileShape_, ToJoltVector(position),
         JPH::Quat::sIdentity(), projConfig);
-    Projectile proj{body, ProjectileKind::HomingShot, life, life, damage, radius, radius,
-        color, 0, intendedVelocity, ProjectileOwner::Player, timeStopped_};
+    Projectile proj{body, kind, life, life, damage, radius, maxRadius,
+        color, 0, intendedVelocity, ProjectileOwner::Player, timeStopped_, {}, 0.0f, false, 0};
     proj.turnRate = turnRate;
     proj.fromMagicCircle = true;
     projectiles_.push_back(proj);
+}
+
+void Game::FireMagicLaserBeam(Vector3 position, Vector3 direction) {
+    Vector3 forward = SafeNormalize(direction, Vector3{0.0f, 0.0f, -1.0f});
+    Vector3 end = Vector3Add(position, Vector3Scale(forward, config_.laserBeamRange));
+    float damage = config_.laserBaseDamage + config_.laserChargeDamage;
+    float beamRadius = config_.laserBeamRadius + config_.laserBeamRadiusChargeBonus;
+    float beamLife = config_.laserBeamLifetime + config_.laserBeamLifetimeChargeBonus;
+    beams_.push_back(Beam{
+        position,
+        end,
+        beamLife,
+        beamLife,
+        beamRadius,
+        1.0f,
+        Color{190, 70, 255, 255}
+    });
+
+    for (size_t i = 0; i < enemies_.size();) {
+        Vector3 enemyPosition = BodyPosition(enemies_[i].body);
+        float hitDistance = beamRadius + enemies_[i].radius * 0.85f;
+        if (DistancePointToSegment(enemyPosition, position, end) <= hitDistance) {
+            enemies_[i].health -= damage;
+            totalDamageDealt_ += damage;
+            SpawnHitBurst(enemyPosition, Color{210, 130, 255, 255}, 20);
+            if (enemies_[i].health <= 0.0f) {
+                score_ += enemies_[i].scoreValue;
+                SpawnHitBurst(enemyPosition, Color{255, 245, 255, 255}, 22);
+                DestroyEnemy(i);
+                continue;
+            }
+        }
+        ++i;
+    }
+    cameraShake_ = std::min(1.0f, cameraShake_ + 0.22f);
+}
+
+float Game::MagicCircleBaseCooldown(const MagicCircle& circle) const {
+    if (circle.activatedByLaserBeam) {
+        return config_.laserBeamCooldown;
+    }
+    switch (circle.activatedKind) {
+        case ProjectileKind::LaserShot:
+            return config_.plasmaCooldown;
+        case ProjectileKind::Flame:
+            return 0.045f;
+        case ProjectileKind::Rocket:
+            return 0.82f;
+        case ProjectileKind::Pellet:
+            return 0.58f;
+        default:
+            return config_.magicCircleFireInterval;
+    }
+}
+
+bool Game::MagicCircleCanActivate(ProjectileKind kind) const {
+    return kind == ProjectileKind::LaserShot
+        || kind == ProjectileKind::Flame
+        || kind == ProjectileKind::Rocket
+        || kind == ProjectileKind::Pellet;
+}
+
+Color Game::MagicCircleTint(ProjectileKind kind) const {
+    switch (kind) {
+        case ProjectileKind::LaserShot:
+            return Color{210, 120, 255, 255};
+        case ProjectileKind::Flame:
+            return Color{185, 70, 245, 235};
+        case ProjectileKind::Rocket:
+            return Color{170, 90, 255, 255};
+        case ProjectileKind::Pellet:
+            return Color{225, 155, 255, 255};
+        default:
+            return Color{190, 90, 255, 255};
+    }
+}
+
+Color Game::MagicCircleTint(const MagicCircle& circle) const {
+    if (circle.activatedByLaserBeam) {
+        return Color{190, 70, 255, 255};
+    }
+    return MagicCircleTint(circle.activatedKind);
+}
+
+const char* Game::MagicCircleKindName(ProjectileKind kind) const {
+    switch (kind) {
+        case ProjectileKind::LaserShot:
+            return "MAGIC PLASMA";
+        case ProjectileKind::Flame:
+            return "MAGIC FLAME";
+        case ProjectileKind::Rocket:
+            return "MAGIC ROCKET";
+        case ProjectileKind::Pellet:
+            return "MAGIC SHOT";
+        default:
+            return "MAGIC CIRCLE";
+    }
+}
+
+const char* Game::MagicCircleKindName(const MagicCircle& circle) const {
+    if (circle.activatedByLaserBeam) {
+        return "MAGIC LASER";
+    }
+    return MagicCircleKindName(circle.activatedKind);
 }
 
 void Game::FireEnemyBeam(Vector3 origin, Vector3 direction, float charge) {
@@ -3623,20 +4194,20 @@ void Game::FireEnemyBeam(Vector3 origin, Vector3 direction, float charge) {
     SpawnHitBurst(origin, Color{255, 230, 145, 255}, 8);
 }
 
-void Game::SpawnEnemyNanoPlatform(Vector3 origin, Vector3 direction) {
+void Game::SpawnEnemyNanoPlatform(Vector3 origin, Vector3 direction, int world) {
     Vector3 forward = Vector3Normalize(direction);
     Vector3 target = Vector3Add(origin, Vector3Scale(forward, config_.nanoPlatformRange * 0.72f));
     float halfLength = config_.nanoPlatformLength * 0.36f;
     float halfWidth = config_.nanoPlatformWidth * 0.36f;
     Vector3 scale = Vector3{config_.nanoPlatformLength * 0.72f, config_.nanoPlatformHeight, config_.nanoPlatformWidth * 0.72f};
     if (IsSphericalMap()) {
-        Vector3 normal = SphericalUpAt(target);
-        float targetAltitude = std::max(SphericalPlayerAltitude(), SphericalAltitudeAt(target));
+        Vector3 normal = SphericalUpAt(target, world);
+        float targetAltitude = std::max(SphericalPlayerAltitude(), SphericalAltitudeAt(target, world));
         targetAltitude += config_.nanoPlatformRange * 0.72f * 0.18f;
-        Vector3 center = SphericalSurfacePoint(target, targetAltitude);
+        Vector3 center = SphericalSurfacePoint(target, targetAltitude, world);
         Vector3 platformRight = SafeNormalize(Vector3CrossProduct(forward, normal), PlayerRight());
         Vector3 platformForward = SafeNormalize(Vector3CrossProduct(normal, platformRight), PlayerForward());
-        nanoPlatforms_.push_back(NanoPlatform{center, scale, normal, platformRight, platformForward, config_.nanoPlatformDelay, config_.nanoPlatformLifetime * 0.45f, config_.nanoPlatformLifetime * 0.45f});
+        nanoPlatforms_.push_back(NanoPlatform{center, scale, normal, platformRight, platformForward, config_.nanoPlatformDelay, config_.nanoPlatformLifetime * 0.45f, config_.nanoPlatformLifetime * 0.45f, world});
         SpawnHitBurst(center, Color{255, 220, 115, 255}, 8);
         return;
     }
@@ -3666,7 +4237,7 @@ void Game::SpawnEnemyNanoPlatform(Vector3 origin, Vector3 direction) {
         platformRight = Vector3Normalize(platformRight);
     }
     Vector3 platformForward = Vector3Normalize(Vector3CrossProduct(normal, platformRight));
-    nanoPlatforms_.push_back(NanoPlatform{position, scale, normal, platformRight, platformForward, config_.nanoPlatformDelay, config_.nanoPlatformLifetime * 0.45f, config_.nanoPlatformLifetime * 0.45f});
+    nanoPlatforms_.push_back(NanoPlatform{position, scale, normal, platformRight, platformForward, config_.nanoPlatformDelay, config_.nanoPlatformLifetime * 0.45f, config_.nanoPlatformLifetime * 0.45f, world});
     SpawnHitBurst(Vector3{position.x, position.y + scale.y, position.z}, Color{255, 220, 115, 255}, 8);
 }
 
@@ -3764,8 +4335,10 @@ void Game::SwitchDuelistWeapon(Enemy& enemy, float distance) {
 void Game::UpdateDuelist(Enemy& enemy, Vector3 position, Vector3 direction, float dt, float& speed, bool& skipVelocity) {
     Vector3 toPlayer = Vector3Subtract(camera_.position, position);
     float distance = Vector3Length(toPlayer);
-    Vector3 localUp = IsSphericalMap() ? SphericalUpAt(position) : Vector3{0.0f, 1.0f, 0.0f};
-    Vector3 tangent = IsSphericalMap() ? SafeNormalize(Vector3CrossProduct(localUp, direction), PlayerRight()) : Vector3{-direction.z, 0.0f, direction.x};
+    Vector3 localUp = UpForWorldAt(position, enemy.world);
+    Vector3 tangent = IsSphericalMap()
+        ? SafeNormalize(Vector3CrossProduct(localUp, direction), PlayerRight())
+        : SafeNormalize(Vector3CrossProduct(localUp, direction), Vector3{-direction.z, 0.0f, direction.x});
 
     // Strategic AI: adaptive movement
     if (enemy.aiTier >= 1) {
@@ -3852,11 +4425,12 @@ void Game::UpdateDuelist(Enemy& enemy, Vector3 position, Vector3 direction, floa
     if (IsSphericalMap()) {
         float targetAlt = SphericalEnemyAltitude(EnemyType::Duelist);
         if (enemy.usingFlightRig) targetAlt += 4.0f;
-        float radialCorrection = std::clamp((SphericalSignedRadius(targetAlt) - Vector3Length(position)) * 7.0f, -12.0f, 8.0f);
-        if (IsHollowWorldMap()) radialCorrection = -radialCorrection;
+        float radialCorrection = std::clamp((SphericalSignedRadius(targetAlt, enemy.world) - Vector3Length(position)) * 7.0f, -12.0f, 8.0f);
+        if (IsHollowPhysicsForWorld(enemy.world)) radialCorrection = -radialCorrection;
         velocity = Vector3Add(Vector3Add(Vector3Scale(direction, speed), Vector3Scale(localUp, radialCorrection)), enemy.externalVelocity);
     } else {
-        float targetY = enemy.usingFlightRig ? 5.0f : 1.2f;
+        float targetAltitude = enemy.usingFlightRig ? 5.0f : 1.2f;
+        float targetY = FlatGroundYForWorld(enemy.world) + FlatUpForWorld(enemy.world).y * targetAltitude;
         float gravScale = enemy.usingSpaceSuit ? 0.24f : 1.0f;
         velocity = Vector3{
             direction.x * speed + enemy.externalVelocity.x,
@@ -3869,7 +4443,7 @@ void Game::UpdateDuelist(Enemy& enemy, Vector3 position, Vector3 direction, floa
 }
 
 void Game::FireDuelistWeapon(Enemy& enemy, Vector3 position, Vector3 toPlayer) {
-    Vector3 localUp = IsSphericalMap() ? SphericalUpAt(position) : Vector3{0.0f, 1.0f, 0.0f};
+    Vector3 localUp = UpForWorldAt(position, enemy.world);
     Vector3 origin = Vector3Add(position, Vector3Scale(localUp, enemy.radius * 0.35f));
     Vector3 target = camera_.position;
     float distanceToPlayer = Vector3Distance(origin, target);
@@ -3902,7 +4476,7 @@ void Game::FireDuelistWeapon(Enemy& enemy, Vector3 position, Vector3 toPlayer) {
             enemy.cooldownTimer = 1.05f / rate;
             enemy.telegraphTimer = 0.34f;
         } else {
-            FireEnemyProjectile(ProjectileKind::LaserShot, origin, aimDirection, 58.0f, config_.plasmaDamage, 1.6f, 0.17f, 0.17f, Color{255, 235, 145, 255});
+            FireEnemyProjectile(ProjectileKind::LaserShot, origin, aimDirection, 58.0f, config_.plasmaDamage, 1.6f, 0.17f, 0.17f, Color{255, 235, 145, 255}, enemy.world);
             enemy.cooldownTimer = 0.28f / rate;
         }
     } else if (enemy.weaponSlot == 1) {
@@ -3911,18 +4485,18 @@ void Game::FireDuelistWeapon(Enemy& enemy, Vector3 position, Vector3 toPlayer) {
             enemy.cooldownTimer = 0.5f / rate;
         } else {
             Vector3 flameDirection = Vector3Normalize(Vector3Add(aimDirection, Vector3Add(Vector3Scale(right, RandomFloat(-0.12f, 0.12f)), Vector3Scale(up, RandomFloat(-0.04f, 0.08f)))));
-            FireEnemyProjectile(ProjectileKind::Flame, origin, flameDirection, RandomFloat(17.0f, 22.0f), config_.flameDamage, config_.flameLifetime, 0.14f, config_.flameMaxRadius, Color{255, 120, 34, 235});
+            FireEnemyProjectile(ProjectileKind::Flame, origin, flameDirection, RandomFloat(17.0f, 22.0f), config_.flameDamage, config_.flameLifetime, 0.14f, config_.flameMaxRadius, Color{255, 120, 34, 235}, enemy.world);
             enemy.cooldownTimer = 0.12f / rate;
         }
     } else if (enemy.weaponSlot == 2) {
         if (GetRandomValue(0, 99) < 22) {
             for (int i = 0; i < 3; ++i) {
                 Vector3 direction = Vector3Normalize(Vector3Add(aimDirection, Vector3Add(Vector3Scale(right, RandomFloat(-0.18f, 0.18f)), Vector3Scale(up, RandomFloat(-0.04f, 0.1f)))));
-                FireEnemyProjectile(ProjectileKind::Rocket, origin, direction, 22.0f, config_.rocketImpactDamage, 2.6f, 0.28f, 0.28f, Color{245, 190, 130, 255});
+                FireEnemyProjectile(ProjectileKind::Rocket, origin, direction, 22.0f, config_.rocketImpactDamage, 2.6f, 0.28f, 0.28f, Color{245, 190, 130, 255}, enemy.world);
             }
             enemy.cooldownTimer = 1.65f / rate;
         } else {
-            FireEnemyProjectile(ProjectileKind::Rocket, origin, aimDirection, 27.0f, config_.rocketImpactDamage, 2.8f, 0.34f, 0.34f, Color{245, 190, 130, 255});
+            FireEnemyProjectile(ProjectileKind::Rocket, origin, aimDirection, 27.0f, config_.rocketImpactDamage, 2.8f, 0.34f, 0.34f, Color{245, 190, 130, 255}, enemy.world);
             enemy.cooldownTimer = 1.15f / rate;
         }
         enemy.telegraphTimer = 0.28f;
@@ -3933,7 +4507,7 @@ void Game::FireDuelistWeapon(Enemy& enemy, Vector3 position, Vector3 toPlayer) {
             float side = RandomFloat(glass ? -0.08f : -0.16f, glass ? 0.08f : 0.16f);
             float lift = RandomFloat(glass ? -0.045f : -0.08f, glass ? 0.055f : 0.08f);
             Vector3 direction = Vector3Normalize(Vector3Add(aimDirection, Vector3Add(Vector3Scale(right, side), Vector3Scale(up, lift))));
-            FireEnemyProjectile(glass ? ProjectileKind::GlassShard : ProjectileKind::Pellet, origin, direction, glass ? config_.glassShardSpeed * 0.78f : RandomFloat(42.0f, 50.0f), glass ? config_.glassShardDamage : config_.shotgunPelletDamage, glass ? config_.glassShardLingerTime : 0.58f, glass ? 0.13f : 0.1f, glass ? 0.13f : 0.1f, glass ? Color{190, 245, 255, 255} : Color{255, 205, 130, 255});
+            FireEnemyProjectile(glass ? ProjectileKind::GlassShard : ProjectileKind::Pellet, origin, direction, glass ? config_.glassShardSpeed * 0.78f : RandomFloat(42.0f, 50.0f), glass ? config_.glassShardDamage : config_.shotgunPelletDamage, glass ? config_.glassShardLingerTime : 0.58f, glass ? 0.13f : 0.1f, glass ? 0.13f : 0.1f, glass ? Color{190, 245, 255, 255} : Color{255, 205, 130, 255}, enemy.world);
         }
         AddEnemyImpulse(enemy, Vector3Scale(aimDirection, -5.0f));
         enemy.cooldownTimer = (glass ? 1.05f : 0.82f) / rate;
@@ -3945,24 +4519,24 @@ void Game::FireDuelistWeapon(Enemy& enemy, Vector3 position, Vector3 toPlayer) {
         } else {
             blackHole = distanceToPlayer > 22.0f && GetRandomValue(0, 99) < 1;
         }
-        FireEnemyProjectile(blackHole ? ProjectileKind::BlackHoleGrenade : ProjectileKind::GravityNail, origin, aimDirection, blackHole ? 22.0f : 58.0f, blackHole ? config_.blackHoleGrenadeDamage : config_.gravityNailDamage, blackHole ? 1.55f : 1.0f, blackHole ? 0.28f : 0.15f, blackHole ? 0.28f : 0.15f, blackHole ? Color{120, 70, 190, 255} : Color{170, 200, 255, 255});
+        FireEnemyProjectile(blackHole ? ProjectileKind::BlackHoleGrenade : ProjectileKind::GravityNail, origin, aimDirection, blackHole ? 22.0f : 58.0f, blackHole ? config_.blackHoleGrenadeDamage : config_.gravityNailDamage, blackHole ? 1.55f : 1.0f, blackHole ? 0.28f : 0.15f, blackHole ? 0.28f : 0.15f, blackHole ? Color{120, 70, 190, 255} : Color{170, 200, 255, 255}, enemy.world);
         enemy.cooldownTimer = (blackHole ? 1.55f : 0.9f) / rate;
         enemy.telegraphTimer = 0.3f;
     } else if (enemy.weaponSlot == 6) {
         int burst = GetRandomValue(0, 99) < 26 ? 2 : 1;
         for (int i = 0; i < burst; ++i) {
             Vector3 direction = Vector3Normalize(Vector3Add(aimDirection, Vector3Add(Vector3Scale(right, RandomFloat(-0.06f, 0.06f)), Vector3Scale(up, RandomFloat(-0.035f, 0.045f)))));
-            FireEnemyProjectile(ProjectileKind::Lance, origin, direction, config_.longinusSpearSpeed * 0.82f, config_.longinusSpearDamage, 1.15f, 0.28f, 0.28f, Color{255, 175, 70, 255});
+            FireEnemyProjectile(ProjectileKind::Lance, origin, direction, config_.longinusSpearSpeed * 0.82f, config_.longinusSpearDamage, 1.15f, 0.28f, 0.28f, Color{255, 175, 70, 255}, enemy.world);
         }
         AddEnemyImpulse(enemy, Vector3Scale(aimDirection, -config_.longinusSpearImpulse * (burst > 1 ? 0.45f : 0.32f)));
         enemy.cooldownTimer = (burst > 1 ? 1.35f : 1.05f) / rate;
     } else if (enemy.weaponSlot == 7) {
         if (GetRandomValue(0, 99) < 28) {
-            SpawnEnemyNanoPlatform(origin, aimDirection);
+            SpawnEnemyNanoPlatform(origin, aimDirection, enemy.world);
             enemy.cooldownTimer = 1.4f / rate;
             enemy.telegraphTimer = 0.28f;
         } else {
-            SpawnEnemyNanoBlade(origin, aimDirection);
+            SpawnEnemyNanoBlade(origin, aimDirection, enemy.world);
             enemy.cooldownTimer = 1.25f / rate;
             enemy.telegraphTimer = 0.35f;
         }
@@ -3973,9 +4547,9 @@ void Game::FireDuelistWeapon(Enemy& enemy, Vector3 position, Vector3 toPlayer) {
     }
 }
 
-void Game::FireBossRing(Vector3 position, int count, float speedScale) {
+void Game::FireBossRing(Vector3 position, int count, float speedScale, int world) {
     float spin = static_cast<float>(GetTime()) * 0.65f;
-    Vector3 up = IsSphericalMap() ? SphericalUpAt(position) : Vector3{0.0f, 1.0f, 0.0f};
+    Vector3 up = UpForWorldAt(position, world);
     Vector3 basisA = SafeNormalize(ProjectOnSphericalTangent(camera_.position, up), Vector3{1.0f, 0.0f, 0.0f});
     if (!IsSphericalMap()) {
         basisA = Vector3{1.0f, 0.0f, 0.0f};
@@ -3996,7 +4570,7 @@ void Game::FireBossRing(Vector3 position, int count, float speedScale) {
         projectileConfig.allowSleeping = false;
 
         JPH::BodyID body = physics_.CreateBody(projectileShape_, ToJoltVector(position), JPH::Quat::sIdentity(), projectileConfig);
-        projectiles_.push_back(Projectile{body, ProjectileKind::EnemyShot, 4.2f, 4.2f, config_.enemyShotDamage, 0.24f, 0.24f, Color{180, 125, 255, 255}, 0, intendedVelocity, ProjectileOwner::Enemy, timeStopped_});
+        projectiles_.push_back(Projectile{body, ProjectileKind::EnemyShot, 4.2f, 4.2f, config_.enemyShotDamage, 0.24f, 0.24f, Color{180, 125, 255, 255}, 0, intendedVelocity, ProjectileOwner::Enemy, timeStopped_, {}, 0.0f, false, world});
     }
     SpawnShockwave(position, 4.8f, Color{170, 115, 255, 255});
 }
@@ -4112,7 +4686,8 @@ void Game::FireNanoBlade(Vector3 direction) {
         config_.nanoBladeThickness,
         config_.nanoBladePlaneThickness,
         config_.nanoBladeDamage / config_.nanoBladeLifetime,
-        ProjectileOwner::Player
+        ProjectileOwner::Player,
+        playerWorld_
     });
     SpawnHitBurst(WeaponMuzzlePosition(), Color{255, 225, 140, 255}, 8);
     eventText_ = "NANO EDGE";
@@ -4170,6 +4745,21 @@ void Game::FireSpearThrust(Vector3 direction) {
         ++i;
     }
 
+    if (HasWormhole()) {
+        const WormholePortal& portal = wormholes_.front();
+        Vector3 gates[2] = {portal.frontPosition, portal.backPosition};
+        float closeRadius = std::max(config_.wormholeTriggerRadius, config_.wormholeVisualRadius) + 0.75f;
+        for (Vector3 gate : gates) {
+            Vector3 toGate = Vector3Subtract(gate, origin);
+            float along = Vector3DotProduct(toGate, forward);
+            Vector3 closest = Vector3Add(origin, Vector3Scale(forward, std::clamp(along, 0.0f, range)));
+            if (along >= 0.0f && along <= range && Vector3Distance(gate, closest) <= closeRadius) {
+                CloseWormhole(gate);
+                break;
+            }
+        }
+    }
+
     Vector3 up = PlayerUp();
     Vector3 end = Vector3Add(origin, Vector3Scale(forward, range));
     beams_.push_back(Beam{
@@ -4198,14 +4788,14 @@ void Game::FireSpearThrust(Vector3 direction) {
     playerVelocity_ = Vector3Add(playerVelocity_, thrust);
     camera_.position = Vector3Add(camera_.position, Vector3Scale(forward, std::clamp(impulse * 0.055f, 0.35f, 1.25f)));
     if (IsSphericalMap()) {
-        float surfaceRadius = SphericalSignedRadius(SphericalPlayerAltitude());
-        bool pushedIntoSurface = IsHollowWorldMap()
+        float surfaceRadius = SphericalSignedRadius(SphericalPlayerAltitude(), playerWorld_);
+        bool pushedIntoSurface = IsHollowPhysicsForWorld(playerWorld_)
             ? Vector3Length(camera_.position) > surfaceRadius
             : Vector3Length(camera_.position) < surfaceRadius;
         if (pushedIntoSurface) {
-            camera_.position = SphericalSurfacePoint(camera_.position, SphericalPlayerAltitude());
+            camera_.position = SphericalSurfacePoint(camera_.position, SphericalPlayerAltitude(), playerWorld_);
         }
-        camera_.up = SphericalUpAt(camera_.position);
+        camera_.up = SphericalUpAt(camera_.position, playerWorld_);
     } else {
         camera_.position.y = std::max(playerHeight_, camera_.position.y);
     }
@@ -4233,7 +4823,7 @@ void Game::DetonateSpear(Vector3 position, ProjectileOwner owner) {
                 }
                 Vector3 direction = Vector3Subtract(enemyPosition, position);
                 if (Vector3Length(direction) <= 0.001f) {
-                    direction = IsSphericalMap() ? SphericalUpAt(position) : Vector3{0.0f, 1.0f, 0.0f};
+                    direction = UpForWorldAt(position, enemy.world);
                 } else {
                     direction = Vector3Normalize(direction);
                 }
@@ -4256,7 +4846,7 @@ void Game::DetonateSpear(Vector3 position, ProjectileOwner owner) {
     SpawnHitBurst(position, Color{255, 200, 80, 255}, 28);
     beams_.push_back(Beam{
         position,
-        Vector3Add(position, Vector3Scale(IsSphericalMap() ? SphericalUpAt(position) : Vector3{0.0f, 1.0f, 0.0f}, 0.01f)),
+        Vector3Add(position, Vector3Scale(UpForWorldAt(position, owner == ProjectileOwner::Player ? playerWorld_ : 0), 0.01f)),
         0.16f,
         0.16f,
         radius * 1.4f,
@@ -4265,15 +4855,16 @@ void Game::DetonateSpear(Vector3 position, ProjectileOwner owner) {
     });
 }
 
-void Game::SpawnEnemyNanoBlade(Vector3 origin, Vector3 direction) {
+void Game::SpawnEnemyNanoBlade(Vector3 origin, Vector3 direction, int world) {
     Vector3 forward = Vector3Normalize(direction);
-    Vector3 planeNormal = Vector3Normalize(Vector3CrossProduct(forward, Vector3{0.0f, 1.0f, 0.0f}));
+    Vector3 localUp = UpForWorldAt(origin, world);
+    Vector3 planeNormal = Vector3Normalize(Vector3CrossProduct(forward, localUp));
     if (Vector3Length(planeNormal) <= 0.001f) {
         planeNormal = Vector3{1.0f, 0.0f, 0.0f};
     }
     Vector3 up = Vector3Normalize(Vector3CrossProduct(planeNormal, forward));
     Vector3 center = Vector3Add(origin, Vector3Scale(forward, config_.nanoBladeWaveSpawnDistance));
-    nanoBlades_.push_back(NanoBlade{center, planeNormal, forward, up, Vector3Scale(forward, config_.nanoBladeWaveSpeed * 0.82f), config_.nanoBladeDelay, config_.nanoBladeLifetime, config_.nanoBladeLifetime, config_.nanoBladeRadius, config_.nanoBladeThickness, config_.nanoBladePlaneThickness, config_.nanoBladeDamage / config_.nanoBladeLifetime, ProjectileOwner::Enemy});
+    nanoBlades_.push_back(NanoBlade{center, planeNormal, forward, up, Vector3Scale(forward, config_.nanoBladeWaveSpeed * 0.82f), config_.nanoBladeDelay, config_.nanoBladeLifetime, config_.nanoBladeLifetime, config_.nanoBladeRadius, config_.nanoBladeThickness, config_.nanoBladePlaneThickness, config_.nanoBladeDamage / config_.nanoBladeLifetime, ProjectileOwner::Enemy, world});
     SpawnHitBurst(origin, Color{255, 210, 120, 255}, 6);
 }
 
@@ -4380,18 +4971,21 @@ void Game::Blink() {
 
     Vector3 target = Vector3Add(start, Vector3Scale(forward, travel));
     if (IsSphericalMap()) {
-        float surfaceRadius = SphericalSignedRadius(SphericalPlayerAltitude());
-        bool beyondSurface = IsHollowWorldMap()
+        float surfaceRadius = SphericalSignedRadius(SphericalPlayerAltitude(), playerWorld_);
+        bool beyondSurface = IsHollowPhysicsForWorld(playerWorld_)
             ? Vector3Length(target) > surfaceRadius
             : Vector3Length(target) < surfaceRadius;
         if (beyondSurface) {
-            target = SphericalSurfacePoint(target, SphericalPlayerAltitude());
+            target = SphericalSurfacePoint(target, SphericalPlayerAltitude(), playerWorld_);
         }
-        if (!IsHollowWorldMap() && Vector3Length(target) > SphericalCleanupDistance() * 0.72f) {
-            target = SphericalSurfacePoint(target, SphericalCleanupDistance() * 0.72f - SphericalRadius());
+        if (!IsHollowPhysicsForWorld(playerWorld_) && Vector3Length(target) > SphericalCleanupDistance() * 0.72f) {
+            target = SphericalSurfacePoint(target, SphericalCleanupDistance() * 0.72f - SphericalRadius(), playerWorld_);
         }
     } else {
-        target.y = std::max(playerHeight_, target.y);
+        float floorHeight = FlatGroundYForWorld(playerWorld_) + FlatUpForWorld(playerWorld_).y * playerHeight_;
+        target.y = playerWorld_ == 0
+            ? std::max(floorHeight, target.y)
+            : std::min(floorHeight, target.y);
 
         Vector3 flat = Vector3{target.x, 0.0f, target.z};
         if (Vector3Length(flat) > maxDistance) {
@@ -4402,11 +4996,15 @@ void Game::Blink() {
     }
 
     camera_.position = target;
-    camera_.up = IsSphericalMap() ? SphericalUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
+    camera_.up = UpForWorldAt(camera_.position, playerWorld_);
     camera_.target = Vector3Add(camera_.position, PlayerForward());
     playerVelocity_ = Vector3Scale(playerVelocity_, 0.35f);
 
     for (size_t i = 0; i < enemies_.size();) {
+        if (enemies_[i].world != playerWorld_) {
+            ++i;
+            continue;
+        }
         Vector3 enemyPosition = BodyPosition(enemies_[i].body);
         if (Vector3Distance(enemyPosition, target) <= config_.blinkClearRadius + enemies_[i].radius) {
             score_ += enemies_[i].scoreValue;
@@ -4428,11 +5026,11 @@ void Game::BlinkDuelist(Enemy& enemy, Vector3 awayFrom) {
     Vector3 position = BodyPosition(enemy.body);
     Vector3 direction = Vector3Length(awayFrom) > 0.001f ? Vector3Normalize(awayFrom) : Vector3{1.0f, 0.0f, 0.0f};
     if (IsSphericalMap()) {
-        direction = SafeNormalize(ProjectOnSphericalTangent(direction, SphericalUpAt(position)), PlayerRight());
+        direction = SafeNormalize(ProjectOnSphericalTangent(direction, SphericalUpAt(position, enemy.world)), PlayerRight());
     }
     Vector3 target = Vector3Add(position, Vector3Scale(direction, 8.5f));
     if (IsSphericalMap()) {
-        target = SphericalSurfacePoint(target, SphericalEnemyAltitude(EnemyType::Duelist));
+        target = SphericalSurfacePoint(target, SphericalEnemyAltitude(EnemyType::Duelist), enemy.world);
     } else if (IsSquareMap()) {
         float limit = squareHalfExtent_ - enemy.radius - 1.0f;
         target.x = std::clamp(target.x, -limit, limit);
@@ -4447,7 +5045,7 @@ void Game::BlinkDuelist(Enemy& enemy, Vector3 awayFrom) {
         }
     }
     if (!IsSphericalMap()) {
-        target.y = 1.2f;
+        target.y = FlatGroundYForWorld(enemy.world) + FlatUpForWorld(enemy.world).y * 1.2f;
     }
     physics_.Bodies().SetPosition(enemy.body, ToJoltVector(target), JPH::EActivation::Activate);
     physics_.Bodies().SetLinearVelocity(enemy.body, JPH::Vec3::sZero());
@@ -4488,7 +5086,7 @@ void Game::FireDroneCanister() {
         JPH::Quat::sIdentity(),
         projectileConfig);
 
-    projectiles_.push_back(Projectile{body, ProjectileKind::DroneCanister, 4.0f, 4.0f, 0.0f, 0.35f, 0.35f, Color{140, 155, 170, 255}, 0, intendedVelocity, ProjectileOwner::Player, false});
+    projectiles_.push_back(Projectile{body, ProjectileKind::DroneCanister, 4.0f, 4.0f, 0.0f, 0.35f, 0.35f, Color{140, 155, 170, 255}, 0, intendedVelocity, ProjectileOwner::Player, false, {}, 0.0f, false, playerWorld_});
     SpawnHitBurst(spawn, Color{180, 190, 200, 255}, 6);
 }
 
@@ -4566,9 +5164,9 @@ void Game::ApplyExplosionImpulse(Vector3 position, float radius, float impulse) 
 
     Vector3 direction = Vector3Subtract(player, position);
     if (Vector3Length(direction) <= 0.001f) {
-        direction = IsSphericalMap() ? SphericalUpAt(player) : Vector3{0.0f, 1.0f, 0.0f};
+        direction = UpForWorldAt(player, playerWorld_);
     }
-    Vector3 up = IsSphericalMap() ? SphericalUpAt(player) : Vector3{0.0f, 1.0f, 0.0f};
+    Vector3 up = UpForWorldAt(player, playerWorld_);
     direction = Vector3Add(direction, Vector3Scale(up, 0.75f));
     direction = Vector3Normalize(direction);
     float falloff = 1.0f - std::clamp(distance / std::max(0.001f, radius), 0.0f, 1.0f);
@@ -4586,7 +5184,7 @@ void Game::ApplyExplosionImpulse(Vector3 position, float radius, float impulse) 
 }
 
 void Game::ApplyShotgunRecoil(Vector3 direction) {
-    Vector3 up = IsSphericalMap() ? SphericalUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
+    Vector3 up = UpForWorldAt(camera_.position, playerWorld_);
     Vector3 recoil = Vector3Scale(direction, -config_.shotgunRecoilImpulse);
     recoil = Vector3Add(recoil, Vector3Scale(up, std::max(0.0f, -Vector3DotProduct(direction, up)) * config_.shotgunRecoilVerticalBonus));
     playerVelocity_ = Vector3Add(playerVelocity_, recoil);
@@ -4604,7 +5202,7 @@ void Game::ApplyShotgunRecoil(Vector3 direction) {
 }
 
 void Game::ApplySpearRecoil(Vector3 direction) {
-    Vector3 up = IsSphericalMap() ? SphericalUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
+    Vector3 up = UpForWorldAt(camera_.position, playerWorld_);
     Vector3 recoil = Vector3Scale(direction, -config_.longinusSpearImpulse);
     recoil = Vector3Add(recoil, Vector3Scale(up, std::max(0.0f, -Vector3DotProduct(direction, up)) * config_.longinusSpearImpulse * 0.42f));
     playerVelocity_ = Vector3Add(playerVelocity_, recoil);
@@ -4958,7 +5556,7 @@ Vector3 Game::PlayerForward() const {
     float yaw = yaw_ * kDegToRad;
     float pitch = pitch_ * kDegToRad;
     if (IsSphericalMap()) {
-        Vector3 up = SphericalUpAt(camera_.position);
+        Vector3 up = SphericalUpAt(camera_.position, playerWorld_);
         Vector3 reference = ProjectOnSphericalTangent(asteroidReferenceForward_, up);
         if (Vector3Length(reference) <= 0.001f) {
             reference = ProjectOnSphericalTangent(Vector3{0.0f, 0.0f, -1.0f}, up);
@@ -4970,15 +5568,19 @@ Vector3 Game::PlayerForward() const {
         }
         return Vector3Normalize(Vector3Add(Vector3Scale(reference, std::cos(pitch)), Vector3Scale(up, std::sin(pitch))));
     }
-    return Vector3Normalize(Vector3{
+    Vector3 flatForward = Vector3Normalize(Vector3{
         std::cos(pitch) * std::cos(yaw),
         std::sin(pitch),
         std::cos(pitch) * std::sin(yaw)
     });
+    if (playerWorld_ == 1) {
+        flatForward.y = -flatForward.y;
+    }
+    return flatForward;
 }
 
 Vector3 Game::PlayerRight() const {
-    Vector3 up = IsSphericalMap() ? SphericalUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
+    Vector3 up = UpForWorldAt(camera_.position, playerWorld_);
     Vector3 right = Vector3CrossProduct(PlayerForward(), up);
     if (Vector3Length(right) <= 0.001f) {
         right = Vector3{1.0f, 0.0f, 0.0f};
@@ -4987,16 +5589,13 @@ Vector3 Game::PlayerRight() const {
 }
 
 Vector3 Game::PlayerUp() const {
-    if (IsSphericalMap()) {
-        return SphericalUpAt(camera_.position);
-    }
-    return Vector3Normalize(Vector3CrossProduct(PlayerRight(), PlayerForward()));
+    return UpForWorldAt(camera_.position, playerWorld_);
 }
 
 Vector3 Game::WeaponMuzzlePosition() const {
     Vector3 muzzle = weaponViewModel_.MuzzlePosition(camera_);
     if (activeWeapon_ == WeaponType::MysticStaff) {
-        Vector3 up = IsSphericalMap() ? SphericalUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
+        Vector3 up = UpForWorldAt(camera_.position, playerWorld_);
         muzzle = Vector3Add(muzzle, Vector3Scale(up, 0.5f));
     }
     return muzzle;
@@ -5009,11 +5608,11 @@ Game::NanoPlatform Game::MakeNanoPlatformTarget(Vector3 direction) const {
     float halfWidth = config_.nanoPlatformWidth * 0.5f;
 
     if (IsSphericalMap()) {
-        Vector3 normal = SphericalUpAt(target);
+        Vector3 normal = SphericalUpAt(target, playerWorld_);
         float platformRange = config_.nanoPlatformRange * nanoPlatformRangeScale_;
-        float targetAltitude = std::max(SphericalPlayerAltitude(), SphericalAltitudeAt(target));
+        float targetAltitude = std::max(SphericalPlayerAltitude(), SphericalAltitudeAt(target, playerWorld_));
         targetAltitude += platformRange * 0.18f;
-        Vector3 center = SphericalSurfacePoint(target, targetAltitude);
+        Vector3 center = SphericalSurfacePoint(target, targetAltitude, playerWorld_);
         Vector3 platformRight = Vector3CrossProduct(forward, normal);
         if (Vector3Length(platformRight) <= 0.001f) {
             platformRight = PlayerRight();
@@ -5022,7 +5621,7 @@ Game::NanoPlatform Game::MakeNanoPlatformTarget(Vector3 direction) const {
         }
         Vector3 platformForward = Vector3Normalize(Vector3CrossProduct(normal, platformRight));
         Vector3 scale = Vector3{config_.nanoPlatformLength, config_.nanoPlatformHeight, config_.nanoPlatformWidth};
-        return NanoPlatform{center, scale, normal, platformRight, platformForward, config_.nanoPlatformDelay, config_.nanoPlatformLifetime, config_.nanoPlatformLifetime};
+        return NanoPlatform{center, scale, normal, platformRight, platformForward, config_.nanoPlatformDelay, config_.nanoPlatformLifetime, config_.nanoPlatformLifetime, playerWorld_};
     }
 
     if (IsSquareMap()) {
@@ -5052,7 +5651,7 @@ Game::NanoPlatform Game::MakeNanoPlatformTarget(Vector3 direction) const {
         platformRight = Vector3Normalize(platformRight);
     }
     Vector3 platformForward = Vector3Normalize(Vector3CrossProduct(normal, platformRight));
-    return NanoPlatform{position, scale, normal, platformRight, platformForward, config_.nanoPlatformDelay, config_.nanoPlatformLifetime, config_.nanoPlatformLifetime};
+    return NanoPlatform{position, scale, normal, platformRight, platformForward, config_.nanoPlatformDelay, config_.nanoPlatformLifetime, config_.nanoPlatformLifetime, playerWorld_};
 }
 
 Vector3 Game::GetFireControlAimPoint() const {
@@ -5122,6 +5721,28 @@ bool Game::IsHollowWorldMap() const {
     return config_.mapType == "hollow_world";
 }
 
+bool Game::IsHollowPhysicsForWorld(int world) const {
+    bool hollow = IsHollowWorldMap();
+    if (IsSphericalMap() && world == 1) {
+        hollow = !hollow;
+    }
+    return hollow;
+}
+
+bool Game::SphericalTouchesSurface(Vector3 position, float radius, int world) const {
+    float distance = Vector3Length(position);
+    return IsHollowPhysicsForWorld(world)
+        ? distance >= SphericalRadius() - radius
+        : distance <= SphericalRadius() + radius;
+}
+
+bool Game::SphericalOutOfBounds(Vector3 position, float padding, int world) const {
+    float distance = Vector3Length(position);
+    return IsHollowPhysicsForWorld(world)
+        ? (distance > SphericalRadius() + padding || distance < std::max(1.0f, SphericalRadius() - SphericalCleanupDistance()))
+        : distance > SphericalCleanupDistance();
+}
+
 float Game::SphericalRadius() const {
     return IsHollowWorldMap() ? config_.hollowWorldRadius : config_.asteroidRadius;
 }
@@ -5134,28 +5755,40 @@ float Game::SphericalCleanupDistance() const {
     return IsHollowWorldMap() ? config_.hollowWorldCleanupDistance : config_.asteroidCleanupDistance;
 }
 
-float Game::SphericalAltitudeAt(Vector3 position) const {
+float Game::SphericalAltitudeAt(Vector3 position, int world) const {
+    if (world < 0) {
+        world = playerWorld_;
+    }
     float distance = Vector3Length(position);
-    return IsHollowWorldMap() ? SphericalRadius() - distance : distance - SphericalRadius();
+    return IsHollowPhysicsForWorld(world) ? SphericalRadius() - distance : distance - SphericalRadius();
 }
 
-float Game::SphericalSignedRadius(float altitude) const {
-    return IsHollowWorldMap() ? SphericalRadius() - altitude : SphericalRadius() + altitude;
+float Game::SphericalSignedRadius(float altitude, int world) const {
+    if (world < 0) {
+        world = playerWorld_;
+    }
+    return IsHollowPhysicsForWorld(world) ? SphericalRadius() - altitude : SphericalRadius() + altitude;
 }
 
-Vector3 Game::SphericalUpAt(Vector3 position) const {
+Vector3 Game::SphericalUpAt(Vector3 position, int world) const {
+    if (world < 0) {
+        world = playerWorld_;
+    }
     if (Vector3Length(position) <= 0.001f) {
         return Vector3{0.0f, 1.0f, 0.0f};
     }
     Vector3 outward = Vector3Normalize(position);
-    return IsHollowWorldMap() ? Vector3Scale(outward, -1.0f) : outward;
+    return IsHollowPhysicsForWorld(world) ? Vector3Scale(outward, -1.0f) : outward;
 }
 
-Vector3 Game::SphericalSurfacePoint(Vector3 position, float altitude) const {
+Vector3 Game::SphericalSurfacePoint(Vector3 position, float altitude, int world) const {
+    if (world < 0) {
+        world = playerWorld_;
+    }
     Vector3 outward = Vector3Length(position) > 0.001f
         ? Vector3Normalize(position)
-        : Vector3{0.0f, IsHollowWorldMap() ? -1.0f : 1.0f, 0.0f};
-    return Vector3Scale(outward, SphericalSignedRadius(altitude));
+        : Vector3{0.0f, IsHollowPhysicsForWorld(world) ? -1.0f : 1.0f, 0.0f};
+    return Vector3Scale(outward, SphericalSignedRadius(altitude, world));
 }
 
 Vector3 Game::ProjectOnSphericalTangent(Vector3 vector, Vector3 up) const {
@@ -5274,13 +5907,13 @@ bool Game::IsSquareMap() const {
 }
 
 bool Game::EnemyTouchesPlayer(Vector3 enemyPosition, float enemyRadius) const {
-    Vector3 up = IsSphericalMap() ? SphericalUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
+    Vector3 up = UpForWorldAt(camera_.position, playerWorld_);
     Vector3 capsuleBottom = IsSphericalMap()
         ? Vector3Subtract(camera_.position, Vector3Scale(up, SphericalPlayerAltitude() - playerRadius_))
-        : Vector3{camera_.position.x, camera_.position.y - playerHeight_ + playerRadius_, camera_.position.z};
+        : Vector3Subtract(camera_.position, Vector3Scale(up, playerHeight_ - playerRadius_));
     Vector3 capsuleTop = IsSphericalMap()
         ? Vector3Subtract(camera_.position, Vector3Scale(up, playerRadius_ * 0.35f))
-        : Vector3{camera_.position.x, camera_.position.y - playerRadius_ * 0.35f, camera_.position.z};
+        : Vector3Subtract(camera_.position, Vector3Scale(up, playerRadius_ * 0.35f));
     float hitDistance = enemyRadius + playerRadius_;
     return DistancePointToSegment(enemyPosition, capsuleBottom, capsuleTop) <= hitDistance;
 }
@@ -5428,32 +6061,38 @@ void Game::DrawArena() const {
 
     if (IsSquareMap()) {
         float size = squareHalfExtent_ * 2.0f;
-        DrawCube(Vector3{0.0f, -0.08f, 0.0f}, size, 0.18f, size, Color{20, 20, 22, 255});
-        DrawCubeWires(Vector3{0.0f, 0.02f, 0.0f}, size, 0.2f, size, Color{135, 130, 122, 255});
+        float groundY = FlatGroundYForWorld(playerWorld_);
+        float worldSide = FlatUpForWorld(playerWorld_).y;
+        float surfaceOffset = groundY + 0.03f * worldSide;
+        DrawCube(Vector3{0.0f, groundY - 0.08f * worldSide, 0.0f}, size, 0.18f, size, Color{20, 20, 22, 255});
+        DrawCubeWires(Vector3{0.0f, groundY + 0.02f * worldSide, 0.0f}, size, 0.2f, size, Color{135, 130, 122, 255});
         for (int i = -3; i <= 3; ++i) {
             float p = static_cast<float>(i) * squareHalfExtent_ / 3.0f;
-            DrawLine3D(Vector3{-squareHalfExtent_, 0.03f, p}, Vector3{squareHalfExtent_, 0.03f, p}, Color{45, 45, 48, 255});
-            DrawLine3D(Vector3{p, 0.03f, -squareHalfExtent_}, Vector3{p, 0.03f, squareHalfExtent_}, Color{45, 45, 48, 255});
+            DrawLine3D(Vector3{-squareHalfExtent_, surfaceOffset, p}, Vector3{squareHalfExtent_, surfaceOffset, p}, Color{45, 45, 48, 255});
+            DrawLine3D(Vector3{p, surfaceOffset, -squareHalfExtent_}, Vector3{p, surfaceOffset, squareHalfExtent_}, Color{45, 45, 48, 255});
         }
-        DrawLine3D(Vector3{-squareHalfExtent_, 0.08f, -squareHalfExtent_}, Vector3{squareHalfExtent_, 0.08f, -squareHalfExtent_}, Color{160, 150, 135, 255});
-        DrawLine3D(Vector3{squareHalfExtent_, 0.08f, -squareHalfExtent_}, Vector3{squareHalfExtent_, 0.08f, squareHalfExtent_}, Color{160, 150, 135, 255});
-        DrawLine3D(Vector3{squareHalfExtent_, 0.08f, squareHalfExtent_}, Vector3{-squareHalfExtent_, 0.08f, squareHalfExtent_}, Color{160, 150, 135, 255});
-        DrawLine3D(Vector3{-squareHalfExtent_, 0.08f, squareHalfExtent_}, Vector3{-squareHalfExtent_, 0.08f, -squareHalfExtent_}, Color{160, 150, 135, 255});
+        DrawLine3D(Vector3{-squareHalfExtent_, surfaceOffset, -squareHalfExtent_}, Vector3{squareHalfExtent_, surfaceOffset, -squareHalfExtent_}, Color{160, 150, 135, 255});
+        DrawLine3D(Vector3{squareHalfExtent_, surfaceOffset, -squareHalfExtent_}, Vector3{squareHalfExtent_, surfaceOffset, squareHalfExtent_}, Color{160, 150, 135, 255});
+        DrawLine3D(Vector3{squareHalfExtent_, surfaceOffset, squareHalfExtent_}, Vector3{-squareHalfExtent_, surfaceOffset, squareHalfExtent_}, Color{160, 150, 135, 255});
+        DrawLine3D(Vector3{-squareHalfExtent_, surfaceOffset, squareHalfExtent_}, Vector3{-squareHalfExtent_, surfaceOffset, -squareHalfExtent_}, Color{160, 150, 135, 255});
         return;
     }
 
-    DrawCylinder(Vector3{0.0f, -0.08f, 0.0f}, arenaRadius_, arenaRadius_, 0.18f, 24, Color{20, 20, 22, 255});
-    DrawCylinderWires(Vector3{0.0f, 0.02f, 0.0f}, arenaRadius_, arenaRadius_, 0.2f, 24, Color{135, 130, 122, 255});
+    float groundY = FlatGroundYForWorld(playerWorld_);
+    float worldSide = FlatUpForWorld(playerWorld_).y;
+    float surfaceOffset = groundY + 0.018f * worldSide;
+    DrawCylinder(Vector3{0.0f, groundY - 0.01f * worldSide, 0.0f}, arenaRadius_, arenaRadius_, 0.02f, 24, Color{20, 20, 22, 255});
+    DrawCylinderWires(Vector3{0.0f, groundY - 0.01f * worldSide, 0.0f}, arenaRadius_, arenaRadius_, 0.025f, 24, Color{135, 130, 122, 255});
 
     for (int i = 0; i < 24; ++i) {
         float angle = (static_cast<float>(i) / 24.0f) * 6.2831853f;
-        Vector3 end = Vector3{std::cos(angle) * arenaRadius_, 0.03f, std::sin(angle) * arenaRadius_};
-        DrawLine3D(Vector3Zero(), end, Color{54, 52, 55, 255});
+        Vector3 end = Vector3{std::cos(angle) * arenaRadius_, surfaceOffset, std::sin(angle) * arenaRadius_};
+        DrawLine3D(Vector3{0.0f, surfaceOffset, 0.0f}, end, Color{54, 52, 55, 255});
     }
 
     for (int ring = 1; ring <= 4; ++ring) {
         float radius = arenaRadius_ * static_cast<float>(ring) / 5.0f;
-        DrawCylinderWires(Vector3{0.0f, 0.01f, 0.0f}, radius, radius, 0.02f, 24, Color{45, 45, 48, 255});
+        DrawCylinderWires(Vector3{0.0f, surfaceOffset, 0.0f}, radius, radius, 0.01f, 24, Color{45, 45, 48, 255});
     }
 }
 
@@ -6360,9 +6999,12 @@ void Game::DrawParticles() const {
 void Game::DrawMagicCircles() const {
     for (const MagicCircle& circle : magicCircles_) {
         float alpha = circle.maxLife > 0.0f ? circle.life / circle.maxLife : 0.0f;
-        Color ringColor = FadeColor(Color{180, 130, 255, 255}, alpha * 0.8f);
-        Color frameColor = FadeColor(Color{220, 180, 255, 255}, alpha * 0.7f);
-        Vector3 up = IsSphericalMap() ? SphericalUpAt(circle.position) : Vector3{0.0f, 1.0f, 0.0f};
+        if (circle.isWormhole) alpha = 1.0f;
+        Color baseRing = circle.isWormhole ? Color{155, 45, 255, 255} : Color{180, 130, 255, 255};
+        Color baseFrame = circle.isWormhole ? Color{230, 95, 255, 255} : Color{220, 180, 255, 255};
+        Color ringColor = FadeColor(baseRing, alpha * 0.85f);
+        Color frameColor = FadeColor(baseFrame, alpha * 0.75f);
+        Vector3 up = UpForWorldAt(circle.position, 0);
 
         // Ground magic circle: concentric rings + pentagram
         // Slight lift above ground on flat maps to prevent z-fighting
@@ -6388,13 +7030,13 @@ void Game::DrawMagicCircles() const {
                 Vector3Add(Vector3Scale(rightA, std::cos(angle) * starR),
                           Vector3Scale(fwdA, std::sin(angle) * starR)));
         }
-        Color starColor = FadeColor(Color{200, 150, 255, 255}, alpha * 0.75f);
+        Color starColor = FadeColor(circle.isWormhole ? Color{220, 85, 255, 255} : Color{200, 150, 255, 255}, alpha * 0.75f);
         for (int vi = 0; vi < 5; ++vi) {
             int next = (vi + 2) % 5;
             DrawLine3D(starPts[vi], starPts[next], starColor);
         }
         // Small center glow dot
-        DrawSphere(groundPos, 0.08f, FadeColor(Color{220, 200, 255, 255}, alpha * 0.9f));
+        DrawSphere(groundPos, 0.08f, FadeColor(circle.isWormhole ? Color{210, 70, 255, 255} : Color{220, 200, 255, 255}, alpha * 0.9f));
 
         // Octahedron wireframe above
         float s = circle.radius * 0.3f;
@@ -6424,10 +7066,31 @@ void Game::DrawMagicCircles() const {
         DrawLine3D(p(nvy), p(vz), frameColor);
         DrawLine3D(p(nvy), p(nvz), frameColor);
 
-        // Absorbed indicator
-        if (!circle.absorbedKinds.empty() && circle.fireCooldown <= 0.0f) {
-            float pulse = 0.6f + std::sin(static_cast<float>(GetTime()) * 6.0f) * 0.3f;
-            DrawSphere(center, 0.18f + pulse * 0.12f, Color{255, 200, 255, 180});
+        // Core indicator
+        if (circle.isWormhole) {
+            float pulse = 0.85f + std::sin(static_cast<float>(GetTime()) * 5.4f) * 0.16f;
+            DrawSphere(center, config_.wormholeVisualRadius * 0.18f * pulse, FadeColor(Color{25, 0, 45, 255}, 0.92f));
+            DrawSphereWires(center, config_.wormholeVisualRadius * pulse, 18, 8, FadeColor(Color{190, 55, 255, 255}, 0.78f));
+            DrawDashedCircle3D(center, config_.wormholeVisualRadius * 1.25f * pulse, up, FadeColor(Color{215, 95, 255, 255}, 0.65f));
+        } else if (circle.activated) {
+            float pulse = 0.7f + std::sin(static_cast<float>(GetTime()) * 7.0f) * 0.3f;
+            Color weaponGlow = MagicCircleTint(circle);
+            DrawSphere(center, 0.22f + pulse * 0.15f, FadeColor(weaponGlow, 0.85f));
+        }
+    }
+
+    for (const WormholePortal& portal : wormholes_) {
+        Vector3 centers[2] = {portal.frontPosition, portal.backPosition};
+        for (int world = 0; world < 2; ++world) {
+            Vector3 center = centers[world];
+            Vector3 up = UpForWorldAt(center, world);
+            float active = playerWorld_ == world ? 1.0f : 0.38f;
+            float pulse = 0.9f + std::sin(static_cast<float>(GetTime()) * 4.8f + world * 1.7f) * 0.12f;
+            Color outer = FadeColor(Color{170, 45, 255, 255}, active * 0.8f);
+            Color inner = FadeColor(Color{35, 0, 65, 255}, active * 0.95f);
+            DrawSphere(center, config_.wormholeVisualRadius * 0.28f * pulse, inner);
+            DrawSphereWires(center, config_.wormholeVisualRadius * pulse, 20, 10, outer);
+            DrawDashedCircle3D(center, config_.wormholeVisualRadius * 1.35f * pulse, up, FadeColor(Color{230, 85, 255, 255}, active * 0.72f));
         }
     }
 }
@@ -6535,7 +7198,7 @@ void Game::DrawHud() const {
         Color armorStatus = duelArmorInvulnTimer_ > 0.0f ? Color{255, 230, 140, 255} : Color{160, 220, 255, 255};
         Color shieldFill = Color{190, 200, 210, 255};
         Color shieldDark = Color{130, 140, 150, 255};
-        int ax = 6, ay = 43;
+        int ax = 8, ay = 45;
         for (int i = 0; i < duelArmor_; ++i) {
             // Body: rounded rectangle fill + manual outline
             DrawRectangleRounded(Rectangle{static_cast<float>(ax + 1), static_cast<float>(ay), 7.0f, 6.0f}, 0.6f, 5, shieldFill);
@@ -6595,8 +7258,15 @@ void Game::DrawHud() const {
         const char* cdText = TextFormat("SHIELD CD %.1fs", mysticStaffShieldCooldown_);
         DrawText(cdText, 100, 117, 8, Color{180, 140, 255, 255});
     }
-    const char* fpsText = TextFormat("FPS %d", GetFPS());
-    DrawText(fpsText, pixelWidth_ - MeasureText(fpsText, 8) - 6, 7, 8, Color{170, 230, 170, 255});
+    // Right-edge indicator: FPS normally, world toggle after wormhole activation
+    if (!wormholes_.empty() || playerWorld_ != 0) {
+        const char* worldText = playerWorld_ == 0 ? "FRONT" : "BACK";
+        Color worldColor = playerWorld_ == 0 ? Color{180, 190, 210, 255} : Color{205, 110, 255, 255};
+        DrawText(worldText, pixelWidth_ - MeasureText(worldText, 8) - 6, 7, 8, worldColor);
+    } else {
+        const char* fpsText = TextFormat("FPS %d", GetFPS());
+        DrawText(fpsText, pixelWidth_ - MeasureText(fpsText, 8) - 6, 7, 8, Color{170, 230, 170, 255});
+    }
 
     if (bethlehem_.active) {
         float bh = bethlehem_.maxHealth > 0.0f ? std::clamp(bethlehem_.health / bethlehem_.maxHealth, 0.0f, 1.0f) : 0.0f;

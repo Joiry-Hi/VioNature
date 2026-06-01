@@ -96,6 +96,7 @@ private:
         float bobTimer = 0.0f;
         float life = 30.0f;
         DroneState state = DroneState::Deploying;
+        int world = 0;
     };
 
     enum class ProjectileKind {
@@ -163,6 +164,7 @@ private:
         JPH::BodyID lastHitEnemy;
         float turnRate = 0.0f;
         bool fromMagicCircle = false;
+        int world = 0;
     };
 
     struct Beam {
@@ -206,6 +208,7 @@ private:
         bool usingSkates = false;
         bool shieldActive = false;
         float shieldCooldown = 0.0f;
+        int world = 0;
     };
 
     struct DamageNumber {
@@ -285,6 +288,7 @@ private:
         float planeThickness = 0.5f;
         float damagePerSecond = 1.0f;
         ProjectileOwner owner = ProjectileOwner::Player;
+        int world = 0;
     };
 
     struct NanoPlatform {
@@ -296,6 +300,7 @@ private:
         float delay = 0.0f;
         float life = 0.0f;
         float maxLife = 0.0f;
+        int world = 0;
         JPH::BodyID platformBody;
     };
 
@@ -330,9 +335,22 @@ private:
         float radius = 3.5f;
         float fireCooldown = 0.0f;
         float fireInterval = 0.15f;
-        std::vector<ProjectileKind> absorbedKinds;
-        std::vector<float> absorbedDamages;
-        std::vector<Color> absorbedColors;
+        bool isWormhole = false;
+        bool activated = false;
+        bool activatedByLaserBeam = false;
+        ProjectileKind activatedKind = ProjectileKind::LaserShot;
+        float fireRateMult = 1.0f;
+        float homingTurnRate = 3.5f;
+    };
+
+    struct WormholePortal {
+        Vector3 frontPosition = {};
+        Vector3 backPosition = {};
+        Vector3 mirrorAnchor = {};
+        Vector3 mirrorNormal = {0.0f, 1.0f, 0.0f};
+        float playerCooldown = 0.0f;
+        float enemyCooldown = 0.0f;
+        int circleIndex = -1;
     };
 
     void Reset();
@@ -351,6 +369,7 @@ private:
     void UpdateNanoPlatforms(float dt);
     void UpdateSlimeSpawnPods(float dt);
     void UpdateMagicCircles(float dt);
+    void UpdateWormholes(float dt);
     void UpdateEnemies(float dt);
     void UpdateWaveDirector(float dt);
     void UpdateProjectiles(float dt);
@@ -371,31 +390,50 @@ private:
     bool DuelWon() const;
     void ShowTutorialTip(const char* text);
     void RecordDummyDamage(const Enemy& enemy, float damage);
-    void FireBossRing(Vector3 position, int count, float speedScale);
+    void FireBossRing(Vector3 position, int count, float speedScale, int world = 0);
     void UpdateDuelist(Enemy& enemy, Vector3 position, Vector3 direction, float dt, float& speed, bool& skipVelocity);
     void SwitchDuelistWeapon(Enemy& enemy, float distance);
     void FireDuelistWeapon(Enemy& enemy, Vector3 position, Vector3 toPlayer);
     void FireEnemyBeam(Vector3 origin, Vector3 direction, float charge);
-    void SpawnEnemyNanoPlatform(Vector3 origin, Vector3 direction);
+    void SpawnEnemyNanoPlatform(Vector3 origin, Vector3 direction, int world = 0);
     void FireProjectile(ProjectileKind kind, Vector3 direction, float speed, float damage, float life, float radius, float maxRadius, Color color);
-    void FireEnemyProjectile(ProjectileKind kind, Vector3 position, Vector3 direction, float speed, float damage, float life, float radius, float maxRadius, Color color);
+    void FireEnemyProjectile(ProjectileKind kind, Vector3 position, Vector3 direction, float speed, float damage, float life, float radius, float maxRadius, Color color, int world = 0);
     void FireLaser(float charge);
-    void FireEnemyShot(Vector3 position, Vector3 direction);
-    void FireHomingShot(Vector3 position, Vector3 direction, float speed, float turnRate, float life, float damage, Color color, ProjectileOwner owner);
+    void FireEnemyShot(Vector3 position, Vector3 direction, int world = 0);
+    void FireHomingShot(Vector3 position, Vector3 direction, float speed, float turnRate, float life, float damage, Color color, ProjectileOwner owner, int world = 0);
     void FireHeatwave(Vector3 direction);
     void FireDuelistHeatwave(Vector3 origin, Vector3 direction);
     void FireNanoBlade(Vector3 direction);
     void FireNanoPlatform(Vector3 direction);
     void FireCurseOrb(Vector3 direction);
     void FireSoulOrb(Vector3 position, float damage, Vector3 direction);
-    void FireMagicProjectile(Vector3 position, Vector3 direction, float damage, Color color);
+    void FireMagicLaserBeam(Vector3 position, Vector3 direction);
+    void FireMagicProjectile(ProjectileKind kind, Vector3 position, Vector3 direction, float speed, float damage,
+        float life, float radius, float maxRadius, Color color, float turnRate);
+    float MagicCircleBaseCooldown(const MagicCircle& circle) const;
+    bool MagicCircleCanActivate(ProjectileKind kind) const;
+    Color MagicCircleTint(const MagicCircle& circle) const;
+    Color MagicCircleTint(ProjectileKind kind) const;
+    const char* MagicCircleKindName(const MagicCircle& circle) const;
+    const char* MagicCircleKindName(ProjectileKind kind) const;
     void DeployMysticStaffShield();
     void BreakMysticStaffShield();
     void SpawnMysticStaffShockwave(Vector3 position);
     void CompleteMagicCircleChannel();
+    bool ActivateWormhole(MagicCircle& circle, int circleIndex, Vector3 octaCenter);
+    bool CloseWormhole(Vector3 position);
+    bool CloseWormholeAlongSegment(Vector3 start, Vector3 end, float extraRadius = 0.0f);
+    bool HasWormhole() const;
+    Vector3 WormholeCenterForWorld(const WormholePortal& portal, int world) const;
+    float FlatGroundYForWorld(int world) const;
+    Vector3 FlatUpForWorld(int world) const;
+    Vector3 UpForWorldAt(Vector3 position, int world) const;
+    Vector3 MirrorPosition(Vector3 position, const WormholePortal& portal) const;
+    Vector3 TeleportThroughWormhole(Vector3 position, int targetWorld, float altitude) const;
+    Vector3 ReflectVelocityThroughWormhole(Vector3 velocity, Vector3 targetPosition, int targetWorld) const;
     void FireSpearThrust(Vector3 direction);
     void DetonateSpear(Vector3 position, ProjectileOwner owner);
-    void SpawnEnemyNanoBlade(Vector3 origin, Vector3 direction);
+    void SpawnEnemyNanoBlade(Vector3 origin, Vector3 direction, int world = 0);
     void SpawnGravityWell(Vector3 position, bool blackHole = false);
     void BlinkDuelist(Enemy& enemy, Vector3 awayFrom);
     void ToggleTimeStop();
@@ -429,13 +467,16 @@ private:
     bool BethlehemAlive() const { return bethlehem_.active; }
     bool IsSphericalMap() const;
     bool IsHollowWorldMap() const;
+    bool IsHollowPhysicsForWorld(int world) const;
+    bool SphericalTouchesSurface(Vector3 position, float radius, int world) const;
+    bool SphericalOutOfBounds(Vector3 position, float padding, int world) const;
     float SphericalRadius() const;
     float SphericalPlayerAltitude() const;
     float SphericalCleanupDistance() const;
-    float SphericalAltitudeAt(Vector3 position) const;
-    float SphericalSignedRadius(float altitude) const;
-    Vector3 SphericalUpAt(Vector3 position) const;
-    Vector3 SphericalSurfacePoint(Vector3 position, float altitude) const;
+    float SphericalAltitudeAt(Vector3 position, int world = -1) const;
+    float SphericalSignedRadius(float altitude, int world = -1) const;
+    Vector3 SphericalUpAt(Vector3 position, int world = -1) const;
+    Vector3 SphericalSurfacePoint(Vector3 position, float altitude, int world = -1) const;
     Vector3 ProjectOnSphericalTangent(Vector3 vector, Vector3 up) const;
     float SphericalEnemyAltitude(EnemyType type) const;
     Vector3 BodyPosition(JPH::BodyID id) const;
@@ -496,6 +537,7 @@ private:
     std::vector<NanoPlatform> nanoPlatforms_;
     std::vector<SlimeSpawnPod> slimeSpawnPods_;
     std::vector<MagicCircle> magicCircles_;
+    std::vector<WormholePortal> wormholes_;
     std::vector<Drone> drones_;
     std::vector<Prop> props_;
     std::vector<Pickup> pickups_;
@@ -513,6 +555,7 @@ private:
     float yaw_ = -90.0f;
     float pitch_ = 0.0f;
     bool grounded_ = true;
+    int playerWorld_ = 0;
     float coyoteTimer_ = 0.0f;
     float jumpBufferTimer_ = 0.0f;
     bool hasSpaceSuit_ = false;

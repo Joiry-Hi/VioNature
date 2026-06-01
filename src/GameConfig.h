@@ -229,6 +229,12 @@ struct GameplayConfig {
     float magicCircleLifetime = 12.0f;
     float magicCircleRadius = 3.5f;
     float magicCircleFireInterval = 0.15f;
+    float magicCircleFireRateMult = 1.0f;
+    float magicCircleHomingTurnRate = 3.5f;
+    float wormholePlayerCooldown = 1.0f;
+    float wormholeEnemyCooldown = 1.2f;
+    float wormholeTriggerRadius = 2.3f;
+    float wormholeVisualRadius = 1.65f;
 };
 
 GameplayConfig LoadGameplayConfig(const char* path = "config/gameplay.cfg");

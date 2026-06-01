@@ -278,6 +278,12 @@ GameplayConfig LoadGameplayConfig(const char* path) {
         {"magic_circle_lifetime", &config.magicCircleLifetime},
         {"magic_circle_radius", &config.magicCircleRadius},
         {"magic_circle_fire_interval", &config.magicCircleFireInterval},
+        {"magic_circle_fire_rate_mult", &config.magicCircleFireRateMult},
+        {"magic_circle_homing_turn_rate", &config.magicCircleHomingTurnRate},
+        {"wormhole_player_cooldown", &config.wormholePlayerCooldown},
+        {"wormhole_enemy_cooldown", &config.wormholeEnemyCooldown},
+        {"wormhole_trigger_radius", &config.wormholeTriggerRadius},
+        {"wormhole_visual_radius", &config.wormholeVisualRadius},
     };
 
     std::string line;
@@ -585,6 +591,12 @@ GameplayConfig LoadGameplayConfig(const char* path) {
     config.magicCircleLifetime = std::max(1.0f, config.magicCircleLifetime);
     config.magicCircleRadius = std::max(0.5f, config.magicCircleRadius);
     config.magicCircleFireInterval = std::max(0.02f, config.magicCircleFireInterval);
+    config.magicCircleFireRateMult = std::max(0.1f, config.magicCircleFireRateMult);
+    config.magicCircleHomingTurnRate = std::max(0.5f, config.magicCircleHomingTurnRate);
+    config.wormholePlayerCooldown = std::max(0.1f, config.wormholePlayerCooldown);
+    config.wormholeEnemyCooldown = std::max(0.1f, config.wormholeEnemyCooldown);
+    config.wormholeTriggerRadius = std::max(0.25f, config.wormholeTriggerRadius);
+    config.wormholeVisualRadius = std::max(0.25f, config.wormholeVisualRadius);
     config.startingEssence = std::max(0, config.startingEssence);
     config.essenceHitInvuln = std::max(0.1f, config.essenceHitInvuln);
     config.essenceRespawnTime = std::max(10.0f, config.essenceRespawnTime);
