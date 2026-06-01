@@ -38,6 +38,8 @@ struct GameplayConfig {
     float laserBeamRadiusChargeBonus = 0.45f;
     float laserBeamCooldown = 0.18f;
     float flameDamage = 0.38f;
+    float flameLifetime = 0.5f;
+    float flameMaxRadius = 0.82f;
     float rocketImpactDamage = 1.2f;
     float rocketExplosionDamage = 4.0f;
     float rocketExplosionRadius = 3.4f;
@@ -117,16 +119,17 @@ struct GameplayConfig {
     float glassShardSeparationRadius = 1.0f;
     float glassShardCenterForce = 2.0f;
     float glassShardCloudFormTime = 1.5f;
-    float recoilLanceDamage = 3.2f;
-    float recoilLanceSpeed = 92.0f;
-    float recoilLanceImpulse = 20.0f;
-    float recoilLanceThrustDamage = 1.65f;
-    float recoilLanceThrustForce = 24.0f;
-    float recoilLanceThrustRange = 6.8f;
-    float recoilLanceThrustImpulse = 15.0f;
-    float recoilLanceShockwaveDamage = 0.9f;
-    float recoilLanceShockwaveForce = 20.0f;
-    float recoilLanceShockwaveRadius = 5.6f;
+    float longinusSpearDamage = 3.2f;
+    float longinusSpearSpeed = 92.0f;
+    float longinusSpearImpulse = 20.0f;
+    float longinusSpearThrustDamage = 1.65f;
+    float longinusSpearThrustForce = 24.0f;
+    float longinusSpearThrustRange = 6.8f;
+    float longinusSpearThrustImpulse = 15.0f;
+    float longinusSpearShockwaveDamage = 0.9f;
+    float longinusSpearShockwaveForce = 20.0f;
+    float longinusSpearShockwaveRadius = 5.6f;
+    float longinusSpearThrustInvuln = 0.5f;
     float nanoBladeDamage = 2.2f;
     float nanoBladeRange = 15.0f;
     float nanoBladeWidth = 0.75f;
@@ -197,6 +200,12 @@ struct GameplayConfig {
     float bossHomingBurstInterval = 0.2f;
     float bossHomingLife = 6.0f;
     float bossHomingSpeedScale = 0.65f;
+
+    // Essence pickup (extra life)
+    int startingEssence = 3;
+    float essenceHitInvuln = 1.5f;
+    float essenceRespawnTime = 45.0f;
+    int essenceMaxOnMap = 1;
 
     // Mystic Staff (weapon 9)
     float curseOrbDirectDamage = 1.5f;

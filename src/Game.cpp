@@ -82,6 +82,10 @@ static const int cjkCodepoints[] = {
     36291, 36305, 36317, 36339, 36718, 36753, 36807, 36827, 36828, 36830, 36861, 36873, 36879, 36880, 36895, 36896,
     37096, 37325, 37327, 38025, 38035, 38142, 38181, 38190, 38271, 38378, 38388, 38459, 38477, 38480, 38544, 38553,
     38598, 38647, 38704, 38738, 38754, 38899, 39030, 39069, 39118, 39134, 39640, 40060, 40657,
+	    // 朗基努斯之枪 + 神秘法杖
+	    20043, 21162, 22522, 26031, 26454, 26391, 27861, 31070, 31192,
+	    24103,
+	    27974, 30005,
 };
 static constexpr int cjkCodepointCount = sizeof(cjkCodepoints) / sizeof(cjkCodepoints[0]);
 
@@ -106,6 +110,9 @@ Game::Game() {
 
     bethlehemModel_ = LoadModel("assets/models/bosses/star_of_bethlehem.obj");
     bethlehemModelLoaded_ = IsModelValid(bethlehemModel_);
+
+    essenceModel_ = LoadModel("assets/models/pickups/stella_octangula_upright.obj");
+    essenceModelLoaded_ = IsModelValid(essenceModel_);
 
     // Load CJK font for Chinese tutorial text
     const char* cjkFontPaths[] = {
@@ -134,6 +141,10 @@ Game::~Game() {
     if (bethlehemModelLoaded_) {
         UnloadModel(bethlehemModel_);
         bethlehemModelLoaded_ = false;
+    }
+    if (essenceModelLoaded_) {
+        UnloadModel(essenceModel_);
+        essenceModelLoaded_ = false;
     }
     if (cjkFontLoaded_) {
         UnloadFont(cjkFont_);
@@ -197,7 +208,7 @@ void Game::Reset() {
     shotgunMode_ = ShotgunMode::Pellet;
     gravityNailerMode_ = GravityNailerMode::Nail;
     nanoConstructorMode_ = NanoConstructorMode::NanoBlade;
-    recoilLanceMode_ = RecoilLanceMode::Throw;
+    longinusSpearMode_ = LonginusSpearMode::Throw;
     nanoPlatformRangeScale_ = 1.0f;
     gauntletMode_ = GauntletMode::TimeStop;
     blinkDistanceScale_ = 1.0f;
@@ -231,13 +242,16 @@ void Game::Reset() {
     tutorialHintIndex_ = 0;
     configReminderTimer_ = 90.0f;
     configReminderIndex_ = 0;
-    for (int i = 0; i < 3; ++i) pickupTipShown_[i] = false;
+    for (int i = 0; i < 4; ++i) pickupTipShown_[i] = false;
     bethlehem_ = {};
     bethlehem_.laserPhase = BethlehemLaserPhase::Inactive;
     duelWon_ = false;
     nextMixedEventTime_ = 104.0f;
     duelArmor_ = DuelMode() ? config_.duelPlayerArmor : 0;
     duelArmorInvulnTimer_ = 0.0f;
+    essence_ = config_.startingEssence;
+    essenceInvulnTimer_ = 0.0f;
+    essenceSpawnTimer_ = 8.0f;  // first essence spawns quickly
     survivalTime_ = 0.0f;
     cameraShake_ = 0.0f;
     score_ = 0;
@@ -365,6 +379,7 @@ void Game::Update(float dt) {
             UpdateCollisions();
         }
         UpdatePickups(dt);
+        UpdateEssenceSpawn(dt);
         UpdateArenaBounds();
 
         if (!timeStopped_) {
@@ -435,7 +450,7 @@ void Game::Update(float dt) {
             if (tutorialHintTimer_ <= 0.0f) {
                 const char* combatTips[] = {
                     "战斗技巧: 火箭跳\n对脚下发射火箭,利用爆炸冲量获得额外高度",
-                    "战斗技巧: 空中位移链\n火箭跳->霰弹反冲->长矛反冲,三段超远位移",
+                    "战斗技巧: 空中位移链\n火箭跳->霰弹反冲->长枪反冲,三段超远位移",
                     "战斗技巧: 刀波钓鱼\n发射刀波后闪现换位,引诱追逐的敌人撞入刀波",
                     "战斗技巧: 时停连招\n时停->贴脸全部火箭->黑洞手雷->解冻瞬间爆发",
                     "战斗技巧: 无人机交叉火力\n不同位置部署无人机,长按右键设集合点",
@@ -447,7 +462,7 @@ void Game::Update(float dt) {
                     "移动提示: 飞行装置(青)拾取后按X悬停\n空格升高 / Ctrl降低,悬停瞄准",
                     "移动提示: 滑板(绿)拾取后按C切换滑行\n极低摩擦,保持高动量滑动",
                 };
-                const char* welcomeTip = "教学模式 | P键隐藏HUD | 自由探索8把武器\n编辑 gameplay.cfg 自定义80+可调参数";
+                const char* welcomeTip = "教学模式 | P键隐藏HUD | 自由探索9把武器\n编辑 gameplay.cfg 自定义200+可调参数";
                 const char* allTips[] = {
                     welcomeTip,
                     combatTips[0], movementTips[0], combatTips[1], movementTips[1],
@@ -465,7 +480,7 @@ void Game::Update(float dt) {
         configReminderTimer_ = std::max(0.0f, configReminderTimer_ - dt);
         if (configReminderTimer_ <= 0.0f && eventTextTimer_ <= 0.0f) {
             const char* configReminders[] = {
-                "TIP: Edit gameplay.cfg to tune 80+ params",
+                "TIP: Edit gameplay.cfg to tune 200+ params",
                 "TIP: game_mode = survival | duel | tutorial",
                 "TIP: map_type = circle | square | asteroid | hollow_world",
             };
@@ -498,6 +513,8 @@ void Game::Update(float dt) {
     }
     timeStopTintTimer_ = std::max(0.0f, timeStopTintTimer_ - dt);
     duelArmorInvulnTimer_ = std::max(0.0f, duelArmorInvulnTimer_ - dt);
+    longinusSpearThrustInvulnTimer_ = std::max(0.0f, longinusSpearThrustInvulnTimer_ - dt);
+    essenceInvulnTimer_ = std::max(0.0f, essenceInvulnTimer_ - dt);
     cameraShake_ = std::max(0.0f, cameraShake_ - dt * 5.0f);
 }
 
@@ -851,7 +868,7 @@ void Game::UpdateWeaponSwitching() {
     } else if (IsKeyPressed(KEY_SIX)) {
         activeWeapon_ = WeaponType::InfinityGauntlet;
     } else if (IsKeyPressed(KEY_SEVEN)) {
-        activeWeapon_ = WeaponType::RecoilLance;
+        activeWeapon_ = WeaponType::LonginusSpear;
     } else if (IsKeyPressed(KEY_EIGHT)) {
         activeWeapon_ = WeaponType::NanoConstructor;
     } else if (IsKeyPressed(KEY_ZERO)) {
@@ -871,7 +888,7 @@ void Game::UpdateWeaponSwitching() {
                 index = 4;
             } else if (activeWeapon_ == WeaponType::InfinityGauntlet) {
                 index = 5;
-            } else if (activeWeapon_ == WeaponType::RecoilLance) {
+            } else if (activeWeapon_ == WeaponType::LonginusSpear) {
                 index = 6;
             } else if (activeWeapon_ == WeaponType::NanoConstructor) {
                 index = 7;
@@ -891,7 +908,7 @@ void Game::UpdateWeaponSwitching() {
             } else if (index == 5) {
                 activeWeapon_ = WeaponType::InfinityGauntlet;
             } else if (index == 6) {
-                activeWeapon_ = WeaponType::RecoilLance;
+                activeWeapon_ = WeaponType::LonginusSpear;
             } else {
                 activeWeapon_ = WeaponType::NanoConstructor;
             }
@@ -911,9 +928,9 @@ void Game::UpdateWeaponSwitching() {
             gravityNailerMode_ = gravityNailerMode_ == GravityNailerMode::Nail ? GravityNailerMode::BlackHole : GravityNailerMode::Nail;
             eventText_ = gravityNailerMode_ == GravityNailerMode::BlackHole ? "BLACK HOLE" : "GRAV NAIL";
             eventTextTimer_ = 1.4f;
-        } else if (activeWeapon_ == WeaponType::RecoilLance) {
-            recoilLanceMode_ = recoilLanceMode_ == RecoilLanceMode::Throw ? RecoilLanceMode::Thrust : RecoilLanceMode::Throw;
-            eventText_ = recoilLanceMode_ == RecoilLanceMode::Thrust ? "SONIC THRUST" : "LANCE THROW";
+        } else if (activeWeapon_ == WeaponType::LonginusSpear) {
+            longinusSpearMode_ = longinusSpearMode_ == LonginusSpearMode::Throw ? LonginusSpearMode::Thrust : LonginusSpearMode::Throw;
+            eventText_ = longinusSpearMode_ == LonginusSpearMode::Thrust ? "AT THRUST" : "SPEAR THROW";
             eventTextTimer_ = 1.4f;
         } else if (activeWeapon_ == WeaponType::RocketLauncher) {
             rocketLauncherMode_ = rocketLauncherMode_ == RocketLauncherMode::Rocket ? RocketLauncherMode::Drone : RocketLauncherMode::Rocket;
@@ -942,15 +959,15 @@ void Game::UpdateWeaponSwitching() {
             int idx = static_cast<int>(activeWeapon_);
             if (idx < 9) {
                 const char* tips[] = {
-                    "外星激光枪\n左键高速连射  |  右键+左键蓄力穿透光束",
-                    "火焰喷射器\n左键火球(半径膨胀)  |  右键热浪冲击波(锥形推飞弹幕)",
-                    "火箭筒\n左键火箭(火箭跳)  |  右键无人机仓  |  长按右键指挥界面",
-                    "霰弹枪\n左键散射弹丸(后坐力位移)  |  右键玻璃碎片尘云(持续伤害)",
-                    "重力钉枪\n左键重力钉牵引力场  |  右键黑洞榴弹(事件视界秒杀)",
+                    "外星激光枪\n左键高速连射电浆球  |  右键+左键蓄力穿透光束",
+                    "火焰喷射器\n左键火球(半径膨胀)  |  右键切换热浪冲击波(锥形推飞弹幕)",
+                    "火箭筒\n左键火箭(火箭跳)  |  右键切换无人机仓  |  长按右键指挥界面",
+                    "霰弹枪\n左键散射弹丸(后坐力位移)  |  右键切换玻璃碎片尘云(持续伤害)",
+                    "引力钉枪\n左键引力钉牵引力场  |  右键切换黑洞榴弹(事件视界秒杀)",
                     "无限手套\n右键切换:时停(TS)/闪现(B)  |  闪现时滚轮调距离",
-                    "反冲长矛\n左键投掷穿透+反冲位移  |  右键音速推进(锥形+后坐力)",
-                    "纳米构造仪\n左键纳米刀波(50伤/秒)  |  右键纳米平台(可站立)  |  滚轮调距离",
-                    "神秘法杖\n左键诅咒法球(追踪+DoT) | 右键切换护盾(S) | 站定时长按双键召唤法阵",
+                    "朗基努斯之枪\n左键投掷穿透+反冲位移  |  右键切换AT推进(锥形+无敌帧)",
+                    "纳米构造仪\n左键纳米刀波(类帧伤)  |  右键切换纳米平台(可站立) 滚轮调距离",
+                    "神秘法杖\n左键诅咒法球(追踪+DoT) | 右键切换护盾(S) | 站定时长按左右键召唤法阵",
                 };
                 ShowTutorialTip(tips[idx]);
                 tutorialHintTimer_ = 0.3f;
@@ -1055,7 +1072,7 @@ void Game::UpdateShooting(float dt) {
             float side = RandomFloat(-0.05f, 0.05f);
             float lift = RandomFloat(-0.035f, 0.035f);
             Vector3 direction = Vector3Normalize(Vector3Add(forward, Vector3Add(Vector3Scale(right, side), Vector3Scale(up, lift))));
-            FireProjectile(ProjectileKind::Flame, direction, RandomFloat(19.0f, 23.0f), config_.flameDamage, 0.5f, 0.12f, 0.82f, Color{255, 112, 28, 235});
+            FireProjectile(ProjectileKind::Flame, direction, RandomFloat(19.0f, 23.0f), config_.flameDamage, config_.flameLifetime, 0.12f, config_.flameMaxRadius, Color{255, 112, 28, 235});
             fireCooldown_ = 0.045f;
             cameraShake_ = std::min(1.0f, cameraShake_ + 0.045f);
         }
@@ -1100,14 +1117,14 @@ void Game::UpdateShooting(float dt) {
             fireCooldown_ = 0.72f;
             cameraShake_ = std::min(1.0f, cameraShake_ + 0.28f);
         }
-    } else if (activeWeapon_ == WeaponType::RecoilLance) {
-        if (recoilLanceMode_ == RecoilLanceMode::Thrust) {
-            FireLanceThrust(forward);
+    } else if (activeWeapon_ == WeaponType::LonginusSpear) {
+        if (longinusSpearMode_ == LonginusSpearMode::Thrust) {
+            FireSpearThrust(forward);
             fireCooldown_ = 0.68f;
             cameraShake_ = std::min(1.0f, cameraShake_ + 0.58f);
         } else {
-            FireProjectile(ProjectileKind::Lance, forward, config_.recoilLanceSpeed, config_.recoilLanceDamage, 1.15f, 0.28f, 0.28f, Color{210, 245, 255, 255});
-            ApplyLanceRecoil(forward);
+            FireProjectile(ProjectileKind::Lance, forward, config_.longinusSpearSpeed, config_.longinusSpearDamage, 1.15f, 0.28f, 0.28f, Color{255, 160, 50, 255});
+            ApplySpearRecoil(forward);
             fireCooldown_ = 0.86f;
             cameraShake_ = std::min(1.0f, cameraShake_ + 0.5f);
         }
@@ -1129,7 +1146,17 @@ void Game::UpdateShooting(float dt) {
         } else if (mysticStaffMode_ == MysticStaffMode::Shield) {
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                 DeployMysticStaffShield();
-                fireCooldown_ = 0.5f;
+                fireCooldown_ = 0.25f;
+            }
+            if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && mysticStaffShieldActive_ && fireCooldown_ <= 0.0f) {
+                for (const Pickup& p : pickups_) {
+                    if (p.type == PickupType::Essence) {
+                        SpawnShockwave(p.position, 60.0f, Color{255, 215, 60, 255});
+                        SpawnShockwave(p.position, 48.5f, Color{255, 240, 160, 255});
+                        SpawnHitBurst(p.position, Color{255, 235, 120, 255}, 16);
+                    }
+                }
+                fireCooldown_ = 0.25f;
             }
         }
     }
@@ -2034,7 +2061,7 @@ void Game::UpdateProjectiles(float dt) {
         }
 
         if (expired && projectile.kind == ProjectileKind::Lance) {
-            DetonateLance(position, projectile.owner);
+            DetonateSpear(position, projectile.owner);
             DestroyProjectile(i);
             continue;
         }
@@ -2391,6 +2418,16 @@ void Game::UpdatePickups(float dt) {
                 if (TutorialMode() && !pickupTipShown_[2]) {
                     pickupTipShown_[2] = true;
                     ShowTutorialTip("已拾取滑板!\n按C键开关滑板 (极低地面摩擦, 保持高动量滑行)");
+                }
+            } else if (pickup.type == PickupType::Essence) {
+                essence_++;
+                SpawnHitBurst(pickup.position, Color{255, 215, 60, 255}, 30);
+                cameraShake_ = std::min(1.0f, cameraShake_ + 0.2f);
+                eventText_ = "ESSENCE +1";
+                eventTextTimer_ = 1.4f;
+                if (TutorialMode() && !pickupTipShown_[3]) {
+                    pickupTipShown_[3] = true;
+                    ShowTutorialTip("已拾取本质/精华!\n额外生命+1  |  受伤时消耗一条命并短暂无敌\n地图上定时刷新");
                 }
             }
 
@@ -3166,6 +3203,39 @@ void Game::SpawnPickup(PickupType type, int slot) {
     pickups_.push_back(Pickup{type, position, 0.85f, RandomFloat(0.0f, 6.28f)});
 }
 
+void Game::UpdateEssenceSpawn(float dt) {
+    if (config_.essenceMaxOnMap <= 0) return;
+
+    int essenceOnMap = 0;
+    for (const Pickup& p : pickups_) {
+        if (p.type == PickupType::Essence) essenceOnMap++;
+    }
+
+    if (essenceOnMap < config_.essenceMaxOnMap) {
+        essenceSpawnTimer_ -= dt;
+        if (essenceSpawnTimer_ <= 0.0f) {
+            essenceSpawnTimer_ = config_.essenceRespawnTime;
+
+            Vector3 position = {};
+            if (IsSphericalMap()) {
+                float theta = RandomFloat(0.0f, 6.2831853f);
+                float u = RandomFloat(-0.42f, 0.42f);
+                float root = std::sqrt(std::max(0.0f, 1.0f - u * u));
+                Vector3 normal = Vector3{root * std::cos(theta), u, root * std::sin(theta)};
+                position = SphericalSurfacePoint(normal, SphericalPlayerAltitude() * 0.8f);
+            } else if (IsSquareMap()) {
+                float hx = squareHalfExtent_ - 3.0f;
+                position = Vector3{RandomFloat(-hx, hx), 1.0f, RandomFloat(-hx, hx)};
+            } else {
+                float angle = RandomFloat(0.0f, 6.2831853f);
+                float radius = arenaRadius_ * RandomFloat(0.15f, 0.75f);
+                position = Vector3{std::cos(angle) * radius, 1.0f, std::sin(angle) * radius};
+            }
+            pickups_.push_back(Pickup{PickupType::Essence, position, 0.85f, RandomFloat(0.0f, 6.28f)});
+        }
+    }
+}
+
 void Game::SpawnEnemy() {
     EnemyType type = EnemyType::Skitter;
     int roll = GetRandomValue(0, 100);
@@ -3473,7 +3543,7 @@ void Game::FireSoulOrb(Vector3 position, float damage, Vector3 direction) {
     float speed = config_.soulOrbSpeed;
     float turnRate = config_.soulOrbTurnRate;
     float life = config_.soulOrbLifetime;
-    Color color{40, 10, 70, 255};
+    Color color{150, 50, 230, 255};
 
     Vector3 intendedVelocity = Vector3Scale(direction, speed);
     PhysicsWorld::BodyConfig projConfig;
@@ -3734,7 +3804,7 @@ void Game::FireDuelistWeapon(Enemy& enemy, Vector3 position, Vector3 toPlayer) {
             enemy.cooldownTimer = 0.5f / rate;
         } else {
             Vector3 flameDirection = Vector3Normalize(Vector3Add(aimDirection, Vector3Add(Vector3Scale(right, RandomFloat(-0.12f, 0.12f)), Vector3Scale(up, RandomFloat(-0.04f, 0.08f)))));
-            FireEnemyProjectile(ProjectileKind::Flame, origin, flameDirection, RandomFloat(17.0f, 22.0f), config_.flameDamage, 0.48f, 0.14f, 0.72f, Color{255, 120, 34, 235});
+            FireEnemyProjectile(ProjectileKind::Flame, origin, flameDirection, RandomFloat(17.0f, 22.0f), config_.flameDamage, config_.flameLifetime, 0.14f, config_.flameMaxRadius, Color{255, 120, 34, 235});
             enemy.cooldownTimer = 0.12f / rate;
         }
     } else if (enemy.weaponSlot == 2) {
@@ -3769,9 +3839,9 @@ void Game::FireDuelistWeapon(Enemy& enemy, Vector3 position, Vector3 toPlayer) {
         int burst = GetRandomValue(0, 99) < 26 ? 2 : 1;
         for (int i = 0; i < burst; ++i) {
             Vector3 direction = Vector3Normalize(Vector3Add(aimDirection, Vector3Add(Vector3Scale(right, RandomFloat(-0.06f, 0.06f)), Vector3Scale(up, RandomFloat(-0.035f, 0.045f)))));
-            FireEnemyProjectile(ProjectileKind::Lance, origin, direction, config_.recoilLanceSpeed * 0.82f, config_.recoilLanceDamage, 1.15f, 0.28f, 0.28f, Color{220, 245, 255, 255});
+            FireEnemyProjectile(ProjectileKind::Lance, origin, direction, config_.longinusSpearSpeed * 0.82f, config_.longinusSpearDamage, 1.15f, 0.28f, 0.28f, Color{255, 175, 70, 255});
         }
-        AddEnemyImpulse(enemy, Vector3Scale(aimDirection, -config_.recoilLanceImpulse * (burst > 1 ? 0.45f : 0.32f)));
+        AddEnemyImpulse(enemy, Vector3Scale(aimDirection, -config_.longinusSpearImpulse * (burst > 1 ? 0.45f : 0.32f)));
         enemy.cooldownTimer = (burst > 1 ? 1.35f : 1.05f) / rate;
     } else if (enemy.weaponSlot == 7) {
         if (GetRandomValue(0, 99) < 28) {
@@ -3947,10 +4017,10 @@ void Game::FireNanoPlatform(Vector3 direction) {
     eventTextTimer_ = 0.95f;
 }
 
-void Game::FireLanceThrust(Vector3 direction) {
+void Game::FireSpearThrust(Vector3 direction) {
     Vector3 forward = Vector3Normalize(direction);
     Vector3 origin = WeaponMuzzlePosition();
-    float range = config_.recoilLanceThrustRange;
+    float range = config_.longinusSpearThrustRange;
     float halfAngleCos = 0.54f;
 
     for (size_t i = 0; i < enemies_.size();) {
@@ -3970,17 +4040,17 @@ void Game::FireLanceThrust(Vector3 direction) {
         }
 
         float falloff = 1.0f - std::clamp(distance / std::max(0.001f, range), 0.0f, 1.0f);
-        enemy.health -= config_.recoilLanceThrustDamage * (0.35f + falloff * 0.65f);
-        totalDamageDealt_ += config_.recoilLanceThrustDamage * (0.35f + falloff * 0.65f);
+        enemy.health -= config_.longinusSpearThrustDamage * (0.35f + falloff * 0.65f);
+        totalDamageDealt_ += config_.longinusSpearThrustDamage * (0.35f + falloff * 0.65f);
         if (enemy.type == EnemyType::Dummy || enemy.type == EnemyType::DummyBoss) {
-            RecordDummyDamage(enemy, config_.recoilLanceThrustDamage * (0.35f + falloff * 0.65f));
+            RecordDummyDamage(enemy, config_.longinusSpearThrustDamage * (0.35f + falloff * 0.65f));
         }
-        float impulse = config_.recoilLanceThrustForce * (0.45f + falloff * 0.9f);
+        float impulse = config_.longinusSpearThrustForce * (0.45f + falloff * 0.9f);
         AddEnemyImpulse(enemy, Vector3Scale(toEnemy, impulse));
-        SpawnHitBurst(enemyPosition, Color{210, 245, 255, 255}, 8);
+        SpawnHitBurst(enemyPosition, Color{255, 150, 40, 255}, 8);
         if (enemy.health <= 0.0f) {
             score_ += enemy.scoreValue;
-            SpawnHitBurst(enemyPosition, Color{240, 255, 255, 255}, 18);
+            SpawnHitBurst(enemyPosition, Color{255, 200, 80, 255}, 18);
             DestroyEnemy(i);
             continue;
         }
@@ -3996,9 +4066,9 @@ void Game::FireLanceThrust(Vector3 direction) {
         0.16f,
         range * 0.72f,
         0.9f,
-        Color{190, 245, 255, 255}
+        Color{255, 150, 40, 255}
     });
-    shockwaves_.push_back(Shockwave{Vector3Add(origin, Vector3Scale(forward, range * 0.55f)), 0.22f, 0.22f, range * 0.55f, Color{190, 245, 255, 255}});
+    shockwaves_.push_back(Shockwave{Vector3Add(origin, Vector3Scale(forward, range * 0.55f)), 0.22f, 0.22f, range * 0.55f, Color{255, 150, 40, 255}});
     heatwaves_.push_back(HeatwavePulse{
         origin,
         forward,
@@ -4006,10 +4076,10 @@ void Game::FireLanceThrust(Vector3 direction) {
         0.18f,
         range,
         0.52f,
-        Color{170, 235, 255, 255}
+        Color{255, 180, 60, 255}
     });
-    SpawnHitBurst(Vector3Add(origin, Vector3Scale(forward, 1.25f)), Color{225, 255, 255, 255}, 14);
-    float impulse = config_.recoilLanceThrustImpulse;
+    SpawnHitBurst(Vector3Add(origin, Vector3Scale(forward, 1.25f)), Color{255, 220, 140, 255}, 14);
+    float impulse = config_.longinusSpearThrustImpulse;
     Vector3 thrust = Vector3Scale(forward, impulse);
     thrust = Vector3Add(thrust, Vector3Scale(up, std::max(0.0f, -Vector3DotProduct(forward, up)) * impulse * 0.28f));
     playerVelocity_ = Vector3Add(playerVelocity_, thrust);
@@ -4027,14 +4097,15 @@ void Game::FireLanceThrust(Vector3 direction) {
         camera_.position.y = std::max(playerHeight_, camera_.position.y);
     }
     camera_.target = Vector3Add(camera_.position, PlayerForward());
+    longinusSpearThrustInvulnTimer_ = config_.longinusSpearThrustInvuln;
     thrustControlLockTimer_ = 0.18f;
     grounded_ = false;
-    eventText_ = "SONIC THRUST";
+    eventText_ = "AT THRUST";
     eventTextTimer_ = 0.85f;
 }
 
-void Game::DetonateLance(Vector3 position, ProjectileOwner owner) {
-    float radius = config_.recoilLanceShockwaveRadius;
+void Game::DetonateSpear(Vector3 position, ProjectileOwner owner) {
+    float radius = config_.longinusSpearShockwaveRadius;
     if (owner == ProjectileOwner::Player) {
         for (size_t i = 0; i < enemies_.size();) {
             Enemy& enemy = enemies_[i];
@@ -4042,10 +4113,10 @@ void Game::DetonateLance(Vector3 position, ProjectileOwner owner) {
             float distance = Vector3Distance(enemyPosition, position);
             if (distance <= radius + enemy.radius) {
                 float falloff = 1.0f - std::clamp(distance / std::max(0.001f, radius), 0.0f, 1.0f);
-                enemy.health -= config_.recoilLanceShockwaveDamage * (0.25f + falloff * 0.75f);
-                totalDamageDealt_ += config_.recoilLanceShockwaveDamage * (0.25f + falloff * 0.75f);
+                enemy.health -= config_.longinusSpearShockwaveDamage * (0.25f + falloff * 0.75f);
+                totalDamageDealt_ += config_.longinusSpearShockwaveDamage * (0.25f + falloff * 0.75f);
                 if (enemy.type == EnemyType::Dummy || enemy.type == EnemyType::DummyBoss) {
-                    RecordDummyDamage(enemy, config_.recoilLanceShockwaveDamage * (0.25f + falloff * 0.75f));
+                    RecordDummyDamage(enemy, config_.longinusSpearShockwaveDamage * (0.25f + falloff * 0.75f));
                 }
                 Vector3 direction = Vector3Subtract(enemyPosition, position);
                 if (Vector3Length(direction) <= 0.001f) {
@@ -4053,11 +4124,11 @@ void Game::DetonateLance(Vector3 position, ProjectileOwner owner) {
                 } else {
                     direction = Vector3Normalize(direction);
                 }
-                AddEnemyImpulse(enemy, Vector3Scale(direction, config_.recoilLanceShockwaveForce * (0.35f + falloff * 0.85f)));
-                SpawnHitBurst(enemyPosition, Color{190, 245, 255, 255}, 7);
+                AddEnemyImpulse(enemy, Vector3Scale(direction, config_.longinusSpearShockwaveForce * (0.35f + falloff * 0.85f)));
+                SpawnHitBurst(enemyPosition, Color{255, 150, 40, 255}, 7);
                 if (enemy.health <= 0.0f) {
                     score_ += enemy.scoreValue;
-                    SpawnHitBurst(enemyPosition, Color{240, 255, 255, 255}, 18);
+                    SpawnHitBurst(enemyPosition, Color{255, 200, 80, 255}, 18);
                     DestroyEnemy(i);
                     continue;
                 }
@@ -4065,11 +4136,11 @@ void Game::DetonateLance(Vector3 position, ProjectileOwner owner) {
             ++i;
         }
     } else if (Vector3Distance(camera_.position, position) <= radius + playerRadius_) {
-        ApplyPlayerHit(camera_.position, Color{190, 245, 255, 255});
+        ApplyPlayerHit(camera_.position, Color{255, 150, 40, 255});
     }
 
-    SpawnShockwave(position, radius, Color{190, 245, 255, 255});
-    SpawnHitBurst(position, Color{220, 255, 255, 255}, 28);
+    SpawnShockwave(position, radius, Color{255, 150, 40, 255});
+    SpawnHitBurst(position, Color{255, 200, 80, 255}, 28);
     beams_.push_back(Beam{
         position,
         Vector3Add(position, Vector3Scale(IsSphericalMap() ? SphericalUpAt(position) : Vector3{0.0f, 1.0f, 0.0f}, 0.01f)),
@@ -4077,7 +4148,7 @@ void Game::DetonateLance(Vector3 position, ProjectileOwner owner) {
         0.16f,
         radius * 1.4f,
         1.0f,
-        Color{190, 245, 255, 255}
+        Color{255, 150, 40, 255}
     });
 }
 
@@ -4419,10 +4490,10 @@ void Game::ApplyShotgunRecoil(Vector3 direction) {
     grounded_ = false;
 }
 
-void Game::ApplyLanceRecoil(Vector3 direction) {
+void Game::ApplySpearRecoil(Vector3 direction) {
     Vector3 up = IsSphericalMap() ? SphericalUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
-    Vector3 recoil = Vector3Scale(direction, -config_.recoilLanceImpulse);
-    recoil = Vector3Add(recoil, Vector3Scale(up, std::max(0.0f, -Vector3DotProduct(direction, up)) * config_.recoilLanceImpulse * 0.42f));
+    Vector3 recoil = Vector3Scale(direction, -config_.longinusSpearImpulse);
+    recoil = Vector3Add(recoil, Vector3Scale(up, std::max(0.0f, -Vector3DotProduct(direction, up)) * config_.longinusSpearImpulse * 0.42f));
     playerVelocity_ = Vector3Add(playerVelocity_, recoil);
     if (IsSphericalMap()) {
         float speed = Vector3Length(playerVelocity_);
@@ -4442,6 +4513,14 @@ void Game::ApplyPlayerHit(Vector3 position, Color color, const char* text) {
         return;
     }
 
+    if (longinusSpearThrustInvulnTimer_ > 0.0f) {
+        return;
+    }
+
+    if (essenceInvulnTimer_ > 0.0f) {
+        return;
+    }
+
     if (DuelMode() && duelArmorInvulnTimer_ > 0.0f) {
         return;
     }
@@ -4453,6 +4532,45 @@ void Game::ApplyPlayerHit(Vector3 position, Color color, const char* text) {
         SpawnHitBurst(position, color, 30);
         SpawnShockwave(camera_.position, 3.4f, Color{255, 215, 120, 255});
         eventText_ = duelArmor_ > 0 ? "ARMOR HIT" : "ARMOR BROKEN";
+        eventTextTimer_ = 1.6f;
+        return;
+    }
+
+    if (essence_ > 0) {
+        essence_--;
+        essenceInvulnTimer_ = config_.essenceHitInvuln;
+        cameraShake_ = std::min(1.0f, cameraShake_ + 0.7f);
+        SpawnHitBurst(position, Color{255, 200, 60, 255}, 30);
+        SpawnShockwave(camera_.position, 3.4f, Color{255, 200, 60, 255});
+        // Knockback enemies and enemy projectiles (shield-break-like)
+        for (Enemy& enemy : enemies_) {
+            Vector3 ep = BodyPosition(enemy.body);
+            float dist = Vector3Distance(camera_.position, ep);
+            if (dist <= 5.0f + enemy.radius) {
+                Vector3 pushDir = Vector3Subtract(ep, camera_.position);
+                float pushLen = Vector3Length(pushDir);
+                if (pushLen > 0.01f) {
+                    pushDir = Vector3Scale(pushDir, 1.0f / pushLen);
+                    float falloff = 1.0f - std::clamp(dist / 5.0f, 0.0f, 1.0f);
+                    AddEnemyImpulse(enemy, Vector3Scale(pushDir, 22.0f * falloff));
+                }
+            }
+        }
+        for (Projectile& proj : projectiles_) {
+            if (proj.owner != ProjectileOwner::Enemy && proj.kind != ProjectileKind::EnemyShot) continue;
+            Vector3 pp = BodyPosition(proj.body);
+            float dist = Vector3Distance(camera_.position, pp);
+            if (dist <= 5.0f + proj.radius) {
+                Vector3 pushDir = Vector3Subtract(pp, camera_.position);
+                float pushLen = Vector3Length(pushDir);
+                if (pushLen > 0.01f) {
+                    pushDir = Vector3Scale(pushDir, 1.0f / pushLen);
+                    float falloff = 1.0f - std::clamp(dist / 5.0f, 0.0f, 1.0f);
+                    AddProjectileImpulse(proj, Vector3Scale(pushDir, 22.0f * falloff));
+                }
+            }
+        }
+        eventText_ = "ESSENCE LOST";
         eventTextTimer_ = 1.6f;
         return;
     }
@@ -4966,8 +5084,8 @@ const char* Game::WeaponName() const {
             return "NAIL";
         case WeaponType::InfinityGauntlet:
             return "GAUNT";
-        case WeaponType::RecoilLance:
-            return "LANCE";
+        case WeaponType::LonginusSpear:
+            return "SPEAR";
         case WeaponType::NanoConstructor:
             return "NANO";
         case WeaponType::MysticStaff:
@@ -4997,8 +5115,8 @@ const char* Game::WeaponModeName() const {
     if (activeWeapon_ == WeaponType::NanoConstructor) {
         return nanoConstructorMode_ == NanoConstructorMode::NanoPlatform ? "P" : "B";
     }
-    if (activeWeapon_ == WeaponType::RecoilLance) {
-        return recoilLanceMode_ == RecoilLanceMode::Thrust ? "T" : "L";
+    if (activeWeapon_ == WeaponType::LonginusSpear) {
+        return longinusSpearMode_ == LonginusSpearMode::Thrust ? "T" : "S";
     }
     if (activeWeapon_ == WeaponType::MysticStaff) {
         if (mysticStaffMode_ == MysticStaffMode::CurseOrb) return "C";
@@ -5065,7 +5183,7 @@ float Game::DistancePointToSegment(Vector3 point, Vector3 start, Vector3 end) co
     return Vector3Distance(point, closest);
 }
 
-void Game::Draw() const {
+void Game::Draw() {
     BeginTextureMode(pixelTarget_);
     ClearBackground(Color{8, 8, 10, 255});
 
@@ -5482,7 +5600,7 @@ void Game::DrawEnemies() const {
     }
 }
 
-void Game::DrawPickups() const {
+void Game::DrawPickups() {
     for (const Pickup& pickup : pickups_) {
         float bob = std::sin(pickup.bobTimer * 3.2f) * 0.12f;
         float pulse = 0.65f + std::sin(pickup.bobTimer * 5.0f) * 0.18f;
@@ -5523,6 +5641,20 @@ void Game::DrawPickups() const {
             DrawLine3D(Vector3Add(base, Vector3{-0.34f, -0.13f, -0.36f}), Vector3Add(base, Vector3{-0.06f, -0.13f, 0.36f}), Color{170, 255, 190, 230});
             DrawLine3D(Vector3Add(base, Vector3{0.06f, -0.13f, -0.36f}), Vector3Add(base, Vector3{0.34f, -0.13f, 0.36f}), Color{170, 255, 190, 230});
             DrawCylinderWires(Vector3Add(base, Vector3{0.0f, -0.18f, 0.0f}), 0.52f + pulse * 0.08f, 0.52f + pulse * 0.08f, 0.02f, 22, Color{155, 255, 185, 190});
+        } else if (pickup.type == PickupType::Essence && essenceModelLoaded_) {
+            // Spin around surface normal
+            float spinSpeed = 120.0f + std::sin(pickup.bobTimer * 0.37f) * 40.0f;
+            float spinAngle = pickup.bobTimer * spinSpeed;
+            rlRotatef(spinAngle, surfUp.x, surfUp.y, surfUp.z);
+
+            // Hue-cycle the model tint by modifying material color
+            float hue = std::fmod(pickup.bobTimer * 45.0f, 360.0f);
+            Color tint = ColorFromHSV(hue, 0.75f, 1.0f);
+            for (int m = 0; m < essenceModel_.meshCount; ++m) {
+                int matIdx = essenceModel_.meshMaterial[m];
+                essenceModel_.materials[matIdx].maps[MATERIAL_MAP_DIFFUSE].color = tint;
+            }
+            DrawModel(essenceModel_, base, 0.65f, WHITE);
         }
         rlPopMatrix();
     }
@@ -5564,12 +5696,42 @@ void Game::DrawProjectiles() const {
             DrawCylinderWires(position, projectile.radius * 2.15f, projectile.radius * 1.25f, 0.03f, 12, FadeColor(Color{90, 190, 255, 255}, 0.65f));
         } else if (projectile.kind == ProjectileKind::Lance) {
             Vector3 forward = Vector3Length(displayVelocity) > 0.001f ? Vector3Normalize(displayVelocity) : PlayerForward();
-            Vector3 tip = Vector3Add(position, Vector3Scale(forward, projectile.radius * 4.4f));
-            Vector3 tail = Vector3Subtract(position, Vector3Scale(forward, projectile.radius * 3.4f));
-            DrawCylinderEx(tail, tip, projectile.radius * 0.34f, projectile.radius * 0.08f, 6, projectile.color);
-            DrawCylinderWiresEx(tail, tip, projectile.radius * 0.38f, projectile.radius * 0.1f, 6, FadeColor(Color{245, 255, 255, 255}, 0.8f));
-            DrawSphereEx(tip, projectile.radius * 0.58f, 6, 4, Color{245, 255, 255, 240});
-            DrawLine3D(tail, Vector3Add(tail, Vector3Scale(trail, 2.2f)), FadeColor(Color{190, 240, 255, 255}, 0.9f));
+            float r = projectile.radius;
+
+            // Local axes for prong spread (perpendicular to flight direction)
+            Vector3 worldUp = {0.0f, 1.0f, 0.0f};
+            Vector3 side = Vector3CrossProduct(forward, worldUp);
+            if (Vector3Length(side) < 0.5f) {
+                Vector3 refRight = {1.0f, 0.0f, 0.0f};
+                side = Vector3CrossProduct(forward, refRight);
+            }
+            side = Vector3Normalize(side);
+            Vector3 up = Vector3Normalize(Vector3CrossProduct(side, forward));
+
+            // Spear geometry points
+            Vector3 tail = Vector3Subtract(position, Vector3Scale(forward, r * 3.4f));
+            Vector3 forkPoint = Vector3Add(position, Vector3Scale(forward, r * 1.6f));
+            Vector3 tipCenter = Vector3Add(position, Vector3Scale(forward, r * 4.2f));
+
+            // Main shaft — dark red-brown
+            DrawCylinderEx(tail, forkPoint, r * 0.30f, r * 0.06f, 8, Color{140, 20, 20, 255});
+            DrawCylinderWiresEx(tail, forkPoint, r * 0.34f, r * 0.10f, 8, FadeColor(Color{255, 140, 70, 255}, 0.5f));
+
+            // Left prong — bright red, angled outward
+            Vector3 leftProngTip = Vector3Add(Vector3Add(tipCenter, Vector3Scale(up, r * 0.55f)), Vector3Scale(forward, r * 0.3f));
+            DrawCylinderEx(forkPoint, leftProngTip, r * 0.07f, r * 0.005f, 6, Color{209, 13, 13, 255});
+            DrawCylinderWiresEx(forkPoint, leftProngTip, r * 0.085f, r * 0.015f, 6, FadeColor(Color{255, 160, 80, 255}, 0.5f));
+
+            // Right prong — bright red, angled outward
+            Vector3 rightProngTip = Vector3Add(Vector3Subtract(tipCenter, Vector3Scale(up, r * 0.55f)), Vector3Scale(forward, r * 0.3f));
+            DrawCylinderEx(forkPoint, rightProngTip, r * 0.07f, r * 0.005f, 6, Color{209, 13, 13, 255});
+            DrawCylinderWiresEx(forkPoint, rightProngTip, r * 0.085f, r * 0.015f, 6, FadeColor(Color{255, 160, 80, 255}, 0.5f));
+
+            // Core glow at fork
+            DrawSphereEx(forkPoint, r * 0.22f, 8, 6, Color{255, 60, 40, 240});
+
+            // Trail
+            DrawLine3D(tail, Vector3Add(tail, Vector3Scale(trail, 2.2f)), FadeColor(Color{255, 130, 50, 255}, 0.9f));
         } else if (projectile.kind == ProjectileKind::GlassShard) {
             Vector3 forward = Vector3Length(displayVelocity) > 0.001f ? Vector3Normalize(displayVelocity) : PlayerForward();
             Vector3 tip = Vector3Add(position, Vector3Scale(forward, projectile.radius * 1.7f));
@@ -5603,7 +5765,7 @@ void Game::DrawProjectiles() const {
             float spin = static_cast<float>(GetTime()) * 5.0f;
             DrawSphereEx(position, projectile.radius * 0.9f, 5, 4, projectile.color);
             DrawSphereWires(position, projectile.radius * (1.4f + std::sin(spin) * 0.2f), 8, 5,
-                FadeColor(Color{80, 40, 120, 255}, 0.6f));
+                FadeColor(Color{200, 120, 255, 255}, 0.6f));
         } else {
             DrawLine3D(position, Vector3Add(position, trail), FadeColor(projectile.color, 0.7f));
             DrawSphereEx(position, projectile.radius, 5, 4, projectile.color);
@@ -6172,8 +6334,8 @@ void Game::DrawWeapon() const {
         mode = WeaponVisualMode::GravityNailer;
     } else if (activeWeapon_ == WeaponType::InfinityGauntlet) {
         mode = WeaponVisualMode::InfinityGauntlet;
-    } else if (activeWeapon_ == WeaponType::RecoilLance) {
-        mode = WeaponVisualMode::RecoilLance;
+    } else if (activeWeapon_ == WeaponType::LonginusSpear) {
+        mode = WeaponVisualMode::LonginusSpear;
     } else if (activeWeapon_ == WeaponType::NanoConstructor) {
         mode = WeaponVisualMode::NanoConstructor;
     } else if (activeWeapon_ == WeaponType::MysticStaff) {
@@ -6246,6 +6408,36 @@ void Game::DrawHud() const {
         Color armorColor = duelArmorInvulnTimer_ > 0.0f ? Color{255, 230, 140, 255} : duelArmor_ > 0 ? Color{160, 220, 255, 255} : Color{255, 105, 95, 255};
         DrawText(TextFormat("ARMOR %d", duelArmor_), 6, 39, 8, armorColor);
     }
+    // Essence life hexagram indicator
+    if (essence_ > 0 && state_ == State::Playing) {
+        int starY = 35; // DuelMode() ? 49 : 39;
+        int maxStars = essence_ > 3 ? 3 : essence_;
+        float hue = std::fmod(survivalTime_ * 60.0f, 360.0f);
+        Color starFill = essenceInvulnTimer_ > 0.0f
+            ? Color{255, 150, 60, 255}
+            : ColorFromHSV(hue, 0.85f, 1.0f);
+        for (int i = 0; i < maxStars; ++i) {
+            int cx = 370 + i * 16;
+            int cy = starY;
+            float s = 6.5f;
+            float c30 = 0.8660254f;
+            float s30 = 0.5f;
+            Vector2 upT   = {static_cast<float>(cx), cy - s};
+            Vector2 upBL  = {cx - s * c30, cy + s * s30};
+            Vector2 upBR  = {cx + s * c30, cy + s * s30};
+            Vector2 dnB   = {static_cast<float>(cx), cy + s};
+            Vector2 dnTL  = {cx - s * c30, cy - s * s30};
+            Vector2 dnTR  = {cx + s * c30, cy - s * s30};
+
+            DrawTriangle(upT, upBL, upBR, starFill);
+            DrawTriangle(dnB, dnTR, dnTL, starFill);
+            DrawTriangleLines(upT, upBL, upBR, FadeColor(Color{30, 15, 0, 255}, 0.45f));
+            DrawTriangleLines(dnB, dnTR, dnTL, FadeColor(Color{30, 15, 0, 255}, 0.45f));
+        }
+        if (essence_ > 3) {
+            DrawText(TextFormat("+%d", essence_ - 3), 363 + maxStars * 16, starY - 4, 8, starFill);
+        }
+    }
     if (activeWeapon_ == WeaponType::InfinityGauntlet && gauntletMode_ == GauntletMode::Blink) {
         const char* blinkText = TextFormat("BLINK %.1fm", config_.blinkDistance * blinkDistanceScale_);
         DrawText(blinkText, 100, 117, 8, Color{190, 160, 255, 255});
@@ -6303,7 +6495,7 @@ void Game::DrawHud() const {
             else if (enemy.weaponSlot == 3) duelistWeapon = "SHOT";
             else if (enemy.weaponSlot == 4) duelistWeapon = "NAIL";
             else if (enemy.weaponSlot == 5) duelistWeapon = "GAUNT";
-            else if (enemy.weaponSlot == 6) duelistWeapon = "LANCE";
+            else if (enemy.weaponSlot == 6) duelistWeapon = "SPEAR";
             else if (enemy.weaponSlot == 7) duelistWeapon = "NANO";
             bossLabel = TextFormat("DUELIST %s", duelistWeapon);
             labelColor = Color{255, 230, 150, 255};
@@ -6323,7 +6515,7 @@ void Game::DrawHud() const {
 
     if (showKeybindOverlay_) {
         int px = 40, py = 58, fh = 8;
-        int panelW = 346, panelH = 135;
+        int panelW = 346, panelH = 138;
         DrawRectangle(px - 8, py - 8, panelW, panelH, Color{0, 0, 0, 210});
         DrawRectangleLines(px - 8, py - 8, panelW, panelH, Color{140, 140, 160, 180});
         DrawText("CONTROLS  (K to close)", px + 80, py - 2, fh + 1, Color{220, 220, 240, 255});
@@ -6347,7 +6539,7 @@ void Game::DrawHud() const {
         Row("Space", "Jump / Fly up", k, left);
         Row("Shift", "Run", k, left);
         Row("Ctrl", "Fly down", k, left);
-        py += 5;
+        py += 8;
         Section("EQUIPMENT", left);
         Row("Z", "Space suit", k, left);
         Row("X", "Flight rig", k, left);
@@ -6355,11 +6547,11 @@ void Game::DrawHud() const {
 
         py = startPy;
         Section("WEAPONS", right);
-        Row("1 - 8", "Select weapon", k, right);
+        Row("0 - 8", "Select weapon", k, right);
         Row("LMB", "Fire", k, right);
         Row("RMB", "Alt / mode toggle", k, right);
         Row("Wheel", "Switch / adjust", k, right);
-        py += 5;
+        py += 4;
         Section("SYSTEM", right);
         Row("P", "Hide HUD", k, right);
         Row("R", "Restart", k, right);

@@ -113,6 +113,8 @@ GameplayConfig LoadGameplayConfig(const char* path) {
         {"laser_beam_radius_charge_bonus", &config.laserBeamRadiusChargeBonus},
         {"laser_beam_cooldown", &config.laserBeamCooldown},
         {"flame_damage", &config.flameDamage},
+        {"flame_lifetime", &config.flameLifetime},
+        {"flame_max_radius", &config.flameMaxRadius},
         {"rocket_impact_damage", &config.rocketImpactDamage},
         {"rocket_explosion_damage", &config.rocketExplosionDamage},
         {"rocket_explosion_radius", &config.rocketExplosionRadius},
@@ -186,16 +188,17 @@ GameplayConfig LoadGameplayConfig(const char* path) {
         {"glass_shard_separation_radius", &config.glassShardSeparationRadius},
         {"glass_shard_center_force", &config.glassShardCenterForce},
         {"glass_shard_cloud_form_time", &config.glassShardCloudFormTime},
-        {"recoil_lance_damage", &config.recoilLanceDamage},
-        {"recoil_lance_speed", &config.recoilLanceSpeed},
-        {"recoil_lance_impulse", &config.recoilLanceImpulse},
-        {"recoil_lance_thrust_damage", &config.recoilLanceThrustDamage},
-        {"recoil_lance_thrust_force", &config.recoilLanceThrustForce},
-        {"recoil_lance_thrust_range", &config.recoilLanceThrustRange},
-        {"recoil_lance_thrust_impulse", &config.recoilLanceThrustImpulse},
-        {"recoil_lance_shockwave_damage", &config.recoilLanceShockwaveDamage},
-        {"recoil_lance_shockwave_force", &config.recoilLanceShockwaveForce},
-        {"recoil_lance_shockwave_radius", &config.recoilLanceShockwaveRadius},
+        {"longinus_spear_damage", &config.longinusSpearDamage},
+        {"longinus_spear_speed", &config.longinusSpearSpeed},
+        {"longinus_spear_impulse", &config.longinusSpearImpulse},
+        {"longinus_spear_thrust_damage", &config.longinusSpearThrustDamage},
+        {"longinus_spear_thrust_force", &config.longinusSpearThrustForce},
+        {"longinus_spear_thrust_range", &config.longinusSpearThrustRange},
+        {"longinus_spear_thrust_impulse", &config.longinusSpearThrustImpulse},
+        {"longinus_spear_shockwave_damage", &config.longinusSpearShockwaveDamage},
+        {"longinus_spear_shockwave_force", &config.longinusSpearShockwaveForce},
+        {"longinus_spear_shockwave_radius", &config.longinusSpearShockwaveRadius},
+        {"longinus_spear_thrust_invuln", &config.longinusSpearThrustInvuln},
         {"nano_blade_damage", &config.nanoBladeDamage},
         {"nano_blade_range", &config.nanoBladeRange},
         {"nano_blade_width", &config.nanoBladeWidth},
@@ -248,6 +251,8 @@ GameplayConfig LoadGameplayConfig(const char* path) {
         {"bethlehem_laser_rotate_speed", &config.bethlehemLaserRotateSpeed},
         {"dummy_health", &config.dummyHealth},
         {"dummy_spawn_interval", &config.dummySpawnInterval},
+        {"essence_hit_invuln", &config.essenceHitInvuln},
+        {"essence_respawn_time", &config.essenceRespawnTime},
         {"dummy_boss_spawn_time", &config.dummyBossSpawnTime},
         {"dummy_bethlehem_spawn_time", &config.dummyBethlehemSpawnTime},
         {"boss_homing_turn_rate", &config.bossHomingTurnRate},
@@ -327,6 +332,12 @@ GameplayConfig LoadGameplayConfig(const char* path) {
             if (ParseInt(value, parsed)) {
                 config.dummyMaxCount = parsed;
             }
+        } else if (key == "starting_essence") {
+            int parsed = 3;
+            if (ParseInt(value, parsed)) { config.startingEssence = parsed; }
+        } else if (key == "essence_max_on_map") {
+            int parsed = 1;
+            if (ParseInt(value, parsed)) { config.essenceMaxOnMap = parsed; }
         } else if (key == "boss_homing_burst_count") {
             int parsed = 3;
             if (ParseInt(value, parsed)) {
@@ -395,6 +406,8 @@ GameplayConfig LoadGameplayConfig(const char* path) {
     config.laserBeamRadiusChargeBonus = std::max(0.0f, config.laserBeamRadiusChargeBonus);
     config.laserBeamCooldown = std::max(0.01f, config.laserBeamCooldown);
     config.flameDamage = std::max(0.0f, config.flameDamage);
+    config.flameLifetime = std::max(0.05f, config.flameLifetime);
+    config.flameMaxRadius = std::max(0.05f, config.flameMaxRadius);
     config.rocketImpactDamage = std::max(0.0f, config.rocketImpactDamage);
     config.rocketExplosionDamage = std::max(0.0f, config.rocketExplosionDamage);
     config.rocketExplosionRadius = std::max(0.0f, config.rocketExplosionRadius);
@@ -472,16 +485,17 @@ GameplayConfig LoadGameplayConfig(const char* path) {
     config.glassShardSeparationRadius = std::max(0.1f, config.glassShardSeparationRadius);
     config.glassShardCenterForce = std::max(0.0f, config.glassShardCenterForce);
     config.glassShardCloudFormTime = std::max(0.0f, config.glassShardCloudFormTime);
-    config.recoilLanceDamage = std::max(0.0f, config.recoilLanceDamage);
-    config.recoilLanceSpeed = std::max(0.0f, config.recoilLanceSpeed);
-    config.recoilLanceImpulse = std::max(0.0f, config.recoilLanceImpulse);
-    config.recoilLanceThrustDamage = std::max(0.0f, config.recoilLanceThrustDamage);
-    config.recoilLanceThrustForce = std::max(0.0f, config.recoilLanceThrustForce);
-    config.recoilLanceThrustRange = std::max(0.5f, config.recoilLanceThrustRange);
-    config.recoilLanceThrustImpulse = std::max(0.0f, config.recoilLanceThrustImpulse);
-    config.recoilLanceShockwaveDamage = std::max(0.0f, config.recoilLanceShockwaveDamage);
-    config.recoilLanceShockwaveForce = std::max(0.0f, config.recoilLanceShockwaveForce);
-    config.recoilLanceShockwaveRadius = std::max(0.1f, config.recoilLanceShockwaveRadius);
+    config.longinusSpearDamage = std::max(0.0f, config.longinusSpearDamage);
+    config.longinusSpearSpeed = std::max(0.0f, config.longinusSpearSpeed);
+    config.longinusSpearImpulse = std::max(0.0f, config.longinusSpearImpulse);
+    config.longinusSpearThrustDamage = std::max(0.0f, config.longinusSpearThrustDamage);
+    config.longinusSpearThrustForce = std::max(0.0f, config.longinusSpearThrustForce);
+    config.longinusSpearThrustRange = std::max(0.5f, config.longinusSpearThrustRange);
+    config.longinusSpearThrustImpulse = std::max(0.0f, config.longinusSpearThrustImpulse);
+    config.longinusSpearShockwaveDamage = std::max(0.0f, config.longinusSpearShockwaveDamage);
+    config.longinusSpearShockwaveForce = std::max(0.0f, config.longinusSpearShockwaveForce);
+    config.longinusSpearShockwaveRadius = std::max(0.1f, config.longinusSpearShockwaveRadius);
+    config.longinusSpearThrustInvuln = std::max(0.0f, config.longinusSpearThrustInvuln);
     config.nanoBladeDamage = std::max(0.0f, config.nanoBladeDamage);
     config.nanoBladeRange = std::max(0.1f, config.nanoBladeRange);
     config.nanoBladeWidth = std::max(0.05f, config.nanoBladeWidth);
@@ -564,5 +578,9 @@ GameplayConfig LoadGameplayConfig(const char* path) {
     config.magicCircleLifetime = std::max(1.0f, config.magicCircleLifetime);
     config.magicCircleRadius = std::max(0.5f, config.magicCircleRadius);
     config.magicCircleFireInterval = std::max(0.02f, config.magicCircleFireInterval);
+    config.startingEssence = std::max(0, config.startingEssence);
+    config.essenceHitInvuln = std::max(0.1f, config.essenceHitInvuln);
+    config.essenceRespawnTime = std::max(10.0f, config.essenceRespawnTime);
+    config.essenceMaxOnMap = std::clamp(config.essenceMaxOnMap, 1, 10);
     return config;
 }

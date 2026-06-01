@@ -12,7 +12,7 @@ enum class WeaponVisualMode {
     Shotgun,
     GravityNailer,
     InfinityGauntlet,
-    RecoilLance,
+    LonginusSpear,
     NanoConstructor,
     MysticStaff
 };

@@ -20,7 +20,7 @@ public:
     Game& operator=(const Game&) = delete;
 
     void Update(float dt);
-    void Draw() const;
+    void Draw();
 
 private:
     enum class WeaponType {
@@ -30,7 +30,7 @@ private:
         Shotgun,
         GravityNailer,
         InfinityGauntlet,
-        RecoilLance,
+        LonginusSpear,
         NanoConstructor,
         MysticStaff
     };
@@ -70,7 +70,7 @@ private:
         NanoPlatform
     };
 
-    enum class RecoilLanceMode {
+    enum class LonginusSpearMode {
         Throw,
         Thrust
     };
@@ -143,7 +143,8 @@ private:
     enum class PickupType {
         SpaceSuit,
         FlightRig,
-        Skates
+        Skates,
+        Essence
     };
 
     struct Projectile {
@@ -348,6 +349,7 @@ private:
     void UpdateProjectiles(float dt);
     void UpdateParticles(float dt);
     void UpdatePickups(float dt);
+    void UpdateEssenceSpawn(float dt);
     void UpdateCollisions();
     void UpdateArenaBounds();
     void BuildMap();
@@ -384,8 +386,8 @@ private:
     void BreakMysticStaffShield();
     void SpawnMysticStaffShockwave(Vector3 position);
     void CompleteMagicCircleChannel();
-    void FireLanceThrust(Vector3 direction);
-    void DetonateLance(Vector3 position, ProjectileOwner owner);
+    void FireSpearThrust(Vector3 direction);
+    void DetonateSpear(Vector3 position, ProjectileOwner owner);
     void SpawnEnemyNanoBlade(Vector3 origin, Vector3 direction);
     void SpawnGravityWell(Vector3 position, bool blackHole = false);
     void BlinkDuelist(Enemy& enemy, Vector3 awayFrom);
@@ -399,7 +401,7 @@ private:
     void UpdateDrones(float dt);
     void ApplyExplosionImpulse(Vector3 position, float radius, float impulse);
     void ApplyShotgunRecoil(Vector3 direction);
-    void ApplyLanceRecoil(Vector3 direction);
+    void ApplySpearRecoil(Vector3 direction);
     void ApplyPlayerHit(Vector3 position, Color color, const char* eventText = nullptr);
     void AddEnemyImpulse(Enemy& enemy, Vector3 impulse);
     void AddProjectileImpulse(Projectile& projectile, Vector3 impulse);
@@ -442,7 +444,7 @@ private:
     void DrawArena() const;
     void DrawProps() const;
     void DrawEnemies() const;
-    void DrawPickups() const;
+    void DrawPickups();
     void DrawProjectiles() const;
     void DrawBeams() const;
     void DrawShockwaves() const;
@@ -523,7 +525,7 @@ private:
     ShotgunMode shotgunMode_ = ShotgunMode::Pellet;
     GravityNailerMode gravityNailerMode_ = GravityNailerMode::Nail;
     NanoConstructorMode nanoConstructorMode_ = NanoConstructorMode::NanoBlade;
-    RecoilLanceMode recoilLanceMode_ = RecoilLanceMode::Throw;
+    LonginusSpearMode longinusSpearMode_ = LonginusSpearMode::Throw;
     float nanoPlatformRangeScale_ = 1.0f;
     GauntletMode gauntletMode_ = GauntletMode::TimeStop;
     float blinkDistanceScale_ = 1.0f;
@@ -544,7 +546,7 @@ private:
     int tutorialHintIndex_ = 0;
     float configReminderTimer_ = 90.0f;
     int configReminderIndex_ = 0;
-    bool pickupTipShown_[3] = {};
+    bool pickupTipShown_[4] = {};
     float timeStopTintTimer_ = 0.0f;
     float fireCooldown_ = 0.0f;
     bool chargingLaser_ = false;
@@ -568,12 +570,18 @@ private:
     BethlehemBoss bethlehem_;
     Model bethlehemModel_;
     bool bethlehemModelLoaded_ = false;
+    Model essenceModel_;
+    bool essenceModelLoaded_ = false;
     Font cjkFont_ = {};
     bool cjkFontLoaded_ = false;
     bool duelWon_ = false;
     float nextMixedEventTime_ = 104.0f;
     int duelArmor_ = 0;
     float duelArmorInvulnTimer_ = 0.0f;
+    float longinusSpearThrustInvulnTimer_ = 0.0f;
+    int essence_ = 0;
+    float essenceInvulnTimer_ = 0.0f;
+    float essenceSpawnTimer_ = 0.0f;
     float survivalTime_ = 0.0f;
     float cameraShake_ = 0.0f;
     int score_ = 0;

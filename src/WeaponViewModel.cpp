@@ -13,12 +13,12 @@ constexpr std::array<const char*, kWeaponModelCount> kWeaponModelPaths = {
     "assets/models/weapons/shotgun.obj",
     "assets/models/weapons/gravity_nailer.obj",
     "assets/models/weapons/infinity_gauntlet.obj",
-    "assets/models/weapons/recoil_lance.obj",
+    "assets/models/weapons/longinus_spear.obj",
     "assets/models/weapons/rift_cutter.obj",
     "assets/models/weapons/mystic_staff.obj",
 };
 constexpr float kWeaponScale = 0.42f;
-constexpr float kLanceScale = 0.58f;
+constexpr float kSpearScale = 0.58f;
 constexpr int kMaterialMapCount = MATERIAL_MAP_BRDF + 1;
 constexpr Vector3 kMuzzleLocal = {0.0f, 0.0f, 0.70f};
 
@@ -38,7 +38,7 @@ int ModelIndex(WeaponVisualMode mode) {
     if (mode == WeaponVisualMode::InfinityGauntlet) {
         return 5;
     }
-    if (mode == WeaponVisualMode::RecoilLance) {
+    if (mode == WeaponVisualMode::LonginusSpear) {
         return 6;
     }
     if (mode == WeaponVisualMode::NanoConstructor) {
@@ -70,8 +70,8 @@ Color ModeTint(WeaponVisualMode mode, float charge) {
     if (mode == WeaponVisualMode::InfinityGauntlet) {
         return Color{255, 230, 170, 255};
     }
-    if (mode == WeaponVisualMode::RecoilLance) {
-        return Color{210, 245, 255, 255};
+    if (mode == WeaponVisualMode::LonginusSpear) {
+        return Color{255, 255, 255, 255};
     }
     if (mode == WeaponVisualMode::NanoConstructor) {
         return Color{255, 225, 120, 255};
@@ -167,7 +167,7 @@ void WeaponViewModel::Draw(const Camera3D& camera, WeaponVisualMode mode, float 
     position = Vector3Add(position, Vector3Scale(Up(camera), std::cos(sway * 0.8f) * 0.012f));
 
     Color tint = ModeTint(mode, charge);
-    Matrix transform = ModelTransform(camera, position, mode == WeaponVisualMode::RecoilLance ? kLanceScale : kWeaponScale);
+    Matrix transform = ModelTransform(camera, position, mode == WeaponVisualMode::LonginusSpear ? kSpearScale : kWeaponScale);
 
     for (int i = 0; i < model.meshCount; ++i) {
         Material material = model.materials[model.meshMaterial[i]];
