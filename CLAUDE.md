@@ -4,6 +4,8 @@
 
 VioNature 是一个复古像素风高速竞技场 FPS，C++17，基于 raylib 5.6-dev（渲染）+ Jolt Physics（物理）。Quake 式高机动 + 深度武器系统 + 球面地图 + Boss 战。
 
+当前项目更接近“FPS 实验室”：大量武器/道具/地图物理/表里世界机制可通过 `config/gameplay.cfg` 调参验证。实现仍以 `Game` 类拥有状态为主，但 `Game.cpp` 已按职责拆成多个实现文件。
+
 ## 构建
 
 ### Linux 原生（开发调试用）
@@ -30,8 +32,16 @@ bash scripts/package-release.sh
 
 ```
 src/                    # 游戏源码（核心）
-  Game.h / .cpp         # 主游戏类，几乎所有逻辑在此
-  GameConfig.h / .cpp   # 配置文件解析，80+ 参数
+  Game.h                # 主 Game 类、状态、嵌套类型、成员声明
+  Game.cpp              # 构造/析构、Reset/ClearWorld、主 Update/Draw
+  GameMath.h            # 共享 inline 数学/helper
+  GamePlayer.cpp        # 玩家输入、视角、移动、受击、时停/闪现、玩家向量
+  GameWeapons.cpp       # 武器切换、射击入口、玩家武器发射 helper、武器名
+  GameProjectiles.cpp   # 投射物、爆炸、热浪、重力井、纳米刀波/平台、魔法阵弹幕
+  GameEnemies.cpp       # 敌人 AI、波次、Duelist、Boss、Bethlehem
+  GameWorld.cpp         # 地图、碰撞、拾取、球面/平面世界、虫洞/表里世界
+  GameRender.cpp        # 全部 Draw* 视觉和 HUD
+  GameConfig.h / .cpp   # 配置文件解析，200+ 参数
   PhysicsWorld.h / .cpp # Jolt Physics 封装
   WeaponViewModel.h / .cpp  # 武器 3D 模型渲染
   main.cpp              # 入口，窗口初始化
@@ -47,8 +57,17 @@ external/               # Git submodule：raylib + Jolt（不直接修改）
 
 ## 代码风格与模式
 
-### Game.h / Game.cpp 是唯一的大文件
-几乎所有游戏逻辑都在 `Game` 类中（约 5000+ 行）。不要试图拆分成多个文件——保持现状。新增功能在 Game.h 声明、Game.cpp 实现。
+### Game 类仍是状态拥有者，但实现已按职责拆分
+不要把新功能塞回 `Game.cpp`。新增/修改功能时优先放入对应实现文件：
+
+- 玩家移动、受击、时停、闪现：`GamePlayer.cpp`
+- 玩家武器输入和发射入口：`GameWeapons.cpp`
+- 投射物、范围效果、魔法阵弹幕、爆炸：`GameProjectiles.cpp`
+- 敌人、Duelist、Boss、波次：`GameEnemies.cpp`
+- 地图、拾取、碰撞、球面/平面物理、虫洞/表里世界：`GameWorld.cpp`
+- 绘制和 HUD：`GameRender.cpp`
+
+第一轮重构只做了“机械分层”，没有抽 ECS 或系统对象。继续开发时不要大规模迁移成员所有权；若要抽 `WorldSurface` / `ProjectileSystem` / `EnemySystem`，应单独规划。
 
 ### 配置系统
 - `GameConfig.h`：结构体字段 + 默认值
@@ -77,9 +96,28 @@ ShotgunMode shotgunMode_ = ShotgunMode::Pellet;
 
 ### 位置与地图
 - `IsSphericalMap()` — asteroid 或 hollow_world
-- `SphericalUpAt(pos)` — 获取本地"上方"法线
-- `SphericalSurfacePoint(pos, altitude)` — 将点投影到球面指定高度
+- `IsHollowPhysicsForWorld(world)` — 判断某个 world 是否按地心世界内壁物理解释
+- `SphericalUpAt(pos, world)` — 获取指定表/里世界的本地"上方"法线
+- `SphericalSurfacePoint(pos, altitude, world)` — 将点投影到指定世界的球面高度
 - `ProjectOnSphericalTangent(v, up)` — 投影到切平面
+- `FlatGroundYForWorld(world)` / `FlatUpForWorld(world)` — 平面地图表/里世界地面与朝向
+
+### 表里世界与虫洞
+- `playerWorld_`：0 = 表世界，1 = 里世界
+- `Enemy::world`：敌人当前遵循的物理层
+- `WormholePortal`：保存 front/back 入口、镜像平面、传送冷却、关联法阵索引
+- 球面地图对偶：`asteroid` 的 world 1 使用 `hollow_world` 物理；`hollow_world` 的 world 1 使用 `asteroid` 物理
+- 平面地图的里世界使用镜像/偏移的平面层；`kFlatBackWorldDepth` 在 `GameMath.h`
+- 敌人与玩家不同 world 时应索敌自己世界的虫洞；同 world 后正常索敌玩家
+- 玩家与敌人接触伤害只应在同 world 时发生；投射物/爆炸/黑洞/刀波/无人机不做世界隔离，这是设计目标
+- 虫洞关闭逻辑在 `CloseWormhole()` / `CloseWormholeAlongSegment()`，朗基努斯之枪相关命中需调用它
+
+### 魔法阵激活规则
+- 只有玩家的电浆球、蓄力激光、火焰球、霰弹、火箭弹能激活大魔法阵
+- 黑洞榴弹命中法阵框架会转化为虫洞
+- 朗基努斯之枪可解除/关闭法阵或虫洞
+- 魔化弹幕应尽量继承原型武器的寿命、伤害、射速等基础参数；法阵本身只提供射速倍率和追踪参数
+- 激光和电浆弹要保持区分：蓄力光束使用 `activatedByLaserBeam`，普通电浆弹使用 `ProjectileKind::LaserShot`
 
 ### 物理
 - 玩家/敌人/弹丸都有 Jolt physics body
@@ -109,12 +147,13 @@ Release zip 包解压后 .cfg 文件可能带只读属性。文档中已注明�
 ### 文件更新检查清单
 新增功能后需确认：
 - [ ] `GameConfig.h` + `GameConfig.cpp`（字段、解析、clamp）
-- [ ] `Game.h` + `Game.cpp`（逻辑实现）
+- [ ] `Game.h` + 对应 `Game*.cpp`（逻辑实现）
 - [ ] `config/gameplay.cfg`（英文版）
 - [ ] `config/gameplay_annotated.cfg`（中文版）
 - [ ] `GAMEPLAY_GUIDE.md`（如有 UI/操作变更）
 - [ ] `README.md`（如有重大特性变更）
-- [ ] 构建验证 `cmake --build . --target MyShooter`
+- [ ] 构建验证 `cmake --build build-sandbox -j2`
+- [ ] Smoke test `build-sandbox/MyShooter --smoke-test`
 
 ## 编辑注意事项
 

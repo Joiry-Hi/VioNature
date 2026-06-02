@@ -12,6 +12,7 @@
 ## V2.0 新特性
 
 - **第 9 把武器 — 神秘法杖**：诅咒法球（追踪 DoT + 灵魂法球链式反应）、秘法护盾（球壁阻挡 + 碎裂冲击波）、魔法阵（双键施法召唤 + 吸收弹幕自动反击）
+- **表里世界虫洞系统**：黑洞榴弹可将大魔法阵永久激活为紫色虫洞，玩家与敌人可穿越到对偶物理层；朗基努斯之枪可关闭虫洞并湮灭里世界入口
 - **朗基努斯之枪重制**：EVA 风格红色双叉枪模型，AT 立场橙黄色冲击波，AT 推进附带无敌帧
 - **Essence 生命拾取系统**：星形八面体彩虹拾取物，额外生命 + 受伤消耗 + 无敌帧，HUD 六芒星指示器
 - **史莱姆王 Boss**：地面移动 → 远跳/高跳 → 重砸冲击波，死亡分裂繁殖
@@ -32,7 +33,7 @@
 | 6 | **无限手套** | 时间停止（冻结所有敌弹） / 闪现传送 | 右键切换模式 |
 | 7 | **朗基努斯之枪** | 红色双叉枪投掷（穿透+反冲） | AT 推进锥（无敌帧+后坐力） |
 | 8 | **纳米构造仪** | 纳米构筑新月刃波（1000 DPS） | 可站立纳米平台（临时地板） |
-| 9 | **神秘法杖** | 诅咒法球（追踪+DoT+魂弹链式） | 秘法护盾 + 魔法阵召唤 |
+| 9 | **神秘法杖** | 诅咒法球（追踪+DoT+魂弹链式） | 秘法护盾 + 魔法阵召唤/虫洞框架 |
 
 单击右键切换副模式；手持火箭筒时**长按**右键（>0.22s）打开无人机指挥界面。神秘法杖按 **0** 键选中。
 
@@ -51,7 +52,7 @@
 | **Blinker** 闪烁者 | 预警 → 瞬移侧后 → 高速冲刺 |
 | **Boss — 几何领主** | 紫色方块 + 环绕尖刺。追踪弹幕（激怒后加速），出场带护卫小怪 |
 | **Boss — 史莱姆王** | 绿色巨球。地面移动 → 长跳/高跳 → 重砸冲击波。死亡分裂为 4 个小史莱姆（最多 2 代） |
-| **Boss — 伯利恒之星** | 金色正方体六芒卫星。地图不同则位置不同（轨道 / 悬停 / 球心）。巨型追踪激光（预警光束 → 伤害光束） |
+| **Boss — 伯利恒之星** | 金色正方体六芒卫星。地图不同则位置不同（轨道 / 悬停 / 球心）。巨型追踪激光（预警光束 → 伤害光束）。**免疫 AoE 与追踪弹**，仅直击弹丸可伤 |
 | **Duelist** 决斗者 | 镜面对战 AI（仅决斗模式），会使用全部 9 种武器及时停、闪现、护盾，根据距离切换战术 |
 | **Dummy** 训练假人 | 仅教程模式，不移动不攻击，用于测试武器伤害 |
 
@@ -72,8 +73,16 @@
 |------|------|
 | `circle` | 经典平坦圆形竞技场，半径可调 |
 | `square` / `square_obstacle` | 方形竞技场，含障碍物 + 多层浮空平台 |
-| `asteroid` | 球形小行星表面，重力指向球心。切线速度守恒——适合轨道速度漂移 |
-| `hollow_world` | 空心球壳内部，重力向外指向球壳。玩家在内壁战斗，伯利恒之星位于正中心 |
+| `asteroid` | 球形小行星表面，重力指向球心；虫洞里世界为 `hollow_world` 物理 |
+| `hollow_world` | 空心球壳内部，重力向外指向球壳；虫洞里世界为 `asteroid` 物理 |
+
+---
+
+## 表里世界与虫洞
+
+神秘法杖召唤的大魔法阵可以被指定玩家弹种激活：电浆球、蓄力激光、火焰球、霰弹、火箭弹会让法阵变成对应弹种的紫色追踪发射框架；朗基努斯之枪可解除/关闭法阵。
+
+黑洞榴弹命中大魔法阵时会把框架永久转化为一对紫色虫洞。玩家穿过虫洞会进入当前地图的“里世界”：小行星与地心世界互为对偶，平面地图则进入带镜像偏移的平面背面层。敌人与玩家不在同一世界时会改为追逐自己所在层的虫洞，并可通过虫洞追到玩家所在层。投射物和范围效果不做世界隔离，这是表里世界互相影响的核心玩法。
 
 ---
 
@@ -197,177 +206,3 @@ bash scripts/package-release.sh
 | R | 重置游戏 |
 
 ---
-
-## Highlights
-
-**9 weapons × 2 modes each** — every weapon has a primary fire and an alternate mode, with the Mystic Staff adding a secret third mode (dual-button magic circle summon).
-
-**Mobility is your best defense.** Rocket jumping, shotgun recoil dashes, spear-throw momentum, AT thrust invincibility frames, blink teleports, flight rigs, and low-grav suits stack into air-strafe chains. Any hit is lethal — unless you have Essence.
-
-**Three bosses with unique mechanics** — the Geometry Lord fires homing barrages and enrages below 45% HP. The Slime King jumps, slams, and splits into clones on death. The Star of Bethlehem orbits like a satellite and sweeps a giant tracking laser.
-
-**Essence life system** — collect rainbow star-octahedron pickups for extra lives. Losing a life triggers a shield-break shockwave that knocks back enemies and projectiles.
-
-**Drone swarm with command interface** — the rocket launcher's alt-fire deploys combat drones that use boids flocking behavior. Long-press right-click opens a tactical overlay with X-ray enemy markers.
-
-**Four distinct maps** — flat arenas, a spherical asteroid surface, and a hollow-world shell interior.
-
-**200+ tunable parameters** — everything from weapon damage to boss spawn timing lives in one config file.
-
-## Weapons
-
-| # | Weapon | Primary | Alternate |
-|---|--------|---------|-----------|
-| 1 | **Laser Rifle** | Rapid-fire plasma bolts | Charged piercing beam |
-| 2 | **Flamethrower** | Expanding fireball (size/lifetime configurable) | Heatwave cone (repels enemy projectiles) |
-| 3 | **Rocket Launcher** | Explosive rockets (rocket-jump capable) | Drone canister + command interface |
-| 4 | **Shotgun** | Pellet spread with recoil dash | Glass shard dust cloud (boids persistent damage) |
-| 5 | **Gravity Nailer** | Gravity well (pulls enemies) | Black hole grenade (event horizon instant kill) |
-| 6 | **Infinity Gauntlet** | Time Stop / Blink teleport | Right-click toggles mode |
-| 7 | **Longinus Spear** | Red twin-prong spear throw (piercing + recoil) | AT thrust cone (invincibility frames + knockback) |
-| 8 | **Nano Constructor** | Nano blade wave (1000 DPS) | Placeable nano-platform (temporary floor) |
-| 9 | **Mystic Staff** | Curse orb (homing + DoT + soul orb chain) | Arcane shield + magic circle summon |
-
-Tap right-click to toggle alt-mode; hold right-click (>0.22s) on rocket launcher for drone command overlay. Press **0** for Mystic Staff.
-
-## Enemies
-
-| Enemy | Behavior |
-|-------|----------|
-| **Skitter** | Basic melee rusher |
-| **Brute** | Tanky, slow, high HP |
-| **Wisp** | Erratic wave-pattern evasion |
-| **Spitter** | Keeps distance, fires aimed projectiles |
-| **Pouncer** | Charges a leap toward the player |
-| **Harrier** | Airborne, sinusoidal strafe, ranged shots |
-| **Blinker** | Telegraph → teleport to flank → high-speed dash |
-| **Boss — Geometry Lord** | Purple cube with orbiting spikes. Homing projectile barrages, enrages below 45% HP. |
-| **Boss — Slime King** | Giant green sphere. Ground movement → long/high jumps → slam shockwave. Splits into 4 offspring on death (up to 2 generations). |
-| **Boss — Star of Bethlehem** | Golden cube-spike satellite. Orbits, hovers, or sits at world center depending on map. Giant tracking laser (warning beam → damaging beam). |
-| **Duelist** | Mirror-match AI (duel mode only). Uses all 9 weapons, time-stop, blink, shield, and adapts tactics by range. |
-| **Dummy** | Tutorial mode only. Stationary target for damage testing. |
-
-## Game Modes
-
-- **Survival** — Escalating waves, scripted enemy surges, three bosses spawn at configured times.
-- **Tutorial** — No enemies. Free exploration of all 9 weapons with training dummies and weapon tips.
-- **Duel** — 1v1 against an AI Duelist. Player has armor charges + Essence extra lives.
-- **Boss Rush** (`boss_rush_mode = true`) — Bosses only, no regular enemies or events.
-
-## Maps
-
-| Map | Description |
-|-----|-------------|
-| `circle` | Classic flat round arena |
-| `square` / `square_obstacle` | Flat square with obstacles + multi-tier floating platforms |
-| `asteroid` | Spherical planetoid surface. Gravity toward core. Tangent velocity conserved — orbital-speed strafing. |
-| `hollow_world` | Hollow sphere interior. Gravity outward toward shell. Battle on inner surface looking inward. |
-
-## Drone Command System
-
-Hold right-click with rocket launcher to open tactical command interface:
-
-- All enemies marked with **3D octahedron wireframes visible through terrain** (X-ray).
-- HUD shows active drone count, enemy count, range, and mode.
-- **Left-click** sets a rally point. Drones enter Assembling → Holding → Complete phases.
-- Drones use **boids flocking** (separation, cohesion, alignment).
-
-## Essence Life System
-
-Rainbow stella octangula pickups spawn periodically on the map:
-
-- **Collect** → +1 extra life (hexagram indicator below HUD timer)
-- **Hit** → consume 1 life + brief invincibility + golden shockwave knockback, instead of dying
-- **Shield ping** → hold left-click in staff shield mode to emit golden pulse waves toward all Essence locations
-- Starting lives, invuln duration, respawn interval, and max on map are all configurable
-
-## Pickups
-
-| Pickup | Effect | Toggle |
-|--------|--------|--------|
-| **Space Suit** (blue) | 0.24× gravity | Z |
-| **Flight Rig** (cyan) | Hover flight | X |
-| **Skates** (green) | Ultra-low friction sliding | C |
-| **Essence** (rainbow star octahedron) | Extra life +1 | Auto-collect |
-
-## Tech Stack
-
-| Layer | Library |
-|-------|---------|
-| Rendering & input | [raylib](https://www.raylib.com/) 5.6-dev (pixel-art pipeline: 426×240 → upscale with `TEXTURE_FILTER_POINT`) |
-| Physics | [Jolt Physics](https://github.com/jrouwe/JoltPhysics) (custom C++17 wrapper) |
-| Window / context | GLFW 3.4 |
-| Build | CMake 3.24+ |
-| Language | C++17 |
-
-## Build
-
-### Linux (native)
-
-```bash
-# Requires: cmake, g++-13+, libx11-dev, libxcursor-dev, libxrandr-dev, libxinerama-dev
-git clone --recurse-submodules <repo-url>
-cd VioNature
-
-mkdir -p build-sandbox && cd build-sandbox
-cmake .. -DCMAKE_BUILD_TYPE=Release
-cmake --build . -j $(nproc)
-```
-
-Output: `build-sandbox/MyShooter` (game) + `build-sandbox/ModelViewer` (model viewer tool).
-
-### Windows (cross-compile from Linux)
-
-```bash
-# Additionally requires: mingw-w64
-cd build-windows
-cmake .. \
-    -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchain-mingw64.cmake \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DJPH_USE_DX12=OFF
-cmake --build . -j $(nproc)
-```
-
-Or use the one-shot release script:
-
-```bash
-bash scripts/package-release.sh
-```
-
-This builds, collects `MyShooter.exe` + MinGW DLLs + assets, swaps in the annotated Chinese config, adds the gameplay guide, and packs everything into `build-windows/VioNature_Release.zip`.
-
-## Configuration
-
-All gameplay parameters live in `config/gameplay.cfg` (English) or `config/gameplay_annotated.cfg` (Chinese annotated). **200+ tunable values** covering:
-
-- Map geometry, gravity, and player movement
-- All 9 weapons — damage, speed, radius, recoil, cooldown
-- Essence starting lives, invuln duration, respawn timing
-- Enemy timing and behavior per type
-- Three bosses — spawn times, health, orbit, laser properties
-- Drone counts, flocking parameters, rally hold duration
-- Duel mode armor and invulnerability frames
-
-The release script packages the annotated Chinese config as the default `gameplay.cfg`.
-
-Full controls and mechanics are documented in [GAMEPLAY_GUIDE.md](GAMEPLAY_GUIDE.md).
-
-## Controls
-
-| Input | Action |
-|-------|--------|
-| WASD | Move |
-| Mouse | Aim |
-| Left click | Fire |
-| Right click (tap) | Toggle weapon alt-mode |
-| Right click (hold, rocket launcher) | Drone command interface |
-| Scroll wheel | Switch weapons / adjust nano-platform range / adjust blink distance |
-| Space | Jump / fly up |
-| Ctrl | Fly down |
-| Shift | Run |
-| 1–8 | Select weapons 1–8 |
-| 0 | Select Mystic Staff (weapon 9) |
-| Z / X / C | Toggle space suit / flight rig / skates |
-| P | Hide HUD + weapon model (screenshot mode) |
-| F11 | Toggle fullscreen |
-| R | Reset game |

@@ -90,7 +90,8 @@ VioNature 共有 **9 把武器**，每把武器都可以通过 **单击右键**�
 ### 9. 神秘法杖 (STAFF)  — 按 0 键切换
 - **主模式：诅咒法球 (C)** — 紫色追踪灵弹，命中敌人后施加 DoT 持续诅咒伤害，诅咒致死时释放灵魂法球链式反应。DPS 叠加倍率、追踪速率均可配置
 - **副模式：秘法护盾 (S)** — 右键切换至护盾模式。左键部署球形护盾，阻挡敌人并推开，被敌方弹幕击中后碎裂释放紫色冲击波推开范围内敌人与弹幕。碎裂后进入冷却。**护盾激活后长按左键**可向场上所有 Essence 拾取物释放金色脉冲光波，揭示位置
-- **魔法阵召唤** — 手持法杖、站立地面、静止时，**同时长按左右键** 3 秒完成施法，脚下生成五角星魔法阵 + 浮空正八面体框架。法阵自动吸收玩家弹幕并发射追踪魔化版本。法阵持续时间、半径、射击间隔均可配置
+- **魔法阵召唤** — 手持法杖、站立地面、静止时，**同时长按左右键** 3 秒完成施法，脚下生成五角星魔法阵 + 浮空正八面体框架。法阵只响应指定玩家弹种：电浆球、蓄力激光、火焰球、霰弹、火箭弹会把框架激活为对应弹种的紫色追踪版本，并继承原武器的基础寿命、伤害、射速等参数。朗基努斯之枪可解除/关闭法阵
+- **虫洞激活** — 黑洞榴弹命中大魔法阵框架时，会把法阵永久转化为紫色虫洞入口，并在“另一面世界”生成对应出口。玩家或敌人接触虫洞会切换到另一物理层；朗基努斯之枪可关闭虫洞，使里世界入口湮灭
 - HUD 模式标识：C / S / SA（护盾激活）/ SC（护盾冷却）
 
 ## 敌人图鉴
@@ -107,7 +108,7 @@ VioNature 共有 **9 把武器**，每把武器都可以通过 **单击右键**�
 | **Boss** 几何领主 | 紫色大球 | 1000 | Wave 2 开始后第 50s 出现，发射追踪弹幕，血量低于 45% 后弹幕加速 |
 | **Boss** 史莱姆王 | 绿色大球 | 200 | 第 100s 出现，地面移动 → 远跳/高跳 → 重砸冲击波。死亡分裂为 4 个小史莱姆，最多分裂 2 代 |
 | **Duelist** 决斗者 | 金色球 | 100 | 仅在 Duel 模式出现，会使用玩家的全部 9 种武器，根据距离选择不同策略，会切换武器、蓄力、闪现、火箭跳 |
-| **Boss** 伯利恒之星 | 金色正方体 + 六芒 | 200（可配） | 按地图类型出现在不同位置：小行星地图沿赤道轨道环绕，平面地图高悬中心上方，空心世界位于球心。攻击方式为巨型激光柱，分预警（无伤透明追踪）和伤害（低透明确认命中）两阶段，预警激光初始锁定玩家后缓慢旋转追踪，伤害阶段继续保持追踪。出现时间、轨道参数、激光数据均可配置 |
+| **Boss** 伯利恒之星 | 金色正方体 + 六芒 | 200（可配） | 按地图类型出现在不同位置：小行星地图沿赤道轨道环绕，平面地图高悬中心上方，空心世界位于球心。攻击方式为巨型激光柱，分预警（无伤透明追踪）和伤害（低透明确认命中）两阶段，预警激光初始锁定玩家后缓慢旋转追踪，伤害阶段继续保持追踪。出现时间、轨道参数、激光数据均可配置。**特殊免疫**：不计入敌人计数，不受 AoE（爆炸/冲击波/重力井/热浪/纳米刃波）伤害，追踪弹不以其为索敌目标——仅有弹丸直接命中可造成伤害，为其赋予"高维天外实体"的独特定位 |
 | **Dummy** 训练假人 | 灰色球 | 10（可配） | 仅 Tutorial 模式，不移动不攻击，用于测试武器伤害 |
 
 ## 拾取物
@@ -140,6 +141,17 @@ VioNature 共有 **9 把武器**，每把武器都可以通过 **单击右键**�
 | **asteroid** | 球形小行星表面，重力指向球心，玩家站在球面外侧战斗 |
 | **hollow_world** | 空心球壳内部，重力指向球壳外，玩家站在球壳内侧向球心战斗 |
 
+## 表里世界与虫洞
+
+当黑洞榴弹激活神秘法杖的大魔法阵后，法阵会变成一对紫色虫洞。虫洞不是独立副本，而是同一空间的“双重物理解释”：
+
+- **小行星 ↔ 地心世界**：`asteroid` 的里世界按 `hollow_world` 物理运行；`hollow_world` 的里世界按 `asteroid` 物理运行
+- **平面地图 ↔ 平面背面层**：`circle` / `square_obstacle` 的里世界仍使用平面物理，但整体镜像偏移，方便形成“穿过地表到另一面”的感觉
+- **玩家穿越**：接触当前世界的虫洞入口会传送到另一端，传送有冷却，避免反复触发
+- **敌人追洞**：敌人与玩家不在同一世界时，会把自己所在世界的虫洞当作索敌目标；穿过虫洞后恢复正常追玩家
+- **伤害规则**：玩家和敌人的直接接触伤害只在同一世界生效；投射物、爆炸、黑洞、刀波、无人机等不做世界隔离，可以跨表里层互相影响
+- **关闭机制**：朗基努斯之枪命中虫洞/法阵区域可关闭传送门，清除虫洞状态
+
 ## 游戏模式（通过 config/gameplay.cfg 的 `game_mode` 切换）
 
 ### Survival（生存模式）
@@ -170,7 +182,7 @@ VioNature 共有 **9 把武器**，每把武器都可以通过 **单击右键**�
 
 ```
 TIME 12.3  SCORE 340  E 8  W SPEAR:S  G 0.24x  SUIT  FPS 60
-WAVE 2                                    SLIME KING [=========     ]
+WORLD FRONT  WAVE 2                       SLIME KING [=========     ]
 DUEL: ARMOR 2
 ```
 
@@ -182,6 +194,7 @@ DUEL: ARMOR 2
 - **状态词**：GROUND（地面）/ AIR（空中）/ SUIT（太空服）/ FLIGHT（飞行）/ SKATE（滑板）/ STOP（时停中）/ GOD（无敌模式）
 - **六芒星**：TIME 下方，实心金色六芒星（色相循环）表示当前 Essence 生命数。受击无敌时变橙色。≤6 个星，>6 显示 +N
 - **WAVE / 事件文字**：当前波次或最近的事件提示
+- **WORLD FRONT / WORLD BACK**：当前所在表世界 / 里世界
 - **Boss/决斗者血条**：仅显示 Boss 和决斗者
 - **决斗者当前武器**：显示 Duelist 正在使用的武器
 
@@ -196,6 +209,8 @@ DUEL: ARMOR 2
 - **角动量保持**：在球形地图（asteroid / hollow_world）中，切线速度不受重力影响，可利用切线加速获得极高的环绕速度
 - **AT 推进无敌帧**：朗基努斯之枪 AT 推进期间无敌，可用来穿越弹幕或硬吃 Boss 攻击
 - **法阵阵地战**：在固定位置召唤魔法阵后，向法阵持续射击以填充吸收弹药，法阵会自动向附近敌人发射追踪弹幕
+- **虫洞引诱**：用黑洞榴弹把法阵转化为虫洞后，可以先进入里世界，引诱表世界敌人追逐虫洞并穿越，再用黑洞/刀波/无人机在出口处布置交叉火力
+- **表里夹击**：投射物不按世界隔离，意味着你可以在里世界布置弹幕，让它们影响表世界敌人；这也是虫洞系统最实验性的部分
 - **护盾感应 Essence**：手持法杖护盾模式时，长按左键向场上所有 Essence 位置释放金色脉冲波，快速定位拾取物
 - **Essence 换血**：有额外生命时可以故意吃伤害触发无敌帧 + 冲击波推开周围敌人，创造输出窗口
 
@@ -222,6 +237,15 @@ DUEL: ARMOR 2
 | `asteroid_player_altitude` / `_enemy_altitude` | 小行星表面玩家/敌人高度 |
 | `hollow_world_radius` | 空心球壳内半径 |
 | `hollow_world_player_altitude` / `_enemy_altitude` | 球壳内玩家/敌人距壳距离 |
+
+### 表里世界与虫洞
+
+| 参数 | 说明 |
+|------|------|
+| `wormhole_player_cooldown` | 玩家虫洞传送冷却 |
+| `wormhole_enemy_cooldown` | 敌人虫洞传送冷却 |
+| `wormhole_trigger_radius` | 虫洞触发半径 |
+| `wormhole_visual_radius` | 虫洞视觉半径 |
 
 ### 玩家移动
 
@@ -250,7 +274,7 @@ DUEL: ARMOR 2
 
 **纳米构造仪 (5h)**: `nano_blade_damage`, `nano_blade_lifetime`, `nano_blade_radius`, `nano_platform_range`, `nano_platform_lifetime` 等
 
-**神秘法杖 (5i)**: `curse_orb_direct_damage`, `curse_orb_dps`, `curse_orb_max_stack_mult`, `curse_orb_speed`, `curse_orb_turn_rate`, `soul_orb_count`, `soul_orb_damage_scale`, `mystic_staff_shield_radius`, `mystic_staff_shield_cooldown`, `mystic_staff_shockwave_radius`, `magic_circle_lifetime`, `magic_circle_radius`, `magic_circle_fire_interval` 等
+**神秘法杖 (5i)**: `curse_orb_direct_damage`, `curse_orb_dps`, `curse_orb_max_stack_mult`, `curse_orb_speed`, `curse_orb_turn_rate`, `soul_orb_count`, `soul_orb_damage_scale`, `mystic_staff_shield_radius`, `mystic_staff_shield_cooldown`, `mystic_staff_shockwave_radius`, `magic_circle_lifetime`, `magic_circle_radius`, `magic_circle_fire_interval`, `magic_circle_fire_rate_mult`, `magic_circle_homing_turn_rate` 等
 
 ### Boss 参数
 

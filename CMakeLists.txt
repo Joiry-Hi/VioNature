@@ -37,8 +37,15 @@ add_executable(MyShooter
     src/main.cpp
     src/GameConfig.cpp
     src/Game.cpp
+    src/GamePlayer.cpp
+    src/GameWeapons.cpp
+    src/GameProjectiles.cpp
+    src/GameEnemies.cpp
+    src/GameWorld.cpp
+    src/GameRender.cpp
     src/PhysicsWorld.cpp
     src/WeaponViewModel.cpp
+    src/platform_win.cpp
 )
 
 # 设置头文件路径
@@ -51,6 +58,9 @@ target_include_directories(MyShooter PRIVATE
 # 注意：在 Linux 上 Jolt 可能依赖 pthread，Threads::Threads 会自动处理
 find_package(Threads REQUIRED)
 target_link_libraries(MyShooter PRIVATE raylib Jolt Threads::Threads)
+if(WIN32)
+    target_link_libraries(MyShooter PRIVATE imm32)
+endif()
 
 # =========================================================
 # 4. 模型预览工具 (ModelViewer)

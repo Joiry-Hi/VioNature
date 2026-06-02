@@ -201,6 +201,7 @@ private:
         bool cursed = false;
         float curseDps = 0.0f;
         bool killedBySoulOrb = false;
+        float lastDamageTime = -999.0f;
         int aiTier = 0;  // 0=random barrage, 1=strategic mirror
         float equipmentTimer = 0.0f;  // cooldown for gear toggling
         bool usingSpaceSuit = false;
@@ -341,6 +342,7 @@ private:
         ProjectileKind activatedKind = ProjectileKind::LaserShot;
         float fireRateMult = 1.0f;
         float homingTurnRate = 3.5f;
+        int world = 0;
     };
 
     struct WormholePortal {
@@ -355,12 +357,22 @@ private:
 
     void Reset();
     void ClearWorld();
+
+    // GamePlayer.cpp
     void UpdatePlayer(float dt);
     void UpdateLook(float dt);
     void UpdateMovement(float dt);
     void UpdateFreeCamera(float dt);
+
+    // GameWeapons.cpp
     void UpdateWeaponSwitching();
+    void UpdateConsole();
+    bool SetConfigValue(const std::string& key, const std::string& value);
+    std::string GetConfigValue(const std::string& key) const;
+    std::vector<std::string> GetConfigKeys() const;
     void UpdateShooting(float dt);
+
+    // GameProjectiles.cpp
     void UpdateBeam(float dt);
     void UpdateShockwaves(float dt);
     void UpdateHeatwaves(float dt);
@@ -374,26 +386,8 @@ private:
     void UpdateWaveDirector(float dt);
     void UpdateProjectiles(float dt);
     void UpdateParticles(float dt);
-    void UpdatePickups(float dt);
-    void UpdateEssenceSpawn(float dt);
     void UpdateCollisions();
-    void UpdateArenaBounds();
-    void BuildMap();
-    void ResolveMapCollision(Vector3 previousPosition);
-    void SpawnStartingPickups();
-    void SpawnPickup(PickupType type, int slot);
-    void SpawnEnemy();
-    void SpawnEnemyOfType(EnemyType type);
-    bool BossAlive() const;
-    bool DuelMode() const;
-    bool TutorialMode() const;
-    bool DuelWon() const;
-    void ShowTutorialTip(const char* text);
-    void RecordDummyDamage(const Enemy& enemy, float damage);
     void FireBossRing(Vector3 position, int count, float speedScale, int world = 0);
-    void UpdateDuelist(Enemy& enemy, Vector3 position, Vector3 direction, float dt, float& speed, bool& skipVelocity);
-    void SwitchDuelistWeapon(Enemy& enemy, float distance);
-    void FireDuelistWeapon(Enemy& enemy, Vector3 position, Vector3 toPlayer);
     void FireEnemyBeam(Vector3 origin, Vector3 direction, float charge);
     void SpawnEnemyNanoPlatform(Vector3 origin, Vector3 direction, int world = 0);
     void FireProjectile(ProjectileKind kind, Vector3 direction, float speed, float damage, float life, float radius, float maxRadius, Color color);
@@ -407,9 +401,9 @@ private:
     void FireNanoPlatform(Vector3 direction);
     void FireCurseOrb(Vector3 direction);
     void FireSoulOrb(Vector3 position, float damage, Vector3 direction);
-    void FireMagicLaserBeam(Vector3 position, Vector3 direction);
+    void FireMagicLaserBeam(Vector3 position, Vector3 direction, int world = 0);
     void FireMagicProjectile(ProjectileKind kind, Vector3 position, Vector3 direction, float speed, float damage,
-        float life, float radius, float maxRadius, Color color, float turnRate);
+        float life, float radius, float maxRadius, Color color, float turnRate, int world = 0);
     float MagicCircleBaseCooldown(const MagicCircle& circle) const;
     bool MagicCircleCanActivate(ProjectileKind kind) const;
     Color MagicCircleTint(const MagicCircle& circle) const;
@@ -420,6 +414,45 @@ private:
     void BreakMysticStaffShield();
     void SpawnMysticStaffShockwave(Vector3 position);
     void CompleteMagicCircleChannel();
+    void FireSpearThrust(Vector3 direction);
+    void DetonateSpear(Vector3 position, ProjectileOwner owner);
+    void SpawnEnemyNanoBlade(Vector3 origin, Vector3 direction, int world = 0);
+    void SpawnGravityWell(Vector3 position, bool blackHole = false);
+    void SpawnShockwave(Vector3 position, float radius, Color color);
+    void ExplodeRocket(Vector3 position, ProjectileOwner owner = ProjectileOwner::Player);
+    void FireDroneCanister();
+    void UpdateDrones(float dt);
+    void AddEnemyImpulse(Enemy& enemy, Vector3 impulse);
+    void AddProjectileImpulse(Projectile& projectile, Vector3 impulse);
+    void SpawnHitBurst(Vector3 position, Color color, int count);
+    void DestroyProjectile(size_t index);
+    void DestroyEnemy(size_t index);
+
+    // GameEnemies.cpp
+    void SpawnEnemy();
+    void SpawnEnemyOfType(EnemyType type);
+    bool BossAlive() const;
+    bool DuelMode() const;
+    bool TutorialMode() const;
+    bool DuelWon() const;
+    void ShowTutorialTip(const char* text);
+    void RecordDummyDamage(const Enemy& enemy, float damage);
+    void UpdateDuelist(Enemy& enemy, Vector3 position, Vector3 direction, float dt, float& speed, bool& skipVelocity);
+    void SwitchDuelistWeapon(Enemy& enemy, float distance);
+    void FireDuelistWeapon(Enemy& enemy, Vector3 position, Vector3 toPlayer);
+    void UpdateBethlehem(float dt);
+    void SpawnBethlehem();
+    void DestroyBethlehem();
+    bool BethlehemAlive() const { return bethlehem_.active; }
+
+    // GameWorld.cpp
+    void UpdatePickups(float dt);
+    void UpdateEssenceSpawn(float dt);
+    void UpdateArenaBounds();
+    void BuildMap();
+    void ResolveMapCollision(Vector3 previousPosition);
+    void SpawnStartingPickups();
+    void SpawnPickup(PickupType type, int slot);
     bool ActivateWormhole(MagicCircle& circle, int circleIndex, Vector3 octaCenter);
     bool CloseWormhole(Vector3 position);
     bool CloseWormholeAlongSegment(Vector3 start, Vector3 end, float extraRadius = 0.0f);
@@ -431,40 +464,25 @@ private:
     Vector3 MirrorPosition(Vector3 position, const WormholePortal& portal) const;
     Vector3 TeleportThroughWormhole(Vector3 position, int targetWorld, float altitude) const;
     Vector3 ReflectVelocityThroughWormhole(Vector3 velocity, Vector3 targetPosition, int targetWorld) const;
-    void FireSpearThrust(Vector3 direction);
-    void DetonateSpear(Vector3 position, ProjectileOwner owner);
-    void SpawnEnemyNanoBlade(Vector3 origin, Vector3 direction, int world = 0);
-    void SpawnGravityWell(Vector3 position, bool blackHole = false);
+
+    // GamePlayer.cpp
     void BlinkDuelist(Enemy& enemy, Vector3 awayFrom);
     void ToggleTimeStop();
     void FreezeDynamicObjects();
     void RestoreDynamicObjects();
     void Blink();
-    void SpawnShockwave(Vector3 position, float radius, Color color);
-    void ExplodeRocket(Vector3 position, ProjectileOwner owner = ProjectileOwner::Player);
-    void FireDroneCanister();
-    void UpdateDrones(float dt);
     void ApplyExplosionImpulse(Vector3 position, float radius, float impulse);
     void ApplyShotgunRecoil(Vector3 direction);
     void ApplySpearRecoil(Vector3 direction);
     void ApplyPlayerHit(Vector3 position, Color color, const char* eventText = nullptr);
-    void AddEnemyImpulse(Enemy& enemy, Vector3 impulse);
-    void AddProjectileImpulse(Projectile& projectile, Vector3 impulse);
-    void SpawnHitBurst(Vector3 position, Color color, int count);
-    void DestroyProjectile(size_t index);
-    void DestroyEnemy(size_t index);
-
     Vector3 PlayerForward() const;
     Vector3 PlayerRight() const;
     Vector3 PlayerUp() const;
     Vector3 WeaponMuzzlePosition() const;
+
+    // GameWorld.cpp
     NanoPlatform MakeNanoPlatformTarget(Vector3 direction) const;
     Vector3 GetFireControlAimPoint() const;
-    void UpdateBethlehem(float dt);
-    void DrawBethlehem() const;
-    void SpawnBethlehem();
-    void DestroyBethlehem();
-    bool BethlehemAlive() const { return bethlehem_.active; }
     bool IsSphericalMap() const;
     bool IsHollowWorldMap() const;
     bool IsHollowPhysicsForWorld(int world) const;
@@ -489,6 +507,8 @@ private:
     float DistancePointToSegment(Vector3 point, Vector3 start, Vector3 end) const;
     float DistanceXZ(Vector3 a, Vector3 b) const;
 
+    // GameRender.cpp
+    void DrawBethlehem() const;
     void DrawArena() const;
     void DrawProps() const;
     void DrawEnemies() const;
@@ -504,6 +524,7 @@ private:
     void DrawSlimeSpawnPods() const;
     void DrawMagicCircles() const;
     void DrawMysticStaffShield() const;
+    void DrawConsole();
     void DrawDrones() const;
     void DrawRallyMarker() const;
     void DrawDashedCircle3D(Vector3 center, float radius, Vector3 normal, Color color) const;
@@ -565,6 +586,16 @@ private:
     bool flightRigEnabled_ = false;
     bool skatesEnabled_ = false;
     bool hideUI_ = false;
+    bool consoleOpen_ = false;
+    char consoleInput_[128] = {};
+    float consoleBackspaceTimer_ = 0.0f;
+    int consoleCursor_ = 0;
+    std::vector<std::string> consoleHistory_;
+    int consoleHistoryIdx_ = -1;
+    std::vector<std::string> consoleCompletions_;
+    int consoleCompletionIdx_ = 0;
+    std::string consoleFeedback_;
+    float consoleFeedbackTimer_ = 0.0f;
     float gravityScale_ = 1.0f;
     float flightTargetAltitude_ = 2.0f;
     float footstepBob_ = 0.0f;

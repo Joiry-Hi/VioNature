@@ -1,8 +1,10 @@
 #pragma once
 
 #include <string>
+#include <unordered_map>
 
 struct GameplayConfig {
+    std::unordered_map<std::string, float*> FloatMap();
     std::string gameMode = "survival";
     std::string mapType = "square_obstacle";
     float circleRadius = 28.0f;
