@@ -272,6 +272,60 @@ void Game::UpdatePickups(float dt) {
         Pickup& pickup = pickups_[i];
         pickup.bobTimer += dt;
 
+        // Falling essence physics
+        if (pickup.gravityScale > 0.0f) {
+            if (IsSphericalMap()) {
+                // Radial gravity toward surface
+                Vector3 up = SphericalUpAt(pickup.position);
+                pickup.velocity = Vector3Subtract(pickup.velocity, Vector3Scale(up, config_.gravity * pickup.gravityScale * dt));
+                pickup.position = Vector3Add(pickup.position, Vector3Scale(pickup.velocity, dt));
+                // Tangent-plane drag
+                Vector3 tangentVel = ProjectOnSphericalTangent(pickup.velocity, up);
+                float hSpeed = Vector3Length(tangentVel);
+                if (hSpeed > 0.1f) {
+                    float drag = pickup.horizontalDrag * dt;
+                    float newSpeed = std::max(0.0f, hSpeed - drag);
+                    float ratio = newSpeed / std::max(0.001f, hSpeed);
+                    Vector3 newTangent = Vector3Scale(tangentVel, ratio);
+                    Vector3 radialVel = Vector3Scale(up, Vector3DotProduct(pickup.velocity, up));
+                    pickup.velocity = Vector3Add(radialVel, newTangent);
+                } else {
+                    // Stop tangent drift, keep only radial
+                    pickup.velocity = Vector3Scale(up, Vector3DotProduct(pickup.velocity, up));
+                }
+                // Ground stop
+                float alt = SphericalAltitudeAt(pickup.position, 0);
+                if (alt <= pickup.radius + 0.1f) {
+                    pickup.position = SphericalSurfacePoint(pickup.position, pickup.radius + 0.1f, 0);
+                    pickup.velocity = Vector3Zero();
+                    pickup.gravityScale = 0.0f;
+                    pickup.horizontalDrag = 0.0f;
+                }
+            } else {
+                pickup.velocity.y -= config_.gravity * pickup.gravityScale * dt;
+                pickup.position.x += pickup.velocity.x * dt;
+                pickup.position.y += pickup.velocity.y * dt;
+                pickup.position.z += pickup.velocity.z * dt;
+                float hSpeed = std::sqrt(pickup.velocity.x * pickup.velocity.x + pickup.velocity.z * pickup.velocity.z);
+                if (hSpeed > 0.1f) {
+                    float drag = pickup.horizontalDrag * dt;
+                    float newSpeed = std::max(0.0f, hSpeed - drag);
+                    float ratio = newSpeed / hSpeed;
+                    pickup.velocity.x *= ratio;
+                    pickup.velocity.z *= ratio;
+                } else {
+                    pickup.velocity.x = 0.0f;
+                    pickup.velocity.z = 0.0f;
+                }
+                if (pickup.position.y <= pickup.radius) {
+                    pickup.position.y = pickup.radius;
+                    pickup.velocity = Vector3Zero();
+                    pickup.gravityScale = 0.0f;
+                    pickup.horizontalDrag = 0.0f;
+                }
+            }
+        }
+
         bool touched = false;
         if (IsSphericalMap()) {
             touched = Vector3Distance(player, pickup.position) <= pickup.radius + playerRadius_ + SphericalPlayerAltitude() * 0.55f;
@@ -290,7 +344,8 @@ void Game::UpdatePickups(float dt) {
                 eventTextTimer_ = 1.4f;
                 if (TutorialMode() && !pickupTipShown_[0]) {
                     pickupTipShown_[0] = true;
-                    ShowTutorialTip("已拾取太空服!\n按Z键开关低重力 (重力降至0.24x, 可高跳远跃)");
+                    ShowTutorialTip(T("已拾取太空服!\n按Z键开关低重力 (重力降至0.24x, 可高跳远跃)",
+                        "Space Suit collected!\nPress Z to toggle low gravity (0.24x)"));
                 }
             } else if (pickup.type == PickupType::FlightRig) {
                 hasFlightRig_ = true;
@@ -305,7 +360,8 @@ void Game::UpdatePickups(float dt) {
                 eventTextTimer_ = 1.6f;
                 if (TutorialMode() && !pickupTipShown_[1]) {
                     pickupTipShown_[1] = true;
-                    ShowTutorialTip("已拾取飞行装置!\n按X键开关飞行 (空格升高, Ctrl降低, 悬停瞄准)");
+                    ShowTutorialTip(T("已拾取飞行装置!\n按X键开关飞行 (空格升高, Ctrl降低, 悬停瞄准)",
+                        "Flight Rig collected!\nPress X to toggle hover (Space/Ctrl to ascend/descend)"));
                 }
             } else if (pickup.type == PickupType::Skates) {
                 hasSkates_ = true;
@@ -316,7 +372,8 @@ void Game::UpdatePickups(float dt) {
                 eventTextTimer_ = 1.4f;
                 if (TutorialMode() && !pickupTipShown_[2]) {
                     pickupTipShown_[2] = true;
-                    ShowTutorialTip("已拾取滑板!\n按C键开关滑板 (极低地面摩擦, 保持高动量滑行)");
+                    ShowTutorialTip(T("已拾取滑板!\n按C键开关滑板 (极低地面摩擦, 保持高动量滑行)",
+                        "Skates collected!\nPress C to toggle ultra-low friction sliding"));
                 }
             } else if (pickup.type == PickupType::Essence) {
                 essence_++;
@@ -326,7 +383,8 @@ void Game::UpdatePickups(float dt) {
                 eventTextTimer_ = 1.4f;
                 if (TutorialMode() && !pickupTipShown_[3]) {
                     pickupTipShown_[3] = true;
-                    ShowTutorialTip("已拾取本质/精华!\n额外生命+1  |  受伤时消耗一条命并短暂无敌\n地图上定时刷新");
+                    ShowTutorialTip(T("已拾取本质/精华!\n额外生命+1  |  受伤时消耗一条命并短暂无敌\n地图上定时刷新",
+                        "Essence collected!\nExtra life +1  |  Lose one on hit with brief invincibility\nRespawns periodically on the map"));
                 }
             }
 

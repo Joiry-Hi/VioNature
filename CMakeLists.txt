@@ -47,6 +47,9 @@ add_executable(MyShooter
     src/WeaponViewModel.cpp
     src/platform_win.cpp
 )
+if(WIN32)
+    target_sources(MyShooter PRIVATE src/resource.rc)
+endif()
 
 # 设置头文件路径
 target_include_directories(MyShooter PRIVATE

@@ -1,1 +1,1 @@
--I"/mnt/Data/Projects/VioNature/external/raylib-src/src" -isystem "/mnt/Data/Projects/VioNature/external/raylib-src/src/external/glfw/include"
+-I"/home/joiry/Data/Projects/VioNature/external/raylib-src/src" -isystem "/home/joiry/Data/Projects/VioNature/external/raylib-src/src/external/glfw/include"

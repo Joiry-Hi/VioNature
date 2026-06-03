@@ -21,6 +21,14 @@ public:
 
     void Update(float dt);
     void Draw();
+    bool IsConsoleOpen() const { return consoleOpen_; }
+    void CloseConsole() { consoleOpen_ = false; }
+    const char* T(const char* cn, const char* en) const {
+        return config_.tutorialLanguage == "english" ? en : cn;
+    }
+    bool WantsQuit() const { return wantsQuit_; }
+    bool IsExiting() const { return exitHoldTimer_ > 0.0f; }
+    float ExitProgress() const { return exitHoldTimer_ / kExitHoldDuration; }
 
 private:
     enum class WeaponType {
@@ -243,8 +251,11 @@ private:
     struct Pickup {
         PickupType type = PickupType::SpaceSuit;
         Vector3 position = {};
+        Vector3 velocity = {};
         float radius = 0.75f;
         float bobTimer = 0.0f;
+        float horizontalDrag = 0.0f;  // >0 for falling essence
+        float gravityScale = 0.0f;    // >0 for falling essence
     };
 
     struct GravityWell {
@@ -315,6 +326,7 @@ private:
         float maxHealth = 0.0f;
         float attackTimer = 0.0f;
         float phaseTimer = 0.0f;
+        float essenceTimer = 15.0f;
         BethlehemLaserPhase laserPhase = BethlehemLaserPhase::Inactive;
         bool active = false;
     };
@@ -589,6 +601,10 @@ private:
     bool consoleOpen_ = false;
     char consoleInput_[128] = {};
     float consoleBackspaceTimer_ = 0.0f;
+    float consoleArrowTimer_ = 0.0f;
+    bool wantsQuit_ = false;
+    float exitHoldTimer_ = 0.0f;
+    static constexpr float kExitHoldDuration = 1.8f;
     int consoleCursor_ = 0;
     std::vector<std::string> consoleHistory_;
     int consoleHistoryIdx_ = -1;

@@ -1,4 +1,4 @@
-# Install script for directory: /mnt/Data/Projects/VioNature/external/raylib-src/src/external/glfw/src
+# Install script for directory: /home/joiry/Data/Projects/VioNature/external/raylib-src/src/external/glfw/src
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

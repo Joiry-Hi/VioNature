@@ -56,10 +56,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /mnt/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/src
+CMAKE_SOURCE_DIR = /home/joiry/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/src
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /mnt/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/bin
+CMAKE_BINARY_DIR = /home/joiry/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/bin
 
 # Include any dependencies generated for this target.
 include CMakeFiles/foo.dir/depend.make
@@ -73,17 +73,17 @@ include CMakeFiles/foo.dir/progress.make
 include CMakeFiles/foo.dir/flags.make
 
 CMakeFiles/foo.dir/foo.cpp.obj: CMakeFiles/foo.dir/flags.make
-CMakeFiles/foo.dir/foo.cpp.obj: /mnt/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/src/foo.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/mnt/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/foo.dir/foo.cpp.obj"
-	/usr/bin/x86_64-w64-mingw32-g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/foo.dir/foo.cpp.obj -c /mnt/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/src/foo.cpp
+CMakeFiles/foo.dir/foo.cpp.obj: /home/joiry/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/src/foo.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/joiry/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/foo.dir/foo.cpp.obj"
+	/usr/bin/x86_64-w64-mingw32-g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/foo.dir/foo.cpp.obj -c /home/joiry/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/src/foo.cpp
 
 CMakeFiles/foo.dir/foo.cpp.i: cmake_force
 	@echo "Preprocessing CXX source to CMakeFiles/foo.dir/foo.cpp.i"
-	/usr/bin/x86_64-w64-mingw32-g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /mnt/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/src/foo.cpp > CMakeFiles/foo.dir/foo.cpp.i
+	/usr/bin/x86_64-w64-mingw32-g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/joiry/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/src/foo.cpp > CMakeFiles/foo.dir/foo.cpp.i
 
 CMakeFiles/foo.dir/foo.cpp.s: cmake_force
 	@echo "Compiling CXX source to assembly CMakeFiles/foo.dir/foo.cpp.s"
-	/usr/bin/x86_64-w64-mingw32-g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /mnt/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/src/foo.cpp -o CMakeFiles/foo.dir/foo.cpp.s
+	/usr/bin/x86_64-w64-mingw32-g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/joiry/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/src/foo.cpp -o CMakeFiles/foo.dir/foo.cpp.s
 
 # Object files for target foo
 foo_OBJECTS = \
@@ -95,7 +95,7 @@ foo_EXTERNAL_OBJECTS =
 libfoo.a: CMakeFiles/foo.dir/foo.cpp.obj
 libfoo.a: CMakeFiles/foo.dir/build.make
 libfoo.a: CMakeFiles/foo.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/mnt/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX static library libfoo.a"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/joiry/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX static library libfoo.a"
 	$(CMAKE_COMMAND) -P CMakeFiles/foo.dir/cmake_clean_target.cmake
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/foo.dir/link.txt --verbose=$(VERBOSE)
 
@@ -108,6 +108,6 @@ CMakeFiles/foo.dir/clean:
 .PHONY : CMakeFiles/foo.dir/clean
 
 CMakeFiles/foo.dir/depend:
-	cd /mnt/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/bin && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /mnt/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/src /mnt/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/src /mnt/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/bin /mnt/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/bin /mnt/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/DependInfo.cmake
+	cd /home/joiry/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/bin && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/joiry/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/src /home/joiry/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/src /home/joiry/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/bin /home/joiry/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/bin /home/joiry/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir/DependInfo.cmake
 .PHONY : CMakeFiles/foo.dir/depend
 

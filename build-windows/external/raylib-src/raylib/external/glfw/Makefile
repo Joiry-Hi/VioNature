@@ -57,10 +57,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /mnt/Data/Projects/VioNature
+CMAKE_SOURCE_DIR = /home/joiry/Data/Projects/VioNature
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /mnt/Data/Projects/VioNature/build-windows
+CMAKE_BINARY_DIR = /home/joiry/Data/Projects/VioNature/build-windows
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -68,7 +68,7 @@ CMAKE_BINARY_DIR = /mnt/Data/Projects/VioNature/build-windows
 # Special rule for the target package
 package: preinstall
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --cyan "Run CPack packaging tool..."
-	cd /mnt/Data/Projects/VioNature/build-windows && /usr/bin/cpack --config ./CPackConfig.cmake
+	cd /home/joiry/Data/Projects/VioNature/build-windows && /usr/bin/cpack --config ./CPackConfig.cmake
 .PHONY : package
 
 # Special rule for the target package
@@ -78,7 +78,7 @@ package/fast: package
 # Special rule for the target package_source
 package_source:
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --cyan "Run CPack packaging tool for source..."
-	cd /mnt/Data/Projects/VioNature/build-windows && /usr/bin/cpack --config ./CPackSourceConfig.cmake /mnt/Data/Projects/VioNature/build-windows/CPackSourceConfig.cmake
+	cd /home/joiry/Data/Projects/VioNature/build-windows && /usr/bin/cpack --config ./CPackSourceConfig.cmake /home/joiry/Data/Projects/VioNature/build-windows/CPackSourceConfig.cmake
 .PHONY : package_source
 
 # Special rule for the target package_source
@@ -152,14 +152,14 @@ install/strip/fast: preinstall/fast
 
 # The main all target
 all: cmake_check_build_system
-	cd /mnt/Data/Projects/VioNature/build-windows && $(CMAKE_COMMAND) -E cmake_progress_start /mnt/Data/Projects/VioNature/build-windows/CMakeFiles /mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw//CMakeFiles/progress.marks
-	cd /mnt/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 external/raylib-src/raylib/external/glfw/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /mnt/Data/Projects/VioNature/build-windows/CMakeFiles 0
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(CMAKE_COMMAND) -E cmake_progress_start /home/joiry/Data/Projects/VioNature/build-windows/CMakeFiles /home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw//CMakeFiles/progress.marks
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 external/raylib-src/raylib/external/glfw/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/joiry/Data/Projects/VioNature/build-windows/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
 clean:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 external/raylib-src/raylib/external/glfw/clean
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 external/raylib-src/raylib/external/glfw/clean
 .PHONY : clean
 
 # The main clean target
@@ -168,17 +168,17 @@ clean/fast: clean
 
 # Prepare targets for installation.
 preinstall: all
-	cd /mnt/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 external/raylib-src/raylib/external/glfw/preinstall
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 external/raylib-src/raylib/external/glfw/preinstall
 .PHONY : preinstall
 
 # Prepare targets for installation.
 preinstall/fast:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 external/raylib-src/raylib/external/glfw/preinstall
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 external/raylib-src/raylib/external/glfw/preinstall
 .PHONY : preinstall/fast
 
 # clear depends
 depend:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
 .PHONY : depend
 
 # Help Target
@@ -206,6 +206,6 @@ help:
 # No rule that depends on this can have commands that come from listfiles
 # because they might be regenerated.
 cmake_check_build_system:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
 .PHONY : cmake_check_build_system
 

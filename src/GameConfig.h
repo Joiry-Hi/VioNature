@@ -7,6 +7,7 @@ struct GameplayConfig {
     std::unordered_map<std::string, float*> FloatMap();
     std::string gameMode = "survival";
     std::string mapType = "square_obstacle";
+    std::string tutorialLanguage = "chinese";
     float circleRadius = 28.0f;
     float gravity = 24.0f;
     float spaceSuitGravityScale = 0.24f;
@@ -192,6 +193,18 @@ struct GameplayConfig {
     float bethlehemLaserRange = 80.0f;
     float bethlehemLaserDamage = 2.5f;
     float bethlehemLaserRotateSpeed = 0.45f;
+    // Bethlehem essence economy
+    float bethlehemEssenceIntervalMin = 20.0f;
+    float bethlehemEssenceIntervalMax = 35.0f;
+    float bethlehemEssenceLaunchSpeed = 12.0f;
+    float bethlehemEssenceLaunchLift = 4.0f;
+    float bethlehemEssenceFallGravity = 0.45f;
+    float bethlehemEssenceFallDrag = 1.5f;
+    int bethlehemEssenceDeathCount = 4;
+    float bethlehemEssenceDeathSpeed = 10.0f;
+    float bethlehemEssenceDeathLift = 5.5f;
+    float bethlehemEssenceDeathGravity = 0.55f;
+    float bethlehemEssenceDeathDrag = 1.8f;
     // Training dummies (tutorial mode only)
     float dummyHealth = 80.0f;
     int dummyMaxCount = 6;

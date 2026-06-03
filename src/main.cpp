@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
         Game game;
         int smokeFrames = 0;
 
-        while (!WindowShouldClose()) {
+        while (!game.WantsQuit()) {
             float dt = GetFrameTime();
             game.Update(dt);
 

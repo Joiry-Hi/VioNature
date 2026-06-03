@@ -1452,9 +1452,9 @@ void Game::DrawHud() const {
     }
 
     if (TutorialMode() && !hideUI_ && !showKeybindOverlay_) {
-        const char* kHint = "F11: Fullscreen\nK: Controls";
+        const char* kHint = "F11: Fullscreen\nK: Controls\n`/~: Console\nR: Restart";
         int kw = MeasureText(kHint, 9);
-        int kx = pixelWidth_ - kw - 8, ky = pixelHeight_ - 120;
+        int kx = pixelWidth_ - kw - 8, ky = pixelHeight_ - 150;
         DrawRectangle(kx - 3, ky - 1, kw + 6, 11, Color{0, 0, 0, 140});
         DrawText(kHint, kx, ky, 9, Color{255, 235, 140, 230});
     }

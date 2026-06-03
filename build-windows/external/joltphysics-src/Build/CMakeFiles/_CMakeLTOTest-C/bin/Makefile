@@ -60,10 +60,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /mnt/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-C/src
+CMAKE_SOURCE_DIR = /home/joiry/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-C/src
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /mnt/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-C/bin
+CMAKE_BINARY_DIR = /home/joiry/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-C/bin
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -90,9 +90,9 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /mnt/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles /mnt/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-C/bin//CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/joiry/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles /home/joiry/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-C/bin//CMakeFiles/progress.marks
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /mnt/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/joiry/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/CMakeFiles/_CMakeLTOTest-C/bin/CMakeFiles 0
 .PHONY : all
 
 # The main clean target

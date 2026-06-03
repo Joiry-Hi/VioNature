@@ -53,10 +53,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /mnt/Data/Projects/VioNature
+CMAKE_SOURCE_DIR = /home/joiry/Data/Projects/VioNature
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /mnt/Data/Projects/VioNature/build-windows
+CMAKE_BINARY_DIR = /home/joiry/Data/Projects/VioNature/build-windows
 
 # Utility rule file for update_mappings.
 
@@ -67,8 +67,8 @@ include external/raylib-src/raylib/external/glfw/src/CMakeFiles/update_mappings.
 include external/raylib-src/raylib/external/glfw/src/CMakeFiles/update_mappings.dir/progress.make
 
 external/raylib-src/raylib/external/glfw/src/CMakeFiles/update_mappings:
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/mnt/Data/Projects/VioNature/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Updating gamepad mappings from upstream repository"
-	cd /mnt/Data/Projects/VioNature/external/raylib-src/src/external/glfw/src && /usr/bin/cmake -P /mnt/Data/Projects/VioNature/external/raylib-src/src/external/glfw/CMake/GenerateMappings.cmake mappings.h.in mappings.h
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/home/joiry/Data/Projects/VioNature/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Updating gamepad mappings from upstream repository"
+	cd /home/joiry/Data/Projects/VioNature/external/raylib-src/src/external/glfw/src && /usr/bin/cmake -P /home/joiry/Data/Projects/VioNature/external/raylib-src/src/external/glfw/CMake/GenerateMappings.cmake mappings.h.in mappings.h
 
 update_mappings: external/raylib-src/raylib/external/glfw/src/CMakeFiles/update_mappings
 update_mappings: external/raylib-src/raylib/external/glfw/src/CMakeFiles/update_mappings.dir/build.make
@@ -79,10 +79,10 @@ external/raylib-src/raylib/external/glfw/src/CMakeFiles/update_mappings.dir/buil
 .PHONY : external/raylib-src/raylib/external/glfw/src/CMakeFiles/update_mappings.dir/build
 
 external/raylib-src/raylib/external/glfw/src/CMakeFiles/update_mappings.dir/clean:
-	cd /mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src && $(CMAKE_COMMAND) -P CMakeFiles/update_mappings.dir/cmake_clean.cmake
+	cd /home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src && $(CMAKE_COMMAND) -P CMakeFiles/update_mappings.dir/cmake_clean.cmake
 .PHONY : external/raylib-src/raylib/external/glfw/src/CMakeFiles/update_mappings.dir/clean
 
 external/raylib-src/raylib/external/glfw/src/CMakeFiles/update_mappings.dir/depend:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /mnt/Data/Projects/VioNature /mnt/Data/Projects/VioNature/external/raylib-src/src/external/glfw/src /mnt/Data/Projects/VioNature/build-windows /mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src /mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/update_mappings.dir/DependInfo.cmake "--color=$(COLOR)"
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/joiry/Data/Projects/VioNature /home/joiry/Data/Projects/VioNature/external/raylib-src/src/external/glfw/src /home/joiry/Data/Projects/VioNature/build-windows /home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src /home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/update_mappings.dir/DependInfo.cmake "--color=$(COLOR)"
 .PHONY : external/raylib-src/raylib/external/glfw/src/CMakeFiles/update_mappings.dir/depend
 

@@ -75,6 +75,11 @@ cp "$ROOT/config/gameplay_annotated.cfg" "$OUTPUT_DIR/config/gameplay.cfg"
 # Docs
 echo "  Copying docs..."
 cp "$ROOT/GAMEPLAY_GUIDE.md" "$OUTPUT_DIR/"
+cp "$ROOT/GAMEPLAY_GUIDE_EN.md" "$OUTPUT_DIR/"
+cp "$ROOT/README.md" "$OUTPUT_DIR/"
+
+# Clean up build artifacts
+rm -f "$OUTPUT_DIR/assets/models/weapons/mystic_staff_v3.mtl"
 
 # Step 4: Zip
 echo ""

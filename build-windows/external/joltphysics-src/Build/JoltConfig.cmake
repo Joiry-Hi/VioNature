@@ -52,14 +52,14 @@ add_library(Jolt::Jolt STATIC IMPORTED)
 set_target_properties(Jolt::Jolt PROPERTIES
   INTERFACE_COMPILE_DEFINITIONS "\$<\$<CONFIG:Release,Distribution,ReleaseASAN,ReleaseUBSAN,ReleaseTSAN,ReleaseCoverage>:NDEBUG>;\$<\$<CONFIG:ReleaseASAN,ReleaseTSAN>:JPH_DISABLE_TEMP_ALLOCATOR;JPH_DISABLE_CUSTOM_ALLOCATOR>;JPH_USE_CPU_COMPUTE;\$<\$<CONFIG:Debug,Release,ReleaseASAN,ReleaseUBSAN,ReleaseTSAN>:JPH_DEBUG_RENDERER>;\$<\$<CONFIG:Debug,Release,ReleaseASAN,ReleaseUBSAN,ReleaseTSAN>:JPH_PROFILE_ENABLED>;JPH_OBJECT_STREAM;JPH_USE_AVX2;JPH_USE_AVX;JPH_USE_SSE4_1;JPH_USE_SSE4_2;JPH_USE_LZCNT;JPH_USE_TZCNT;JPH_USE_F16C;JPH_USE_FMADD"
   INTERFACE_COMPILE_OPTIONS "-mavx2;-mbmi;-mpopcnt;-mlzcnt;-mf16c;-mlzcnt;-mbmi;-mf16c;-mfma;-mfpmath=sse"
-  INTERFACE_INCLUDE_DIRECTORIES "/mnt/Data/Projects/VioNature/external/joltphysics-src/Build/../"
+  INTERFACE_INCLUDE_DIRECTORIES "/home/joiry/Data/Projects/VioNature/external/joltphysics-src/Build/../"
 )
 
 # Import target "Jolt::Jolt" for configuration "Release"
 set_property(TARGET Jolt::Jolt APPEND PROPERTY IMPORTED_CONFIGURATIONS RELEASE)
 set_target_properties(Jolt::Jolt PROPERTIES
   IMPORTED_LINK_INTERFACE_LANGUAGES_RELEASE "CXX"
-  IMPORTED_LOCATION_RELEASE "/mnt/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/libJolt.a"
+  IMPORTED_LOCATION_RELEASE "/home/joiry/Data/Projects/VioNature/build-windows/external/joltphysics-src/Build/libJolt.a"
   )
 
 # This file does not depend on other imported targets which have

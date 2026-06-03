@@ -37,6 +37,10 @@ static const int cjkCodepoints[] = {
 	    20043, 21162, 22522, 26031, 26454, 26391, 27861, 31070, 31192,
 	    24103,
 	    27974, 30005,
+	    20037, 25509, 27704, 37197,
+	    23454, 25103, 25171, 25913, 26377, 28216, 31995, 32479, 36755,
+	    20462,
+	    25152,
 };
 static constexpr int cjkCodepointCount = sizeof(cjkCodepoints) / sizeof(cjkCodepoints[0]);
 
@@ -302,6 +306,17 @@ void Game::Update(float dt) {
     if (IsKeyPressed(KEY_K) && !consoleOpen_) {
         showKeybindOverlay_ = !showKeybindOverlay_;
     }
+
+    // Hold ESC to exit (when console is closed)
+    if (IsKeyDown(KEY_ESCAPE) && !consoleOpen_) {
+        exitHoldTimer_ += GetFrameTime();
+        if (exitHoldTimer_ >= kExitHoldDuration) {
+            wantsQuit_ = true;
+        }
+    } else {
+        exitHoldTimer_ = 0.0f;
+    }
+
     if (IsKeyPressed(KEY_GRAVE)) {
         if (!consoleOpen_) {
             consoleOpen_ = true;
@@ -452,29 +467,54 @@ void Game::Update(float dt) {
             tutorialHintTimer_ = std::max(0.0f, tutorialHintTimer_ - dt);
             if (tutorialHintTimer_ <= 0.0f) {
                 const char* combatTips[] = {
-                    "战斗技巧: 火箭跳\n对脚下发射火箭,利用爆炸冲量获得额外高度",
-                    "战斗技巧: 空中位移链\n火箭跳->霰弹反冲->长枪反冲,三段超远位移",
-                    "战斗技巧: 刀波钓鱼\n发射刀波后闪现换位,引诱追逐的敌人撞入刀波",
-                    "战斗技巧: 时停连招\n时停->贴脸全部火箭->黑洞手雷->解冻瞬间爆发",
-                    "战斗技巧: 无人机交叉火力\n不同位置部署无人机,长按右键设集合点",
-                    "战斗技巧: 角动量保持\n球形地图切线速度不受重力,环绕加速",
+                    T("战斗技巧: 火箭跳\n对脚下发射火箭,利用爆炸冲量获得额外高度",
+                      "COMBAT: Rocket Jump\nFire a rocket at your feet for extra height"),
+                    T("战斗技巧: 空中位移链\n火箭跳->霰弹反冲->长枪反冲,三段超远位移",
+                      "COMBAT: Air Chain\nRocket jump -> shotgun recoil -> spear recoil for 3-stage movement"),
+                    T("战斗技巧: 刀波钓鱼\n发射刀波后闪现换位,引诱追逐的敌人撞入刀波",
+                      "COMBAT: Blade Bait\nFire a nano blade, then blink to lure enemies into it"),
+                    T("战斗技巧: 时停连招\n时停->贴脸全部火箭->黑洞手雷->解冻瞬间爆发",
+                      "COMBAT: Time-Stop Combo\nFreeze time -> point-blank rockets -> black hole -> resume"),
+                    T("战斗技巧: 无人机交叉火力\n不同位置部署无人机,长按右键设集合点",
+                      "COMBAT: Drone Crossfire\nDeploy drones at multiple positions, hold RMB to set rally points"),
+                    T("战斗技巧: 角动量保持\n球形地图切线速度不受重力,环绕加速",
+                      "COMBAT: Orbital Momentum\nTangent velocity is conserved on spherical maps for extreme speed"),
+                };
+                const char* configTips[] = {
+                    T("系统提示: 开发控制台\n按 ~ 打开控制台, 输入 key=value 实时调整游戏参数",
+                      "SYSTEM: Dev Console\nPress ~ to open, type key=value to live-tune parameters"),
+                    T("系统提示: 永久保存配置\n编辑 config/gameplay.cfg 可永久保存所有参数修改",
+                      "SYSTEM: Permanent Config\nEdit gameplay.cfg to save changes permanently"),
                 };
                 const char* movementTips[] = {
-                    "移动提示: Shift加速跑动\n空中也保持加速度(Quake风格空中控制)",
-                    "移动提示: 太空服(蓝)拾取后按Z开关\n低重力0.24x,可高跳远跃",
-                    "移动提示: 飞行装置(青)拾取后按X悬停\n空格升高 / Ctrl降低,悬停瞄准",
-                    "移动提示: 滑板(绿)拾取后按C切换滑行\n极低摩擦,保持高动量滑动",
+                    T("移动提示: Shift加速跑动\n空中也保持加速度(Quake风格空中控制)",
+                      "MOVEMENT: Shift to Run\nAir acceleration is preserved (Quake-style air control)"),
+                    T("移动提示: 太空服(蓝)拾取后按Z开关\n低重力0.24x,可高跳远跃",
+                      "MOVEMENT: Space Suit (Blue)\nPress Z to toggle low gravity (0.24x)"),
+                    T("移动提示: 飞行装置(青)拾取后按X悬停\n空格升高 / Ctrl降低,悬停瞄准",
+                      "MOVEMENT: Flight Rig (Cyan)\nPress X to hover, Space/Ctrl to ascend/descend"),
+                    T("移动提示: 滑板(绿)拾取后按C切换滑行\n极低摩擦,保持高动量滑动",
+                      "MOVEMENT: Skates (Green)\nPress C to toggle ultra-low friction sliding"),
                 };
-                const char* welcomeTip = "教学模式 | P键隐藏HUD | 自由探索9把武器\n编辑 gameplay.cfg 自定义200+可调参数";
+                const char* welcomeTip = T(
+                    "教学模式 | P键隐藏HUD | 自由探索9把武器\n编辑 gameplay.cfg 自定义200+可调参数",
+                    "Tutorial Mode | P hides HUD | Explore all 9 weapons\nEdit gameplay.cfg to tune 200+ params");
                 const char* allTips[] = {
                     welcomeTip,
                     combatTips[0], movementTips[0], combatTips[1], movementTips[1],
                     combatTips[2], movementTips[2], combatTips[3], movementTips[3],
                     combatTips[4], combatTips[5],
+                    configTips[0], configTips[1],
                 };
-                constexpr int totalTips = sizeof(allTips) / sizeof(allTips[0]);
-                ShowTutorialTip(allTips[tutorialHintIndex_ % totalTips]);
-                tutorialHintIndex_ = (tutorialHintIndex_ + 1) % totalTips;
+                // When console is open, only rotate config-related tips
+                if (consoleOpen_) {
+                    ShowTutorialTip(configTips[tutorialHintIndex_ % 2]);
+                    tutorialHintIndex_ = (tutorialHintIndex_ + 1) % 2;
+                } else {
+                    constexpr int totalTips = sizeof(allTips) / sizeof(allTips[0]);
+                    ShowTutorialTip(allTips[tutorialHintIndex_ % totalTips]);
+                    tutorialHintIndex_ = (tutorialHintIndex_ + 1) % totalTips;
+                }
                 tutorialHintTimer_ = 1.0f;
             }
         }
@@ -598,6 +638,23 @@ void Game::Draw() {
         float alpha = timeStopped_ ? 0.16f : timeStopTintTimer_ * 0.28f;
         DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), FadeColor(Color{80, 70, 145, 255}, alpha));
     }
+
+    // Exit hold overlay
+    if (exitHoldTimer_ > 0.0f) {
+        float progress = exitHoldTimer_ / kExitHoldDuration;
+        unsigned char overlayAlpha = static_cast<unsigned char>(progress * progress * 180.0f);
+        DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Color{0, 0, 0, overlayAlpha});
+        const char* exitText = "EXITING THE GAME";
+        int fontSize = 32;
+        int tw = MeasureText(exitText, fontSize);
+        DrawText(exitText, (GetScreenWidth() - tw) / 2, GetScreenHeight() / 2 - 24, fontSize, WHITE);
+        // Progress bar
+        int barW = 200, barH = 4;
+        int barX = (GetScreenWidth() - barW) / 2, barY = GetScreenHeight() / 2 + 16;
+        DrawRectangle(barX, barY, barW, barH, Color{40, 40, 40, 200});
+        DrawRectangle(barX, barY, static_cast<int>(barW * progress), barH, Color{200, 60, 40, 240});
+    }
+
     DrawConsole();
 }
 
@@ -760,23 +817,51 @@ void Game::UpdateConsole() {
         }
     }
 
-    // Arrow history
-    if (IsKeyPressed(KEY_UP) && !consoleHistory_.empty()) {
-        if (consoleHistoryIdx_ == -1) consoleHistoryIdx_ = static_cast<int>(consoleHistory_.size()) - 1;
-        else if (consoleHistoryIdx_ > 0) --consoleHistoryIdx_;
-        strncpy(consoleInput_, consoleHistory_[consoleHistoryIdx_].c_str(), 126);
-        consoleCursor_ = static_cast<int>(strlen(consoleInput_));
-    }
-    if (IsKeyPressed(KEY_DOWN) && !consoleHistory_.empty()) {
-        if (consoleHistoryIdx_ != -1) {
-            if (consoleHistoryIdx_ < static_cast<int>(consoleHistory_.size()) - 1) {
-                ++consoleHistoryIdx_;
-                strncpy(consoleInput_, consoleHistory_[consoleHistoryIdx_].c_str(), 126);
-            } else {
-                consoleHistoryIdx_ = -1;
-                consoleInput_[0] = '\0';
-            }
+    // Arrow keys: navigate completions when visible, otherwise history (with hold-to-repeat)
+    auto arrowFire = [&](bool isDown)->bool {
+        if (IsKeyPressed(isDown ? KEY_DOWN : KEY_UP)) return true;
+        consoleArrowTimer_ += GetFrameTime();
+        float delay = consoleArrowTimer_ < 0.35f ? 0.35f : 0.04f;
+        if (consoleArrowTimer_ >= delay) { consoleArrowTimer_ -= delay; return true; }
+        return false;
+    };
+    bool upHeld = IsKeyDown(KEY_UP) && !IsKeyDown(KEY_DOWN);
+    bool downHeld = IsKeyDown(KEY_DOWN) && !IsKeyDown(KEY_UP);
+    if (!upHeld && !downHeld) consoleArrowTimer_ = 0.0f;
+
+    if (upHeld && arrowFire(false)) {
+        if (!consoleCompletions_.empty()) {
+            if (consoleCompletionIdx_ > 0) --consoleCompletionIdx_;
+            else consoleCompletionIdx_ = static_cast<int>(consoleCompletions_.size()) - 1;
+            const auto& sel = consoleCompletions_[consoleCompletionIdx_];
+            strncpy(consoleInput_, sel.c_str(), 126);
+            consoleInput_[sel.size()] = '\0';
+            consoleCursor_ = static_cast<int>(sel.size());
+        } else if (!consoleHistory_.empty()) {
+            if (consoleHistoryIdx_ == -1) consoleHistoryIdx_ = static_cast<int>(consoleHistory_.size()) - 1;
+            else if (consoleHistoryIdx_ > 0) --consoleHistoryIdx_;
+            strncpy(consoleInput_, consoleHistory_[consoleHistoryIdx_].c_str(), 126);
             consoleCursor_ = static_cast<int>(strlen(consoleInput_));
+        }
+    }
+    if (downHeld && arrowFire(true)) {
+        if (!consoleCompletions_.empty()) {
+            consoleCompletionIdx_ = (consoleCompletionIdx_ + 1) % static_cast<int>(consoleCompletions_.size());
+            const auto& sel = consoleCompletions_[consoleCompletionIdx_];
+            strncpy(consoleInput_, sel.c_str(), 126);
+            consoleInput_[sel.size()] = '\0';
+            consoleCursor_ = static_cast<int>(sel.size());
+        } else if (!consoleHistory_.empty()) {
+            if (consoleHistoryIdx_ != -1) {
+                if (consoleHistoryIdx_ < static_cast<int>(consoleHistory_.size()) - 1) {
+                    ++consoleHistoryIdx_;
+                    strncpy(consoleInput_, consoleHistory_[consoleHistoryIdx_].c_str(), 126);
+                } else {
+                    consoleHistoryIdx_ = -1;
+                    consoleInput_[0] = '\0';
+                }
+                consoleCursor_ = static_cast<int>(strlen(consoleInput_));
+            }
         }
     }
 
@@ -815,41 +900,47 @@ void Game::UpdateConsole() {
 void Game::DrawConsole() {
     if (!consoleOpen_) return;
     consoleFeedbackTimer_ = std::max(0.0f, consoleFeedbackTimer_ - GetFrameTime());
-    int h = 18;
-    int y = pixelHeight_ - h - 4;
+    int fontSz = 25, hintSz = 25, feedbackSz = 25;
+    int h = 30;
+    int y = pixelHeight_;
     int screenW = pixelWidth_;
 
-    // Background
-    DrawRectangle(0, y - 4, screenW, h + 8 + (consoleCompletions_.size() > 1 ? static_cast<int>(consoleCompletions_.size()) * 8 : 0), Color{0, 0, 0, 210});
-
-    // Completion suggestions
-    if (consoleCompletions_.size() > 1) {
-        for (size_t i = 0; i < consoleCompletions_.size(); ++i) {
-            Color c = (static_cast<int>(i) == consoleCompletionIdx_) ? Color{255, 200, 60, 255} : Color{160, 160, 170, 255};
-            DrawText(consoleCompletions_[i].c_str(), 8, y - 12 - static_cast<int>(i) * 8 - 4, 7, c);
-        }
-    }
+    // Input background
+    DrawRectangle(0, y - 4, screenW, h + 8, Color{0, 0, 0, 220});
 
     // Input line
-    DrawText(">", 4, y, 8, Color{180, 220, 255, 255});
-    DrawText(consoleInput_, 14, y, 8, Color{220, 235, 255, 255});
+    DrawText(">", 6, y + 2, fontSz, Color{180, 220, 255, 255});
+    DrawText(consoleInput_, 18, y + 2, fontSz, Color{220, 235, 255, 255});
 
     // Show current value hint when a valid key is typed
     std::string input(consoleInput_, consoleCursor_);
     std::string val = GetConfigValue(input);
     if (val != "?") {
-        DrawText(TextFormat("= %s", val.c_str()), 14 + MeasureText(consoleInput_, 8) + 4, y, 8, Color{120, 130, 150, 255});
+        DrawText(TextFormat("= %s", val.c_str()), 18 + MeasureText(consoleInput_, fontSz) + 4, y + 2, hintSz, Color{120, 130, 150, 255});
     }
 
     // Cursor blink
     if (static_cast<int>(GetTime() * 2.0f) % 2 == 0) {
-        int curX = 14 + MeasureText(TextFormat("%.*s", consoleCursor_, consoleInput_), 8);
-        DrawLine(curX, y + 1, curX, y + h - 2, Color{255, 255, 255, 200});
+        int curX = 18 + MeasureText(TextFormat("%.*s", consoleCursor_, consoleInput_), fontSz);
+        DrawLine(curX, y + 3, curX, y + h - 4, Color{255, 255, 255, 200});
     }
 
-    // Feedback
+    // Completion suggestions (below input line)
+    if (consoleCompletions_.size() > 1) {
+        int sugY = y + h + 4;
+        int sugH = static_cast<int>(consoleCompletions_.size()) * (hintSz + 2);
+        DrawRectangle(0, sugY - 2, screenW, sugH + 4 + 4, Color{0, 0, 0, 200});
+        for (size_t i = 0; i < consoleCompletions_.size(); ++i) {
+            Color c = (static_cast<int>(i) == consoleCompletionIdx_) ? Color{255, 200, 60, 255} : Color{160, 160, 170, 255};
+            DrawText(consoleCompletions_[i].c_str(), 8, sugY + static_cast<int>(i) * (hintSz + 2), hintSz, c);
+        }
+    }
+
+    // Feedback (below everything)
     if (consoleFeedbackTimer_ > 0.0f) {
+        int fbY = y + h - 60;
+        if (consoleCompletions_.size() > 1) fbY += static_cast<int>(consoleCompletions_.size()) * (hintSz + 2) + 4;
         Color fbColor = consoleFeedback_.find("OK:") == 0 ? Color{120, 255, 140, 255} : Color{255, 140, 120, 255};
-        DrawText(consoleFeedback_.c_str(), 14, y - 12, 7, FadeColor(fbColor, std::min(1.0f, consoleFeedbackTimer_)));
+        DrawText(consoleFeedback_.c_str(), 8, fbY, feedbackSz, FadeColor(fbColor, std::min(1.0f, consoleFeedbackTimer_)));
     }
 }

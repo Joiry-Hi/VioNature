@@ -243,6 +243,16 @@ std::unordered_map<std::string, float*> GameplayConfig::FloatMap() {
         {"bethlehem_laser_range", &bethlehemLaserRange},
         {"bethlehem_laser_damage", &bethlehemLaserDamage},
         {"bethlehem_laser_rotate_speed", &bethlehemLaserRotateSpeed},
+        {"bethlehem_essence_interval_min", &bethlehemEssenceIntervalMin},
+        {"bethlehem_essence_interval_max", &bethlehemEssenceIntervalMax},
+        {"bethlehem_essence_launch_speed", &bethlehemEssenceLaunchSpeed},
+        {"bethlehem_essence_launch_lift", &bethlehemEssenceLaunchLift},
+        {"bethlehem_essence_fall_gravity", &bethlehemEssenceFallGravity},
+        {"bethlehem_essence_fall_drag", &bethlehemEssenceFallDrag},
+        {"bethlehem_essence_death_speed", &bethlehemEssenceDeathSpeed},
+        {"bethlehem_essence_death_lift", &bethlehemEssenceDeathLift},
+        {"bethlehem_essence_death_gravity", &bethlehemEssenceDeathGravity},
+        {"bethlehem_essence_death_drag", &bethlehemEssenceDeathDrag},
         {"dummy_health", &dummyHealth},
         {"dummy_spawn_interval", &dummySpawnInterval},
         {"essence_hit_invuln", &essenceHitInvuln},
@@ -318,6 +328,10 @@ GameplayConfig LoadGameplayConfig(const char* path) {
             config.gameMode = Lower(Trim(value));
         } else if (key == "map_type") {
             config.mapType = Lower(Trim(value));
+        } else if (key == "tutorial_language") {
+            std::string v = Lower(Trim(value));
+            if (v == "english") config.tutorialLanguage = "english";
+            else config.tutorialLanguage = "chinese";
         } else if (key == "duelist_count") {
             int parsed = 1;
             if (ParseInt(value, parsed)) { config.duelistCount = parsed; }
@@ -348,6 +362,9 @@ GameplayConfig LoadGameplayConfig(const char* path) {
         } else if (key == "essence_max_on_map") {
             int parsed = 1;
             if (ParseInt(value, parsed)) { config.essenceMaxOnMap = parsed; }
+        } else if (key == "bethlehem_essence_death_count") {
+            int parsed = 4;
+            if (ParseInt(value, parsed)) { config.bethlehemEssenceDeathCount = parsed; }
         } else if (key == "boss_homing_burst_count") {
             int parsed = 3;
             if (ParseInt(value, parsed)) {
@@ -563,6 +580,17 @@ GameplayConfig LoadGameplayConfig(const char* path) {
     config.bethlehemLaserRange = std::max(2.0f, config.bethlehemLaserRange);
     config.bethlehemLaserDamage = std::max(0.0f, config.bethlehemLaserDamage);
     config.bethlehemLaserRotateSpeed = std::max(0.0f, config.bethlehemLaserRotateSpeed);
+    config.bethlehemEssenceIntervalMin = std::max(5.0f, config.bethlehemEssenceIntervalMin);
+    config.bethlehemEssenceIntervalMax = std::max(config.bethlehemEssenceIntervalMin, config.bethlehemEssenceIntervalMax);
+    config.bethlehemEssenceLaunchSpeed = std::max(1.0f, config.bethlehemEssenceLaunchSpeed);
+    config.bethlehemEssenceLaunchLift = std::max(0.0f, config.bethlehemEssenceLaunchLift);
+    config.bethlehemEssenceFallGravity = std::max(0.05f, config.bethlehemEssenceFallGravity);
+    config.bethlehemEssenceFallDrag = std::max(0.0f, config.bethlehemEssenceFallDrag);
+    config.bethlehemEssenceDeathCount = std::max(0, config.bethlehemEssenceDeathCount);
+    config.bethlehemEssenceDeathSpeed = std::max(1.0f, config.bethlehemEssenceDeathSpeed);
+    config.bethlehemEssenceDeathLift = std::max(0.0f, config.bethlehemEssenceDeathLift);
+    config.bethlehemEssenceDeathGravity = std::max(0.05f, config.bethlehemEssenceDeathGravity);
+    config.bethlehemEssenceDeathDrag = std::max(0.0f, config.bethlehemEssenceDeathDrag);
     config.dummyHealth = std::max(1.0f, config.dummyHealth);
     config.dummySpawnInterval = std::max(0.5f, config.dummySpawnInterval);
     config.dummyBossSpawnTime = std::max(1.0f, config.dummyBossSpawnTime);

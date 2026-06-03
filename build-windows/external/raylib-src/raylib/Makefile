@@ -57,10 +57,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /mnt/Data/Projects/VioNature
+CMAKE_SOURCE_DIR = /home/joiry/Data/Projects/VioNature
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /mnt/Data/Projects/VioNature/build-windows
+CMAKE_BINARY_DIR = /home/joiry/Data/Projects/VioNature/build-windows
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -68,7 +68,7 @@ CMAKE_BINARY_DIR = /mnt/Data/Projects/VioNature/build-windows
 # Special rule for the target package
 package: preinstall
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --cyan "Run CPack packaging tool..."
-	cd /mnt/Data/Projects/VioNature/build-windows && /usr/bin/cpack --config ./CPackConfig.cmake
+	cd /home/joiry/Data/Projects/VioNature/build-windows && /usr/bin/cpack --config ./CPackConfig.cmake
 .PHONY : package
 
 # Special rule for the target package
@@ -78,7 +78,7 @@ package/fast: package
 # Special rule for the target package_source
 package_source:
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --cyan "Run CPack packaging tool for source..."
-	cd /mnt/Data/Projects/VioNature/build-windows && /usr/bin/cpack --config ./CPackSourceConfig.cmake /mnt/Data/Projects/VioNature/build-windows/CPackSourceConfig.cmake
+	cd /home/joiry/Data/Projects/VioNature/build-windows && /usr/bin/cpack --config ./CPackSourceConfig.cmake /home/joiry/Data/Projects/VioNature/build-windows/CPackSourceConfig.cmake
 .PHONY : package_source
 
 # Special rule for the target package_source
@@ -152,14 +152,14 @@ install/strip/fast: preinstall/fast
 
 # The main all target
 all: cmake_check_build_system
-	cd /mnt/Data/Projects/VioNature/build-windows && $(CMAKE_COMMAND) -E cmake_progress_start /mnt/Data/Projects/VioNature/build-windows/CMakeFiles /mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib//CMakeFiles/progress.marks
-	cd /mnt/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 external/raylib-src/raylib/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /mnt/Data/Projects/VioNature/build-windows/CMakeFiles 0
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(CMAKE_COMMAND) -E cmake_progress_start /home/joiry/Data/Projects/VioNature/build-windows/CMakeFiles /home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib//CMakeFiles/progress.marks
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 external/raylib-src/raylib/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/joiry/Data/Projects/VioNature/build-windows/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
 clean:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 external/raylib-src/raylib/clean
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 external/raylib-src/raylib/clean
 .PHONY : clean
 
 # The main clean target
@@ -168,22 +168,22 @@ clean/fast: clean
 
 # Prepare targets for installation.
 preinstall: all
-	cd /mnt/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 external/raylib-src/raylib/preinstall
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 external/raylib-src/raylib/preinstall
 .PHONY : preinstall
 
 # Prepare targets for installation.
 preinstall/fast:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 external/raylib-src/raylib/preinstall
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 external/raylib-src/raylib/preinstall
 .PHONY : preinstall/fast
 
 # clear depends
 depend:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
 .PHONY : depend
 
 # Convenience name for target.
 external/raylib-src/raylib/CMakeFiles/raylib.dir/rule:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 external/raylib-src/raylib/CMakeFiles/raylib.dir/rule
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 external/raylib-src/raylib/CMakeFiles/raylib.dir/rule
 .PHONY : external/raylib-src/raylib/CMakeFiles/raylib.dir/rule
 
 # Convenience name for target.
@@ -192,7 +192,7 @@ raylib: external/raylib-src/raylib/CMakeFiles/raylib.dir/rule
 
 # fast build rule for target.
 raylib/fast:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/build
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/build
 .PHONY : raylib/fast
 
 raudio.obj: raudio.c.obj
@@ -200,7 +200,7 @@ raudio.obj: raudio.c.obj
 
 # target to build an object file
 raudio.c.obj:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/raudio.c.obj
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/raudio.c.obj
 .PHONY : raudio.c.obj
 
 raudio.i: raudio.c.i
@@ -208,7 +208,7 @@ raudio.i: raudio.c.i
 
 # target to preprocess a source file
 raudio.c.i:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/raudio.c.i
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/raudio.c.i
 .PHONY : raudio.c.i
 
 raudio.s: raudio.c.s
@@ -216,7 +216,7 @@ raudio.s: raudio.c.s
 
 # target to generate assembly for a file
 raudio.c.s:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/raudio.c.s
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/raudio.c.s
 .PHONY : raudio.c.s
 
 rcore.obj: rcore.c.obj
@@ -224,7 +224,7 @@ rcore.obj: rcore.c.obj
 
 # target to build an object file
 rcore.c.obj:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rcore.c.obj
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rcore.c.obj
 .PHONY : rcore.c.obj
 
 rcore.i: rcore.c.i
@@ -232,7 +232,7 @@ rcore.i: rcore.c.i
 
 # target to preprocess a source file
 rcore.c.i:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rcore.c.i
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rcore.c.i
 .PHONY : rcore.c.i
 
 rcore.s: rcore.c.s
@@ -240,7 +240,7 @@ rcore.s: rcore.c.s
 
 # target to generate assembly for a file
 rcore.c.s:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rcore.c.s
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rcore.c.s
 .PHONY : rcore.c.s
 
 rmodels.obj: rmodels.c.obj
@@ -248,7 +248,7 @@ rmodels.obj: rmodels.c.obj
 
 # target to build an object file
 rmodels.c.obj:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rmodels.c.obj
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rmodels.c.obj
 .PHONY : rmodels.c.obj
 
 rmodels.i: rmodels.c.i
@@ -256,7 +256,7 @@ rmodels.i: rmodels.c.i
 
 # target to preprocess a source file
 rmodels.c.i:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rmodels.c.i
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rmodels.c.i
 .PHONY : rmodels.c.i
 
 rmodels.s: rmodels.c.s
@@ -264,7 +264,7 @@ rmodels.s: rmodels.c.s
 
 # target to generate assembly for a file
 rmodels.c.s:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rmodels.c.s
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rmodels.c.s
 .PHONY : rmodels.c.s
 
 rshapes.obj: rshapes.c.obj
@@ -272,7 +272,7 @@ rshapes.obj: rshapes.c.obj
 
 # target to build an object file
 rshapes.c.obj:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rshapes.c.obj
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rshapes.c.obj
 .PHONY : rshapes.c.obj
 
 rshapes.i: rshapes.c.i
@@ -280,7 +280,7 @@ rshapes.i: rshapes.c.i
 
 # target to preprocess a source file
 rshapes.c.i:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rshapes.c.i
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rshapes.c.i
 .PHONY : rshapes.c.i
 
 rshapes.s: rshapes.c.s
@@ -288,7 +288,7 @@ rshapes.s: rshapes.c.s
 
 # target to generate assembly for a file
 rshapes.c.s:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rshapes.c.s
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rshapes.c.s
 .PHONY : rshapes.c.s
 
 rtext.obj: rtext.c.obj
@@ -296,7 +296,7 @@ rtext.obj: rtext.c.obj
 
 # target to build an object file
 rtext.c.obj:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rtext.c.obj
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rtext.c.obj
 .PHONY : rtext.c.obj
 
 rtext.i: rtext.c.i
@@ -304,7 +304,7 @@ rtext.i: rtext.c.i
 
 # target to preprocess a source file
 rtext.c.i:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rtext.c.i
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rtext.c.i
 .PHONY : rtext.c.i
 
 rtext.s: rtext.c.s
@@ -312,7 +312,7 @@ rtext.s: rtext.c.s
 
 # target to generate assembly for a file
 rtext.c.s:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rtext.c.s
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rtext.c.s
 .PHONY : rtext.c.s
 
 rtextures.obj: rtextures.c.obj
@@ -320,7 +320,7 @@ rtextures.obj: rtextures.c.obj
 
 # target to build an object file
 rtextures.c.obj:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rtextures.c.obj
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rtextures.c.obj
 .PHONY : rtextures.c.obj
 
 rtextures.i: rtextures.c.i
@@ -328,7 +328,7 @@ rtextures.i: rtextures.c.i
 
 # target to preprocess a source file
 rtextures.c.i:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rtextures.c.i
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rtextures.c.i
 .PHONY : rtextures.c.i
 
 rtextures.s: rtextures.c.s
@@ -336,7 +336,7 @@ rtextures.s: rtextures.c.s
 
 # target to generate assembly for a file
 rtextures.c.s:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rtextures.c.s
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(MAKE) $(MAKESILENT) -f external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make external/raylib-src/raylib/CMakeFiles/raylib.dir/rtextures.c.s
 .PHONY : rtextures.c.s
 
 # Help Target
@@ -383,6 +383,6 @@ help:
 # No rule that depends on this can have commands that come from listfiles
 # because they might be regenerated.
 cmake_check_build_system:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
 .PHONY : cmake_check_build_system
 

@@ -1,6 +1,6 @@
 external/raylib-src/raylib/CMakeFiles/raylib.dir/rshapes.c.obj: \
- /mnt/Data/Projects/VioNature/external/raylib-src/src/rshapes.c \
- /mnt/Data/Projects/VioNature/external/raylib-src/src/raylib.h \
+ /home/joiry/Data/Projects/VioNature/external/raylib-src/src/rshapes.c \
+ /home/joiry/Data/Projects/VioNature/external/raylib-src/src/raylib.h \
  /usr/lib/gcc/x86_64-w64-mingw32/13-win32/include/stdarg.h \
  /usr/share/mingw-w64/include/stdarg.h \
  /usr/share/mingw-w64/include/_mingw_stdarg.h \
@@ -10,8 +10,8 @@ external/raylib-src/raylib/CMakeFiles/raylib.dir/rshapes.c.obj: \
  /usr/share/mingw-w64/include/_mingw_secapi.h \
  /usr/share/mingw-w64/include/sdks/_mingw_ddk.h \
  /usr/lib/gcc/x86_64-w64-mingw32/13-win32/include/stdbool.h \
- /mnt/Data/Projects/VioNature/external/raylib-src/src/config.h \
- /mnt/Data/Projects/VioNature/external/raylib-src/src/rlgl.h \
+ /home/joiry/Data/Projects/VioNature/external/raylib-src/src/config.h \
+ /home/joiry/Data/Projects/VioNature/external/raylib-src/src/rlgl.h \
  /usr/share/mingw-w64/include/math.h \
  /usr/share/mingw-w64/include/crtdefs.h \
  /usr/share/mingw-w64/include/corecrt.h \

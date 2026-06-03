@@ -1,4 +1,4 @@
-# Install script for directory: /mnt/Data/Projects/VioNature/external/raylib-src/src
+# Install script for directory: /home/joiry/Data/Projects/VioNature/external/raylib-src/src
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -39,34 +39,34 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/cmake_install.cmake")
+  include("/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/cmake_install.cmake")
 endif()
 
 if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE STATIC_LIBRARY FILES "/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/libraylib.a")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE STATIC_LIBRARY FILES "/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/libraylib.a")
 endif()
 
 if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT)
   file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/include" TYPE FILE FILES
-    "/mnt/Data/Projects/VioNature/external/raylib-src/src/raylib.h"
-    "/mnt/Data/Projects/VioNature/external/raylib-src/src/rcamera.h"
-    "/mnt/Data/Projects/VioNature/external/raylib-src/src/rlgl.h"
-    "/mnt/Data/Projects/VioNature/external/raylib-src/src/raymath.h"
+    "/home/joiry/Data/Projects/VioNature/external/raylib-src/src/raylib.h"
+    "/home/joiry/Data/Projects/VioNature/external/raylib-src/src/rcamera.h"
+    "/home/joiry/Data/Projects/VioNature/external/raylib-src/src/rlgl.h"
+    "/home/joiry/Data/Projects/VioNature/external/raylib-src/src/raymath.h"
     )
 endif()
 
 if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig" TYPE FILE FILES "/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/raylib.pc")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig" TYPE FILE FILES "/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/raylib.pc")
 endif()
 
 if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/cmake/raylib" TYPE FILE FILES "/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/raylib-config-version.cmake")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/cmake/raylib" TYPE FILE FILES "/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/raylib-config-version.cmake")
 endif()
 
 if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT)
   file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/cmake/raylib" TYPE FILE FILES
-    "/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/raylib-config-version.cmake"
-    "/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/raylib-config.cmake"
+    "/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/raylib-config-version.cmake"
+    "/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/raylib-config.cmake"
     )
 endif()
 
@@ -74,7 +74,7 @@ if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT
   if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/cmake/raylib/raylib-targets.cmake")
     file(DIFFERENT _cmake_export_file_changed FILES
          "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/cmake/raylib/raylib-targets.cmake"
-         "/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/CMakeFiles/Export/3f9a69e8808e76b29b64bee1688b3b35/raylib-targets.cmake")
+         "/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/CMakeFiles/Export/3f9a69e8808e76b29b64bee1688b3b35/raylib-targets.cmake")
     if(_cmake_export_file_changed)
       file(GLOB _cmake_old_config_files "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/cmake/raylib/raylib-targets-*.cmake")
       if(_cmake_old_config_files)
@@ -87,9 +87,9 @@ if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT
     endif()
     unset(_cmake_export_file_changed)
   endif()
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/cmake/raylib" TYPE FILE FILES "/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/CMakeFiles/Export/3f9a69e8808e76b29b64bee1688b3b35/raylib-targets.cmake")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/cmake/raylib" TYPE FILE FILES "/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/CMakeFiles/Export/3f9a69e8808e76b29b64bee1688b3b35/raylib-targets.cmake")
   if(CMAKE_INSTALL_CONFIG_NAME MATCHES "^([Rr][Ee][Ll][Ee][Aa][Ss][Ee])$")
-    file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/cmake/raylib" TYPE FILE FILES "/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/CMakeFiles/Export/3f9a69e8808e76b29b64bee1688b3b35/raylib-targets-release.cmake")
+    file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/cmake/raylib" TYPE FILE FILES "/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/CMakeFiles/Export/3f9a69e8808e76b29b64bee1688b3b35/raylib-targets-release.cmake")
   endif()
 endif()
 

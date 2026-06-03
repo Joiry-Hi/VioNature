@@ -358,6 +358,24 @@ void Game::UpdateProjectiles(float dt) {
             continue;
         }
 
+        // Prop collision on flat maps (AABB block check)
+        if (!IsSphericalMap()) {
+            for (const Prop& prop : props_) {
+                if (!prop.collidable || prop.shape != 0) continue;
+                float minX = prop.position.x - prop.scale.x * 0.5f - projectile.radius;
+                float maxX = prop.position.x + prop.scale.x * 0.5f + projectile.radius;
+                float minZ = prop.position.z - prop.scale.z * 0.5f - projectile.radius;
+                float maxZ = prop.position.z + prop.scale.z * 0.5f + projectile.radius;
+                float topY = prop.position.y + prop.scale.y;
+                float bottomY = prop.position.y;
+                if (position.x >= minX && position.x <= maxX && position.z >= minZ && position.z <= maxZ
+                    && position.y > bottomY && position.y < topY) {
+                    DestroyProjectile(i);
+                    continue;
+                }
+            }
+        }
+
         bool detonatesOnGround = projectile.kind == ProjectileKind::Rocket || projectile.kind == ProjectileKind::GravityNail || projectile.kind == ProjectileKind::BlackHoleGrenade || projectile.kind == ProjectileKind::Lance || projectile.kind == ProjectileKind::DroneCanister;
         bool touchesGround = false;
         if (IsSphericalMap()) {

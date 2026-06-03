@@ -53,10 +53,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /mnt/Data/Projects/VioNature
+CMAKE_SOURCE_DIR = /home/joiry/Data/Projects/VioNature
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /mnt/Data/Projects/VioNature/build-windows
+CMAKE_BINARY_DIR = /home/joiry/Data/Projects/VioNature/build-windows
 
 # Include any dependencies generated for this target.
 include external/raylib-src/raylib/CMakeFiles/raylib.dir/depend.make
@@ -71,93 +71,93 @@ include external/raylib-src/raylib/CMakeFiles/raylib.dir/flags.make
 
 external/raylib-src/raylib/CMakeFiles/raylib.dir/raudio.c.obj: external/raylib-src/raylib/CMakeFiles/raylib.dir/flags.make
 external/raylib-src/raylib/CMakeFiles/raylib.dir/raudio.c.obj: external/raylib-src/raylib/CMakeFiles/raylib.dir/includes_C.rsp
-external/raylib-src/raylib/CMakeFiles/raylib.dir/raudio.c.obj: /mnt/Data/Projects/VioNature/external/raylib-src/src/raudio.c
+external/raylib-src/raylib/CMakeFiles/raylib.dir/raudio.c.obj: /home/joiry/Data/Projects/VioNature/external/raylib-src/src/raudio.c
 external/raylib-src/raylib/CMakeFiles/raylib.dir/raudio.c.obj: external/raylib-src/raylib/CMakeFiles/raylib.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/mnt/Data/Projects/VioNature/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object external/raylib-src/raylib/CMakeFiles/raylib.dir/raudio.c.obj"
-	cd /mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT external/raylib-src/raylib/CMakeFiles/raylib.dir/raudio.c.obj -MF CMakeFiles/raylib.dir/raudio.c.obj.d -o CMakeFiles/raylib.dir/raudio.c.obj -c /mnt/Data/Projects/VioNature/external/raylib-src/src/raudio.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/joiry/Data/Projects/VioNature/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object external/raylib-src/raylib/CMakeFiles/raylib.dir/raudio.c.obj"
+	cd /home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT external/raylib-src/raylib/CMakeFiles/raylib.dir/raudio.c.obj -MF CMakeFiles/raylib.dir/raudio.c.obj.d -o CMakeFiles/raylib.dir/raudio.c.obj -c /home/joiry/Data/Projects/VioNature/external/raylib-src/src/raudio.c
 
 external/raylib-src/raylib/CMakeFiles/raylib.dir/raudio.c.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/raylib.dir/raudio.c.i"
-	cd /mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /mnt/Data/Projects/VioNature/external/raylib-src/src/raudio.c > CMakeFiles/raylib.dir/raudio.c.i
+	cd /home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/joiry/Data/Projects/VioNature/external/raylib-src/src/raudio.c > CMakeFiles/raylib.dir/raudio.c.i
 
 external/raylib-src/raylib/CMakeFiles/raylib.dir/raudio.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/raylib.dir/raudio.c.s"
-	cd /mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /mnt/Data/Projects/VioNature/external/raylib-src/src/raudio.c -o CMakeFiles/raylib.dir/raudio.c.s
+	cd /home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/joiry/Data/Projects/VioNature/external/raylib-src/src/raudio.c -o CMakeFiles/raylib.dir/raudio.c.s
 
 external/raylib-src/raylib/CMakeFiles/raylib.dir/rcore.c.obj: external/raylib-src/raylib/CMakeFiles/raylib.dir/flags.make
 external/raylib-src/raylib/CMakeFiles/raylib.dir/rcore.c.obj: external/raylib-src/raylib/CMakeFiles/raylib.dir/includes_C.rsp
-external/raylib-src/raylib/CMakeFiles/raylib.dir/rcore.c.obj: /mnt/Data/Projects/VioNature/external/raylib-src/src/rcore.c
+external/raylib-src/raylib/CMakeFiles/raylib.dir/rcore.c.obj: /home/joiry/Data/Projects/VioNature/external/raylib-src/src/rcore.c
 external/raylib-src/raylib/CMakeFiles/raylib.dir/rcore.c.obj: external/raylib-src/raylib/CMakeFiles/raylib.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/mnt/Data/Projects/VioNature/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building C object external/raylib-src/raylib/CMakeFiles/raylib.dir/rcore.c.obj"
-	cd /mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT external/raylib-src/raylib/CMakeFiles/raylib.dir/rcore.c.obj -MF CMakeFiles/raylib.dir/rcore.c.obj.d -o CMakeFiles/raylib.dir/rcore.c.obj -c /mnt/Data/Projects/VioNature/external/raylib-src/src/rcore.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/joiry/Data/Projects/VioNature/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building C object external/raylib-src/raylib/CMakeFiles/raylib.dir/rcore.c.obj"
+	cd /home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT external/raylib-src/raylib/CMakeFiles/raylib.dir/rcore.c.obj -MF CMakeFiles/raylib.dir/rcore.c.obj.d -o CMakeFiles/raylib.dir/rcore.c.obj -c /home/joiry/Data/Projects/VioNature/external/raylib-src/src/rcore.c
 
 external/raylib-src/raylib/CMakeFiles/raylib.dir/rcore.c.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/raylib.dir/rcore.c.i"
-	cd /mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /mnt/Data/Projects/VioNature/external/raylib-src/src/rcore.c > CMakeFiles/raylib.dir/rcore.c.i
+	cd /home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/joiry/Data/Projects/VioNature/external/raylib-src/src/rcore.c > CMakeFiles/raylib.dir/rcore.c.i
 
 external/raylib-src/raylib/CMakeFiles/raylib.dir/rcore.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/raylib.dir/rcore.c.s"
-	cd /mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /mnt/Data/Projects/VioNature/external/raylib-src/src/rcore.c -o CMakeFiles/raylib.dir/rcore.c.s
+	cd /home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/joiry/Data/Projects/VioNature/external/raylib-src/src/rcore.c -o CMakeFiles/raylib.dir/rcore.c.s
 
 external/raylib-src/raylib/CMakeFiles/raylib.dir/rmodels.c.obj: external/raylib-src/raylib/CMakeFiles/raylib.dir/flags.make
 external/raylib-src/raylib/CMakeFiles/raylib.dir/rmodels.c.obj: external/raylib-src/raylib/CMakeFiles/raylib.dir/includes_C.rsp
-external/raylib-src/raylib/CMakeFiles/raylib.dir/rmodels.c.obj: /mnt/Data/Projects/VioNature/external/raylib-src/src/rmodels.c
+external/raylib-src/raylib/CMakeFiles/raylib.dir/rmodels.c.obj: /home/joiry/Data/Projects/VioNature/external/raylib-src/src/rmodels.c
 external/raylib-src/raylib/CMakeFiles/raylib.dir/rmodels.c.obj: external/raylib-src/raylib/CMakeFiles/raylib.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/mnt/Data/Projects/VioNature/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building C object external/raylib-src/raylib/CMakeFiles/raylib.dir/rmodels.c.obj"
-	cd /mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT external/raylib-src/raylib/CMakeFiles/raylib.dir/rmodels.c.obj -MF CMakeFiles/raylib.dir/rmodels.c.obj.d -o CMakeFiles/raylib.dir/rmodels.c.obj -c /mnt/Data/Projects/VioNature/external/raylib-src/src/rmodels.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/joiry/Data/Projects/VioNature/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building C object external/raylib-src/raylib/CMakeFiles/raylib.dir/rmodels.c.obj"
+	cd /home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT external/raylib-src/raylib/CMakeFiles/raylib.dir/rmodels.c.obj -MF CMakeFiles/raylib.dir/rmodels.c.obj.d -o CMakeFiles/raylib.dir/rmodels.c.obj -c /home/joiry/Data/Projects/VioNature/external/raylib-src/src/rmodels.c
 
 external/raylib-src/raylib/CMakeFiles/raylib.dir/rmodels.c.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/raylib.dir/rmodels.c.i"
-	cd /mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /mnt/Data/Projects/VioNature/external/raylib-src/src/rmodels.c > CMakeFiles/raylib.dir/rmodels.c.i
+	cd /home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/joiry/Data/Projects/VioNature/external/raylib-src/src/rmodels.c > CMakeFiles/raylib.dir/rmodels.c.i
 
 external/raylib-src/raylib/CMakeFiles/raylib.dir/rmodels.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/raylib.dir/rmodels.c.s"
-	cd /mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /mnt/Data/Projects/VioNature/external/raylib-src/src/rmodels.c -o CMakeFiles/raylib.dir/rmodels.c.s
+	cd /home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/joiry/Data/Projects/VioNature/external/raylib-src/src/rmodels.c -o CMakeFiles/raylib.dir/rmodels.c.s
 
 external/raylib-src/raylib/CMakeFiles/raylib.dir/rshapes.c.obj: external/raylib-src/raylib/CMakeFiles/raylib.dir/flags.make
 external/raylib-src/raylib/CMakeFiles/raylib.dir/rshapes.c.obj: external/raylib-src/raylib/CMakeFiles/raylib.dir/includes_C.rsp
-external/raylib-src/raylib/CMakeFiles/raylib.dir/rshapes.c.obj: /mnt/Data/Projects/VioNature/external/raylib-src/src/rshapes.c
+external/raylib-src/raylib/CMakeFiles/raylib.dir/rshapes.c.obj: /home/joiry/Data/Projects/VioNature/external/raylib-src/src/rshapes.c
 external/raylib-src/raylib/CMakeFiles/raylib.dir/rshapes.c.obj: external/raylib-src/raylib/CMakeFiles/raylib.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/mnt/Data/Projects/VioNature/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building C object external/raylib-src/raylib/CMakeFiles/raylib.dir/rshapes.c.obj"
-	cd /mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT external/raylib-src/raylib/CMakeFiles/raylib.dir/rshapes.c.obj -MF CMakeFiles/raylib.dir/rshapes.c.obj.d -o CMakeFiles/raylib.dir/rshapes.c.obj -c /mnt/Data/Projects/VioNature/external/raylib-src/src/rshapes.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/joiry/Data/Projects/VioNature/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building C object external/raylib-src/raylib/CMakeFiles/raylib.dir/rshapes.c.obj"
+	cd /home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT external/raylib-src/raylib/CMakeFiles/raylib.dir/rshapes.c.obj -MF CMakeFiles/raylib.dir/rshapes.c.obj.d -o CMakeFiles/raylib.dir/rshapes.c.obj -c /home/joiry/Data/Projects/VioNature/external/raylib-src/src/rshapes.c
 
 external/raylib-src/raylib/CMakeFiles/raylib.dir/rshapes.c.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/raylib.dir/rshapes.c.i"
-	cd /mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /mnt/Data/Projects/VioNature/external/raylib-src/src/rshapes.c > CMakeFiles/raylib.dir/rshapes.c.i
+	cd /home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/joiry/Data/Projects/VioNature/external/raylib-src/src/rshapes.c > CMakeFiles/raylib.dir/rshapes.c.i
 
 external/raylib-src/raylib/CMakeFiles/raylib.dir/rshapes.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/raylib.dir/rshapes.c.s"
-	cd /mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /mnt/Data/Projects/VioNature/external/raylib-src/src/rshapes.c -o CMakeFiles/raylib.dir/rshapes.c.s
+	cd /home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/joiry/Data/Projects/VioNature/external/raylib-src/src/rshapes.c -o CMakeFiles/raylib.dir/rshapes.c.s
 
 external/raylib-src/raylib/CMakeFiles/raylib.dir/rtext.c.obj: external/raylib-src/raylib/CMakeFiles/raylib.dir/flags.make
 external/raylib-src/raylib/CMakeFiles/raylib.dir/rtext.c.obj: external/raylib-src/raylib/CMakeFiles/raylib.dir/includes_C.rsp
-external/raylib-src/raylib/CMakeFiles/raylib.dir/rtext.c.obj: /mnt/Data/Projects/VioNature/external/raylib-src/src/rtext.c
+external/raylib-src/raylib/CMakeFiles/raylib.dir/rtext.c.obj: /home/joiry/Data/Projects/VioNature/external/raylib-src/src/rtext.c
 external/raylib-src/raylib/CMakeFiles/raylib.dir/rtext.c.obj: external/raylib-src/raylib/CMakeFiles/raylib.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/mnt/Data/Projects/VioNature/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building C object external/raylib-src/raylib/CMakeFiles/raylib.dir/rtext.c.obj"
-	cd /mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT external/raylib-src/raylib/CMakeFiles/raylib.dir/rtext.c.obj -MF CMakeFiles/raylib.dir/rtext.c.obj.d -o CMakeFiles/raylib.dir/rtext.c.obj -c /mnt/Data/Projects/VioNature/external/raylib-src/src/rtext.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/joiry/Data/Projects/VioNature/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building C object external/raylib-src/raylib/CMakeFiles/raylib.dir/rtext.c.obj"
+	cd /home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT external/raylib-src/raylib/CMakeFiles/raylib.dir/rtext.c.obj -MF CMakeFiles/raylib.dir/rtext.c.obj.d -o CMakeFiles/raylib.dir/rtext.c.obj -c /home/joiry/Data/Projects/VioNature/external/raylib-src/src/rtext.c
 
 external/raylib-src/raylib/CMakeFiles/raylib.dir/rtext.c.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/raylib.dir/rtext.c.i"
-	cd /mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /mnt/Data/Projects/VioNature/external/raylib-src/src/rtext.c > CMakeFiles/raylib.dir/rtext.c.i
+	cd /home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/joiry/Data/Projects/VioNature/external/raylib-src/src/rtext.c > CMakeFiles/raylib.dir/rtext.c.i
 
 external/raylib-src/raylib/CMakeFiles/raylib.dir/rtext.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/raylib.dir/rtext.c.s"
-	cd /mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /mnt/Data/Projects/VioNature/external/raylib-src/src/rtext.c -o CMakeFiles/raylib.dir/rtext.c.s
+	cd /home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/joiry/Data/Projects/VioNature/external/raylib-src/src/rtext.c -o CMakeFiles/raylib.dir/rtext.c.s
 
 external/raylib-src/raylib/CMakeFiles/raylib.dir/rtextures.c.obj: external/raylib-src/raylib/CMakeFiles/raylib.dir/flags.make
 external/raylib-src/raylib/CMakeFiles/raylib.dir/rtextures.c.obj: external/raylib-src/raylib/CMakeFiles/raylib.dir/includes_C.rsp
-external/raylib-src/raylib/CMakeFiles/raylib.dir/rtextures.c.obj: /mnt/Data/Projects/VioNature/external/raylib-src/src/rtextures.c
+external/raylib-src/raylib/CMakeFiles/raylib.dir/rtextures.c.obj: /home/joiry/Data/Projects/VioNature/external/raylib-src/src/rtextures.c
 external/raylib-src/raylib/CMakeFiles/raylib.dir/rtextures.c.obj: external/raylib-src/raylib/CMakeFiles/raylib.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/mnt/Data/Projects/VioNature/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building C object external/raylib-src/raylib/CMakeFiles/raylib.dir/rtextures.c.obj"
-	cd /mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT external/raylib-src/raylib/CMakeFiles/raylib.dir/rtextures.c.obj -MF CMakeFiles/raylib.dir/rtextures.c.obj.d -o CMakeFiles/raylib.dir/rtextures.c.obj -c /mnt/Data/Projects/VioNature/external/raylib-src/src/rtextures.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/joiry/Data/Projects/VioNature/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building C object external/raylib-src/raylib/CMakeFiles/raylib.dir/rtextures.c.obj"
+	cd /home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT external/raylib-src/raylib/CMakeFiles/raylib.dir/rtextures.c.obj -MF CMakeFiles/raylib.dir/rtextures.c.obj.d -o CMakeFiles/raylib.dir/rtextures.c.obj -c /home/joiry/Data/Projects/VioNature/external/raylib-src/src/rtextures.c
 
 external/raylib-src/raylib/CMakeFiles/raylib.dir/rtextures.c.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/raylib.dir/rtextures.c.i"
-	cd /mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /mnt/Data/Projects/VioNature/external/raylib-src/src/rtextures.c > CMakeFiles/raylib.dir/rtextures.c.i
+	cd /home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/joiry/Data/Projects/VioNature/external/raylib-src/src/rtextures.c > CMakeFiles/raylib.dir/rtextures.c.i
 
 external/raylib-src/raylib/CMakeFiles/raylib.dir/rtextures.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/raylib.dir/rtextures.c.s"
-	cd /mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /mnt/Data/Projects/VioNature/external/raylib-src/src/rtextures.c -o CMakeFiles/raylib.dir/rtextures.c.s
+	cd /home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && /usr/bin/x86_64-w64-mingw32-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/joiry/Data/Projects/VioNature/external/raylib-src/src/rtextures.c -o CMakeFiles/raylib.dir/rtextures.c.s
 
 # Object files for target raylib
 raylib_OBJECTS = \
@@ -170,27 +170,27 @@ raylib_OBJECTS = \
 
 # External object files for target raylib
 raylib_EXTERNAL_OBJECTS = \
-"/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/context.c.obj" \
-"/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/init.c.obj" \
-"/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/input.c.obj" \
-"/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/monitor.c.obj" \
-"/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/platform.c.obj" \
-"/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/vulkan.c.obj" \
-"/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/window.c.obj" \
-"/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/egl_context.c.obj" \
-"/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/osmesa_context.c.obj" \
-"/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/null_init.c.obj" \
-"/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/null_monitor.c.obj" \
-"/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/null_window.c.obj" \
-"/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/null_joystick.c.obj" \
-"/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/win32_module.c.obj" \
-"/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/win32_time.c.obj" \
-"/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/win32_thread.c.obj" \
-"/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/win32_init.c.obj" \
-"/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/win32_joystick.c.obj" \
-"/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/win32_monitor.c.obj" \
-"/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/win32_window.c.obj" \
-"/mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/wgl_context.c.obj"
+"/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/context.c.obj" \
+"/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/init.c.obj" \
+"/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/input.c.obj" \
+"/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/monitor.c.obj" \
+"/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/platform.c.obj" \
+"/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/vulkan.c.obj" \
+"/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/window.c.obj" \
+"/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/egl_context.c.obj" \
+"/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/osmesa_context.c.obj" \
+"/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/null_init.c.obj" \
+"/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/null_monitor.c.obj" \
+"/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/null_window.c.obj" \
+"/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/null_joystick.c.obj" \
+"/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/win32_module.c.obj" \
+"/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/win32_time.c.obj" \
+"/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/win32_thread.c.obj" \
+"/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/win32_init.c.obj" \
+"/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/win32_joystick.c.obj" \
+"/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/win32_monitor.c.obj" \
+"/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/win32_window.c.obj" \
+"/home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/wgl_context.c.obj"
 
 external/raylib-src/raylib/libraylib.a: external/raylib-src/raylib/CMakeFiles/raylib.dir/raudio.c.obj
 external/raylib-src/raylib/libraylib.a: external/raylib-src/raylib/CMakeFiles/raylib.dir/rcore.c.obj
@@ -221,19 +221,19 @@ external/raylib-src/raylib/libraylib.a: external/raylib-src/raylib/external/glfw
 external/raylib-src/raylib/libraylib.a: external/raylib-src/raylib/external/glfw/src/CMakeFiles/glfw.dir/wgl_context.c.obj
 external/raylib-src/raylib/libraylib.a: external/raylib-src/raylib/CMakeFiles/raylib.dir/build.make
 external/raylib-src/raylib/libraylib.a: external/raylib-src/raylib/CMakeFiles/raylib.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/mnt/Data/Projects/VioNature/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Linking C static library libraylib.a"
-	cd /mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && $(CMAKE_COMMAND) -P CMakeFiles/raylib.dir/cmake_clean_target.cmake
-	cd /mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/raylib.dir/link.txt --verbose=$(VERBOSE)
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/joiry/Data/Projects/VioNature/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Linking C static library libraylib.a"
+	cd /home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && $(CMAKE_COMMAND) -P CMakeFiles/raylib.dir/cmake_clean_target.cmake
+	cd /home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/raylib.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
 external/raylib-src/raylib/CMakeFiles/raylib.dir/build: external/raylib-src/raylib/libraylib.a
 .PHONY : external/raylib-src/raylib/CMakeFiles/raylib.dir/build
 
 external/raylib-src/raylib/CMakeFiles/raylib.dir/clean:
-	cd /mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && $(CMAKE_COMMAND) -P CMakeFiles/raylib.dir/cmake_clean.cmake
+	cd /home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib && $(CMAKE_COMMAND) -P CMakeFiles/raylib.dir/cmake_clean.cmake
 .PHONY : external/raylib-src/raylib/CMakeFiles/raylib.dir/clean
 
 external/raylib-src/raylib/CMakeFiles/raylib.dir/depend:
-	cd /mnt/Data/Projects/VioNature/build-windows && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /mnt/Data/Projects/VioNature /mnt/Data/Projects/VioNature/external/raylib-src/src /mnt/Data/Projects/VioNature/build-windows /mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib /mnt/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/CMakeFiles/raylib.dir/DependInfo.cmake "--color=$(COLOR)"
+	cd /home/joiry/Data/Projects/VioNature/build-windows && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/joiry/Data/Projects/VioNature /home/joiry/Data/Projects/VioNature/external/raylib-src/src /home/joiry/Data/Projects/VioNature/build-windows /home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib /home/joiry/Data/Projects/VioNature/build-windows/external/raylib-src/raylib/CMakeFiles/raylib.dir/DependInfo.cmake "--color=$(COLOR)"
 .PHONY : external/raylib-src/raylib/CMakeFiles/raylib.dir/depend
 

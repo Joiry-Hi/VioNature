@@ -270,8 +270,12 @@ void Game::UpdateEnemies(float dt) {
                 }
                 skipVelocity = true;
             } else if (enemy.burstCount == 3) {
-                // Slamming down
+                // Slamming down — contact damage during descent + ground impact
                 enemy.actionTimer -= dt;
+                // Mid-air contact: hitting the player during the slam descent
+                if (sameWorldAsPlayer && EnemyTouchesPlayer(position, enemy.radius)) {
+                    ApplyPlayerHit(position, Color{100, 220, 140, 255}, "SLIME SLAM");
+                }
                 bool hitGround = IsSphericalMap()
                     ? SphericalAltitudeAt(position, enemy.world) <= targetAlt + enemy.radius * 0.35f
                     : (enemy.world == 0 ? position.y <= flatEnemySlamY : position.y >= flatEnemySlamY);
@@ -386,6 +390,29 @@ void Game::UpdateEnemies(float dt) {
         }
         enemy.externalVelocity = Vector3Scale(enemy.externalVelocity, std::pow(0.12f, dt));
         physics_.Bodies().SetLinearVelocity(enemy.body, ToJoltVelocity(velocity));
+
+        // Prop collision (AABB pushback, same as player)
+        for (const Prop& prop : props_) {
+            if (!prop.collidable || prop.shape != 0) continue;
+            float minX = prop.position.x - prop.scale.x * 0.5f - enemy.radius;
+            float maxX = prop.position.x + prop.scale.x * 0.5f + enemy.radius;
+            float minZ = prop.position.z - prop.scale.z * 0.5f - enemy.radius;
+            float maxZ = prop.position.z + prop.scale.z * 0.5f + enemy.radius;
+            float topY = prop.position.y + prop.scale.y;
+            float bottomY = prop.position.y;
+            float feetY = position.y - enemy.radius;
+            bool overlapsXZ = position.x >= minX && position.x <= maxX && position.z >= minZ && position.z <= maxZ;
+            if (!overlapsXZ) continue;
+            if (feetY >= topY || position.y <= bottomY) continue;
+            float pushLeft = std::abs(position.x - minX), pushRight = std::abs(maxX - position.x);
+            float pushBack = std::abs(position.z - minZ), pushFront = std::abs(maxZ - position.z);
+            float best = std::min(std::min(pushLeft, pushRight), std::min(pushBack, pushFront));
+            if (best == pushLeft) position.x = minX;
+            else if (best == pushRight) position.x = maxX;
+            else if (best == pushBack) position.z = minZ;
+            else position.z = maxZ;
+            physics_.Bodies().SetPosition(enemy.body, ToJoltVector(position), JPH::EActivation::Activate);
+        }
 
         // Curse damage over time
         if (enemy.cursed && !timeStopped_) {
@@ -977,6 +1004,7 @@ void Game::SpawnBethlehem() {
     bethlehem_.maxHealth = config_.bethlehemHealth;
     bethlehem_.attackTimer = 1.5f;
     bethlehem_.phaseTimer = 0.0f;
+    bethlehem_.essenceTimer = RandomFloat(config_.bethlehemEssenceIntervalMin, config_.bethlehemEssenceIntervalMax);
     bethlehem_.laserPhase = BethlehemLaserPhase::Inactive;
     bethlehem_.orbitAngle = 0.0f;
 
@@ -998,6 +1026,33 @@ void Game::DestroyBethlehem() {
     bethlehem_.laserPhase = BethlehemLaserPhase::Inactive;
     SpawnShockwave(bethlehem_.position, 14.0f, Color{255, 180, 60, 255});
     SpawnHitBurst(bethlehem_.position, Color{255, 220, 140, 255}, 110);
+    // Spawn falling essence pickups in random directions
+    Vector3 launchUp = IsSphericalMap() ? SphericalUpAt(bethlehem_.position) : Vector3{0.0f, 1.0f, 0.0f};
+    Vector3 launchA = {}, launchB = {};
+    if (IsSphericalMap()) {
+        launchA = {1.0f, 0.0f, 0.0f};
+        launchA = SafeNormalize(ProjectOnSphericalTangent(launchA, launchUp), Vector3{1.0f, 0.0f, 0.0f});
+        launchB = SafeNormalize(Vector3CrossProduct(launchUp, launchA), Vector3{0.0f, 0.0f, 1.0f});
+        float spin = RandomFloat(0.0f, 6.2831853f);
+        float c = std::cos(spin), s = std::sin(spin);
+        Vector3 ta = Vector3Add(Vector3Scale(launchA, c), Vector3Scale(launchB, s));
+        Vector3 tb = Vector3Add(Vector3Scale(launchA, -s), Vector3Scale(launchB, c));
+        launchA = ta; launchB = tb;
+    } else { launchA = {1.0f, 0.0f, 0.0f}; launchB = {0.0f, 0.0f, 1.0f}; }
+    for (int ei = 0; ei < config_.bethlehemEssenceDeathCount; ++ei) {
+        float angle = RandomFloat(0.0f, 6.2831853f);
+        float speed = config_.bethlehemEssenceDeathSpeed * RandomFloat(0.6f, 1.4f);
+        float lift = RandomFloat(config_.bethlehemEssenceDeathLift * 0.5f, config_.bethlehemEssenceDeathLift * 1.5f);
+        Vector3 vel = Vector3Add(Vector3Add(Vector3Scale(launchA, std::cos(angle) * speed), Vector3Scale(launchUp, lift)), Vector3Scale(launchB, std::sin(angle) * speed));
+        Pickup p;
+        p.type = PickupType::Essence;
+        p.position = bethlehem_.position;
+        p.velocity = vel;
+        p.horizontalDrag = config_.bethlehemEssenceDeathDrag;
+        p.gravityScale = config_.bethlehemEssenceDeathGravity;
+        p.bobTimer = RandomFloat(0.0f, 6.28f);
+        pickups_.push_back(p);
+    }
     eventText_ = "STAR FALLEN";
     eventTextTimer_ = 4.0f;
     cameraShake_ = 1.0f;
@@ -1019,6 +1074,40 @@ void Game::UpdateBethlehem(float dt) {
         }
     } else {
         bethlehem_.position = Vector3{0.0f, config_.bethlehemOrbitAltitude, 0.0f};
+    }
+
+    // Periodically launch essence pickups while alive
+    bethlehem_.essenceTimer -= dt;
+    if (bethlehem_.essenceTimer <= 0.0f) {
+        bethlehem_.essenceTimer = RandomFloat(config_.bethlehemEssenceIntervalMin, config_.bethlehemEssenceIntervalMax);
+        float angle = RandomFloat(0.0f, 6.2831853f);
+        float speed = config_.bethlehemEssenceLaunchSpeed * RandomFloat(0.7f, 1.3f);
+        float lift = RandomFloat(config_.bethlehemEssenceLaunchLift * 0.5f, config_.bethlehemEssenceLaunchLift * 1.5f);
+        Vector3 up = IsSphericalMap() ? SphericalUpAt(bethlehem_.position) : Vector3{0.0f, 1.0f, 0.0f};
+        Vector3 tangentA = {}, tangentB = {};
+        if (IsSphericalMap()) {
+            tangentA = {1.0f, 0.0f, 0.0f};
+            tangentA = SafeNormalize(ProjectOnSphericalTangent(tangentA, up), Vector3{1.0f, 0.0f, 0.0f});
+            tangentB = SafeNormalize(Vector3CrossProduct(up, tangentA), Vector3{0.0f, 0.0f, 1.0f});
+            // Random spin around radial axis so launch spread varies
+            float spin = RandomFloat(0.0f, 6.2831853f);
+            float c = std::cos(spin), s = std::sin(spin);
+            Vector3 ta = Vector3Add(Vector3Scale(tangentA, c), Vector3Scale(tangentB, s));
+            Vector3 tb = Vector3Add(Vector3Scale(tangentA, -s), Vector3Scale(tangentB, c));
+            tangentA = ta; tangentB = tb;
+        } else {
+            tangentA = {1.0f, 0.0f, 0.0f};
+            tangentB = {0.0f, 0.0f, 1.0f};
+        }
+        Vector3 vel = Vector3Add(Vector3Add(Vector3Scale(tangentA, std::cos(angle) * speed), Vector3Scale(up, lift)), Vector3Scale(tangentB, std::sin(angle) * speed));
+        Pickup p;
+        p.type = PickupType::Essence;
+        p.position = bethlehem_.position;
+        p.velocity = vel;
+        p.horizontalDrag = config_.bethlehemEssenceFallDrag;
+        p.gravityScale = config_.bethlehemEssenceFallGravity;
+        p.bobTimer = RandomFloat(0.0f, 6.28f);
+        pickups_.push_back(p);
     }
 
     // In tutorial mode, keep orbital movement but skip laser attacks

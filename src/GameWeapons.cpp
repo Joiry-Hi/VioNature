@@ -133,16 +133,26 @@ void Game::UpdateWeaponSwitching() {
         if (TutorialMode()) {
             int idx = static_cast<int>(activeWeapon_);
             if (idx < 9) {
+                bool eng = config_.tutorialLanguage == "english";
                 const char* tips[] = {
-                    "外星激光枪\n左键高速连射电浆球  |  右键+左键蓄力穿透光束",
-                    "火焰喷射器\n左键火球(半径膨胀)  |  右键切换热浪冲击波(锥形推飞弹幕)",
-                    "火箭筒\n左键火箭(火箭跳)  |  右键切换无人机仓  |  长按右键指挥界面",
-                    "霰弹枪\n左键散射弹丸(后坐力位移)  |  右键切换玻璃碎片尘云(持续伤害)",
-                    "引力钉枪\n左键引力钉牵引力场  |  右键切换黑洞榴弹(事件视界秒杀)",
-                    "无限手套\n右键切换:时停(TS)/闪现(B)  |  闪现时滚轮调距离",
-                    "朗基努斯之枪\n左键投掷穿透+反冲位移  |  右键切换AT推进(锥形+无敌帧)",
-                    "纳米构造仪\n左键纳米刀波(类帧伤)  |  右键切换纳米平台(可站立) 滚轮调距离",
-                    "神秘法杖\n左键诅咒法球(追踪+DoT) | 右键切换护盾(S) | 站定时长按左右键召唤法阵",
+                    eng ? "Laser Rifle\nLMB rapid-fire plasma bolts  |  RMB+LMB charged piercing beam"
+                        : "外星激光枪\n左键高速连射电浆球  |  右键+左键蓄力穿透光束",
+                    eng ? "Flamethrower\nLMB expanding fireball  |  RMB heatwave cone (deflects projectiles)"
+                        : "火焰喷射器\n左键火球(半径膨胀)  |  右键切换热浪冲击波(锥形推飞弹幕)",
+                    eng ? "Rocket Launcher\nLMB rocket (rocket-jump)  |  RMB drone canister  |  Hold RMB for command overlay"
+                        : "火箭筒\n左键火箭(火箭跳)  |  右键切换无人机仓  |  长按右键指挥界面",
+                    eng ? "Shotgun\nLMB pellet spread (recoil dash)  |  RMB glass shard cloud (persistent damage)"
+                        : "霰弹枪\n左键散射弹丸(后坐力位移)  |  右键切换玻璃碎片尘云(持续伤害)",
+                    eng ? "Gravity Nailer\nLMB gravity well (pulls enemies)  |  RMB black hole grenade (event horizon)"
+                        : "引力钉枪\n左键引力钉牵引力场  |  右键切换黑洞榴弹(事件视界秒杀)",
+                    eng ? "Infinity Gauntlet\nRMB toggles: TimeStop(TS)/Blink(B)  |  Scroll wheel adjusts blink distance"
+                        : "无限手套\n右键切换:时停(TS)/闪现(B)  |  闪现时滚轮调距离",
+                    eng ? "Longinus Spear\nLMB thrown spear (piercing+recoil)  |  RMB AT thrust (cone+invuln frames)"
+                        : "朗基努斯之枪\n左键投掷穿透+反冲位移  |  右键切换AT推进(锥形+无敌帧)",
+                    eng ? "Nano Constructor\nLMB nano blade wave  |  RMB nano platform (standable)  |  Scroll adjusts range"
+                        : "纳米构造仪\n左键纳米刀波(类帧伤)  |  右键切换纳米平台(可站立) 滚轮调距离",
+                    eng ? "Mystic Staff\nLMB curse orb (homing+DoT)  |  RMB shield  |  Stand still+hold LMB+RMB to summon circle"
+                        : "神秘法杖\n左键诅咒法球(追踪+DoT) | 右键切换护盾(S) | 站定时长按左右键召唤法阵",
                 };
                 ShowTutorialTip(tips[idx]);
                 tutorialHintTimer_ = 0.3f;
@@ -212,6 +222,25 @@ void Game::UpdateShooting(float dt) {
             && grounded_ && Vector3Length(playerVelocity_) < 1.5f) {
             mysticStaffChannelProgress_ = std::min(1.0f, mysticStaffChannelProgress_ + dt / 3.0f);
             cameraShake_ = std::min(0.35f, cameraShake_ + dt * 0.12f);
+            // Spawn channeling particles around the player
+            Vector3 up = IsSphericalMap() ? SphericalUpAt(camera_.position) : Vector3{0.0f, 1.0f, 0.0f};
+            Vector3 right = PlayerRight();
+            Vector3 fwd = PlayerForward();
+            float ringR = 1.2f + mysticStaffChannelProgress_ * 0.6f;
+            int burstCount = static_cast<int>(mysticStaffChannelProgress_ * 16.0f) + 3;
+            for (int pi = 0; pi < burstCount; ++pi) {
+                float angle = mysticStaffChannelProgress_ * 12.0f + pi * 0.55f;
+                Vector3 offset = Vector3Add(Vector3Scale(right, std::cos(angle) * ringR), Vector3Scale(fwd, std::sin(angle) * ringR));
+                Vector3 pos = Vector3Add(camera_.position, offset);
+                pos = Vector3Add(pos, Vector3Scale(up, 0.3f + RandomFloat(-0.3f, 0.3f)));
+                particles_.push_back(Particle{
+                    pos,
+                    Vector3Scale(up, RandomFloat(1.5f, 4.5f)),
+                    Color{200, 160, 255, 220},
+                    RandomFloat(0.25f, 0.65f), RandomFloat(0.25f, 0.65f),
+                    RandomFloat(0.04f, 0.1f)
+                });
+            }
         } else {
             if (mysticStaffChannelProgress_ >= 1.0f) {
                 CompleteMagicCircleChannel();
@@ -330,6 +359,10 @@ void Game::UpdateShooting(float dt) {
                         SpawnHitBurst(p.position, Color{255, 235, 120, 255}, 16);
                     }
                 }
+                // Mini essence pulse on the staff muzzle
+                Vector3 muzzle = WeaponMuzzlePosition();
+                // SpawnShockwave(muzzle, 0.5f, Color{255, 215, 60, 255});
+                SpawnHitBurst(muzzle, Color{255, 235, 120, 255}, 6);
                 fireCooldown_ = 0.25f;
             }
         }
