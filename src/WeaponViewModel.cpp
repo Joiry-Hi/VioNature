@@ -3,6 +3,7 @@
 #include "raymath.h"
 
 #include <array>
+#include <cmath>
 
 namespace {
 constexpr int kWeaponModelCount = 9;

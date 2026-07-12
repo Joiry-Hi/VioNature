@@ -25,6 +25,63 @@ cmake --build . -j $(nproc)
 bash scripts/package-release.sh
 ```
 
+### Web / itch.io HTML5 构建
+```bash
+bash scripts/build-web.sh
+# 本地预览：
+cd web-release/dist
+python3 -m http.server 8080
+```
+
+Web 构建产物：
+- `web-release/dist/index.html`
+- `web-release/dist/vionature.html`
+- `web-release/dist/vionature.js`
+- `web-release/dist/vionature.wasm`
+- `web-release/dist/vionature.data`
+- `web-release/packages/vionature_web.zip`
+- `web-release/packages/vionature_itch_html5.zip`
+
+上传 itch.io 使用 `web-release/packages/vionature_itch_html5.zip`，并确保 ZIP 根目录直接包含 `index.html`。不要上传外层目录包。`scripts/build-web.sh` 会删除并重建 `web-release/dist/`，如果终端正在旧 `web-release/dist` 中，重建后必须重新 `cd` 进去再开 HTTP server。
+
+### Web 无音频轻量包（wakudemo / 低带宽 demo）
+```bash
+bash scripts/build-web-no-audio.sh
+# 本地预览：
+cd web-release-no-audio/dist
+python3 -m http.server 8080
+```
+
+该脚本用于带宽敏感站点：复制 `config/` 与 `assets/` 到 `web-release-no-audio/staging/`，删除 `.wav/.mp3/.ogg/.flac/.m4a/.aac` 等音频文件，并以 `VIONATURE_NO_AUDIO=ON` 编译。它不影响正常 `web-release/` 和 itch.io 完整音频包。
+
+无音频构建产物：
+- `web-release-no-audio/dist/index.html`
+- `web-release-no-audio/dist/vionature.html`
+- `web-release-no-audio/dist/vionature.js`
+- `web-release-no-audio/dist/vionature.wasm`
+- `web-release-no-audio/dist/vionature.data`
+- `web-release-no-audio/packages/vionature_web_no_audio.zip`
+- `web-release-no-audio/packages/vionature_wakudemo_no_audio.zip`
+
+上传 wakudemo 优先使用 `web-release-no-audio/packages/vionature_wakudemo_no_audio.zip`。如果只是改玩法/渲染且无需声音，仍建议跑一次该脚本确认轻量包可构建。
+
+### itch.io butler 发布
+```bash
+# 首次本机安装/登录
+scripts/install-butler.sh
+tools/butler/butler login
+
+# 构建并上传 windows / linux / html5 三个 channel
+ITCH_TARGET=yourname/vionature bash scripts/publish-itch.sh all
+
+# 只上传 Web，或跳过构建直接上传现有 release 目录
+ITCH_TARGET=yourname/vionature bash scripts/publish-itch.sh web
+ITCH_TARGET=yourname/vionature bash scripts/publish-itch.sh windows linux web --skip-build
+```
+
+默认 channel：`windows`、`linux`、`html5`。可用 `WINDOWS_CHANNEL`、`LINUX_CHANNEL`、`WEB_CHANNEL` 覆盖；可用 `VERSION=0.3.1` 传给 butler `--userversion`。
+`publish-itch.sh` 会优先使用 `tools/butler/butler`，找不到时再使用 PATH 中的 `butler`。
+
 ### 编译验证
 改完代码后务必 `cmake --build . --target MyShooter` 确认零错误。本项目只依赖 CMake 构建，无其他构建工具。
 
@@ -45,13 +102,19 @@ src/                    # 游戏源码（核心）
   PhysicsWorld.h / .cpp # Jolt Physics 封装
   WeaponViewModel.h / .cpp  # 武器 3D 模型渲染
   main.cpp              # 入口，窗口初始化
+web/
+  shell.html            # Web/itch HTML shell，启动 StartGame、画面缩放、加载状态
 tools/                  # 辅助工具（ModelViewer 等）
 config/                 # 配置文件
   gameplay.cfg           # 英文简洁版
   gameplay_annotated.cfg # 中文注释版（release 打包时重命名为 gameplay.cfg）
 scripts/                # Python/Bash 脚本
   package-release.sh     # Windows 打包
+  build-web.sh           # 完整音频 Web/itch.io HTML5 包
+  build-web-no-audio.sh  # 无音频轻量 Web 包（wakudemo / 低带宽 demo）
 assets/                 # 模型、纹理等资源
+  BGM/                  # 流式播放的背景音乐，例如 Main_theme.mp3
+  SFX/                  # wav 音效与 SFX.txt 说明
 external/               # Git submodule：raylib + Jolt（不直接修改）
 ```
 
@@ -76,6 +139,7 @@ external/               # Git submodule：raylib + Jolt（不直接修改）
 - `config/gameplay_annotated.cfg`：中文详细注释
 - 两个 cfg 文件必须同步更新（新增参数时两边都加）
 - 命名风格：`snake_case` in cfg，`camelCase` in C++
+- 音频参数：`sfx_volume`、`bgm_path`、`bgm_volume`、`bgm_loop_gap`、`bgm_altitude_fade_start`、`bgm_altitude_fade_end`、`bgm_altitude_min_volume`、`bgm_back_world_volume`。BGM 用 `MusicStream` 流式播放，默认文件在 `assets/BGM/Main_theme.mp3`，完整 Web 构建会随整个 `assets/` 目录进入 `.data` 包；无音频 Web 构建会剔除音频文件并定义 `VIONATURE_NO_AUDIO`。
 
 ### 武器模式系统
 每把有副模式的武器的模式通过右侧 enum 管理，右键切换模式：
@@ -90,6 +154,16 @@ ShotgunMode shotgunMode_ = ShotgunMode::Pellet;
 - 3D 渲染在 `BeginMode3D` / `EndMode3D` 之间
 - 2D HUD 在 `EndMode3D` 之后、`EndTextureMode` 之前
 - X-ray 穿透效果：用第二个 `BeginMode3D`/`EndMode3D` 对 + `rlDisableDepthTest()`
+
+### Web 版启动、缩放与输入
+- Web 版不依赖 Emscripten 自动调用 `main()`；`web/shell.html` 在 runtime 初始化后通过 `Module.ccall('StartGame')` 显式启动游戏
+- `CMakeLists.txt` 的 Web 链接参数包含 `-sINVOKE_RUN=0` 和 `-sEXPORTED_RUNTIME_METHODS=ccall`
+- Web preload 目录可用 CMake cache 覆盖：`VIONATURE_WEB_CONFIG_DIR` 和 `VIONATURE_WEB_ASSETS_DIR`；`scripts/build-web-no-audio.sh` 依赖这两个参数把 staging 资源包进 `/config` 与 `/assets`
+- `VIONATURE_NO_AUDIO=ON` 会定义 `VIONATURE_NO_AUDIO`，跳过音频加载/播放；用于无音频轻量 Web 包，不要用于正常完整音频发布
+- `main.cpp` 中 `StartGame()` / `GameMainLoop()` 使用 `EMSCRIPTEN_KEEPALIVE`，并为 Web 主循环保持 `Game` 对象生命周期
+- `web/shell.html` 使用 16:9 容器将 canvas 等比缩放到浏览器/itch iframe 可见区域，避免画面被裁剪
+- Web 鼠标视角不要直接依赖 raylib `GetMouseDelta()`：浏览器/itch 会把鼠标锁在画面中心。`main.cpp` 安装 JS pointer-lock 输入桥，累积 `mousemove.movementX/Y`；`GamePlayer.cpp` 的 `UpdateLook()` 在 `PLATFORM_WEB` 下消费 `ConsumeWebMouseDeltaX/Y()`
+- 修改 Web shell 或入口后需要重新运行 `scripts/build-web.sh`，并上传新生成的 `web-release/packages/vionature_itch_html5.zip`；如果目标是 wakudemo/低带宽 demo，还要运行 `scripts/build-web-no-audio.sh` 并上传 `web-release-no-audio/packages/vionature_wakudemo_no_audio.zip`
 
 ### 伤害模型
 玩家无血量条——任何来自敌人/弹幕/激光的伤害调用 `ApplyPlayerHit()` → 立即死亡（invincible / duel 护甲除外）。不存在 DoT（Damage over Time），所有伤害是瞬间致命。
@@ -154,6 +228,8 @@ Release zip 包解压后 .cfg 文件可能带只读属性。文档中已注明�
 - [ ] `README.md`（如有重大特性变更）
 - [ ] 构建验证 `cmake --build build-sandbox -j2`
 - [ ] Smoke test `build-sandbox/MyShooter --smoke-test`
+- [ ] 如影响 Web 完整版：`scripts/build-web.sh`，并检查 `web-release/packages/vionature_itch_html5.zip` 根目录含 `index.html`
+- [ ] 如影响 wakudemo / 低带宽 Web demo：`scripts/build-web-no-audio.sh`，并检查 `web-release-no-audio/packages/vionature_wakudemo_no_audio.zip`
 
 ## 编辑注意事项
 

@@ -65,6 +65,21 @@ if(WIN32)
     target_link_libraries(MyShooter PRIVATE imm32)
 endif()
 
+option(VIONATURE_NO_AUDIO "Build without audio loading/playback" OFF)
+if(VIONATURE_NO_AUDIO)
+    target_compile_definitions(MyShooter PRIVATE VIONATURE_NO_AUDIO)
+endif()
+
+if(EMSCRIPTEN)
+    set(VIONATURE_WEB_CONFIG_DIR "${CMAKE_SOURCE_DIR}/config" CACHE PATH "Config directory preloaded into /config for web builds")
+    set(VIONATURE_WEB_ASSETS_DIR "${CMAKE_SOURCE_DIR}/assets" CACHE PATH "Assets directory preloaded into /assets for web builds")
+    set_target_properties(MyShooter PROPERTIES
+        OUTPUT_NAME "vionature"
+        LINK_FLAGS "-sUSE_GLFW=3 -sALLOW_MEMORY_GROWTH=1 -sTOTAL_MEMORY=256MB -sINVOKE_RUN=0 -sEXPORTED_RUNTIME_METHODS=ccall --preload-file ${VIONATURE_WEB_CONFIG_DIR}@/config --preload-file ${VIONATURE_WEB_ASSETS_DIR}@/assets"
+    )
+    target_compile_definitions(MyShooter PRIVATE PLATFORM_WEB)
+endif()
+
 # =========================================================
 # 4. 模型预览工具 (ModelViewer)
 # =========================================================

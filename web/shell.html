@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>VioNature</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; background: #0a0a0f; overflow: hidden; color: #d8d0aa; font-family: monospace; }
+  body { display: flex; justify-content: center; align-items: center; }
+  #game-container { position: relative; width: min(100vw, calc(100vh * 16 / 9)); height: min(100vh, calc(100vw * 9 / 16)); overflow: hidden; background: #050509; }
+  canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+  #status-panel {
+    position: absolute;
+    left: 50%;
+    top: 48%;
+    width: min(72%, 520px);
+    transform: translate(-50%, -50%);
+    text-align: center;
+    padding: 20px;
+    pointer-events: none;
+  }
+  #status { margin-bottom: 12px; color: #f2e8b8; text-shadow: 0 1px 0 #000; }
+  #progress-frame {
+    position: relative;
+    width: 100%;
+    height: 10px;
+    border: 1px solid #5b5470;
+    background: #11111a;
+    overflow: hidden;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55), inset 0 0 12px rgba(143, 124, 255, 0.12);
+  }
+  #progress-bar {
+    position: relative;
+    width: 0%;
+    height: 100%;
+    overflow: hidden;
+    background:
+      repeating-linear-gradient(115deg,
+        rgba(255, 255, 255, 0.24) 0 6px,
+        rgba(255, 255, 255, 0.03) 6px 13px),
+      linear-gradient(90deg, #6e62d8, #c2a952 60%, #f0d66d);
+    background-size: 34px 34px, 100% 100%;
+    transition: width 120ms linear;
+  }
+  #progress-bar::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-120%);
+    background: linear-gradient(90deg,
+      rgba(255, 255, 255, 0),
+      rgba(255, 245, 180, 0.55),
+      rgba(255, 255, 255, 0));
+  }
+  #progress-frame.loading #progress-bar {
+    animation: progress-stripes 900ms linear infinite, progress-glow 1500ms ease-in-out infinite;
+  }
+  #progress-frame.loading #progress-bar::after {
+    animation: progress-sheen 1350ms ease-in-out infinite;
+  }
+  #progress-frame.complete #progress-bar {
+    animation: progress-complete 520ms ease-out 1;
+  }
+  @keyframes progress-stripes {
+    from { background-position: 0 0, 0 0; }
+    to { background-position: 34px 0, 0 0; }
+  }
+  @keyframes progress-sheen {
+    0% { transform: translateX(-120%); opacity: 0; }
+    18% { opacity: 1; }
+    70% { opacity: 0.75; }
+    100% { transform: translateX(120%); opacity: 0; }
+  }
+  @keyframes progress-glow {
+    0%, 100% { filter: brightness(0.92); }
+    50% { filter: brightness(1.22); }
+  }
+  @keyframes progress-complete {
+    0% { filter: brightness(1); }
+    45% { filter: brightness(1.65); }
+    100% { filter: brightness(1); }
+  }
+  #start-button {
+    position: absolute;
+    left: 50%;
+    top: 58%;
+    transform: translate(-50%, -50%);
+    padding: 12px 18px;
+    border: 1px solid #d8d0aa;
+    background: #15151f;
+    color: #f2e8b8;
+    font: 700 16px monospace;
+    cursor: pointer;
+    display: none;
+  }
+  #start-button:hover { background: #242436; }
+  #start-button[hidden] { display: none !important; }
+  .emscripten { display: none; }
+</style>
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+    <div id="status-panel">
+      <div id="status">Loading VioNature...</div>
+      <div id="progress-frame" class="loading"><div id="progress-bar"></div></div>
+    </div>
+    <button id="start-button" type="button">Run Game</button>
+  </div>
+  <script>
+    var statusElement = document.getElementById('status');
+    var statusPanel = document.getElementById('status-panel');
+    var progressFrame = document.getElementById('progress-frame');
+    var progressBar = document.getElementById('progress-bar');
+    var canvasElement = document.getElementById('canvas');
+    var startButton = document.getElementById('start-button');
+    var runtimeReady = false;
+    var gameStarted = false;
+    var expectedRunDependencies = 0;
+    function resizeGameCanvas() {
+      var width = window.innerWidth || 1280;
+      var height = window.innerHeight || 720;
+      var targetRatio = 16 / 9;
+      var cssWidth = width;
+      var cssHeight = Math.floor(width / targetRatio);
+      if (cssHeight > height) {
+        cssHeight = height;
+        cssWidth = Math.floor(height * targetRatio);
+      }
+      document.getElementById('game-container').style.width = cssWidth + 'px';
+      document.getElementById('game-container').style.height = cssHeight + 'px';
+      canvasElement.style.width = cssWidth + 'px';
+      canvasElement.style.height = cssHeight + 'px';
+    }
+    window.addEventListener('resize', resizeGameCanvas);
+    resizeGameCanvas();
+
+    function requestFullscreenForGame() {
+      var target = document.getElementById('game-container');
+      var request = target.requestFullscreen
+        || target.webkitRequestFullscreen
+        || target.mozRequestFullScreen
+        || target.msRequestFullscreen;
+      if (request && !document.fullscreenElement) {
+        try {
+          var result = request.call(target);
+          if (result && result.catch) result.catch(function() {});
+        } catch (error) {}
+      }
+    }
+
+    function resumeBrowserAudio() {
+      try {
+        var contexts = [];
+        if (Module && Module.SDL2 && Module.SDL2.audioContext) contexts.push(Module.SDL2.audioContext);
+        if (Module && Module.SDL && Module.SDL.audioContext) contexts.push(Module.SDL.audioContext);
+        if (Module && Module.AL && Module.AL.currentContext && Module.AL.currentContext.audioCtx) contexts.push(Module.AL.currentContext.audioCtx);
+        contexts.forEach(function(ctx) {
+          if (ctx && ctx.state === 'suspended' && ctx.resume) ctx.resume();
+        });
+      } catch (error) {}
+    }
+
+    function showStartButton() {
+      if (!runtimeReady || gameStarted) return;
+      if (statusElement) statusElement.textContent = 'Click Run Game to enable fullscreen, controls, and audio';
+      if (progressFrame) progressFrame.style.display = 'none';
+      if (startButton) {
+        startButton.hidden = false;
+        startButton.disabled = false;
+        startButton.style.display = 'block';
+        startButton.style.pointerEvents = 'auto';
+      }
+    }
+
+    function hideStartButton() {
+      if (!startButton) return;
+      startButton.disabled = true;
+      startButton.hidden = true;
+      startButton.style.display = 'none';
+      startButton.style.pointerEvents = 'none';
+    }
+
+    function hideStatusPanel(delayMs) {
+      setTimeout(function() {
+        if (statusPanel) statusPanel.style.display = 'none';
+      }, delayMs || 0);
+    }
+
+    function isExpectedMainLoopException(error) {
+      var text = String(error && (error.message || error));
+      return text.indexOf('SimulateInfiniteLoop') !== -1
+        || text.indexOf('unwind') !== -1
+        || text.indexOf('rewind') !== -1;
+    }
+
+    function finishStartUi() {
+      hideStartButton();
+      if (progressFrame) progressFrame.style.display = 'none';
+      if (canvasElement) canvasElement.focus();
+      if (statusElement) statusElement.textContent = 'Click the canvas to focus controls';
+      hideStatusPanel(1000);
+    }
+
+    function startGameFromUserGesture() {
+      if (!runtimeReady || gameStarted) return;
+      gameStarted = true;
+      hideStartButton();
+      requestFullscreenForGame();
+      resumeBrowserAudio();
+      try {
+        Module.ccall('StartGame', null, [], []);
+        resumeBrowserAudio();
+        finishStartUi();
+      } catch (error) {
+        if (isExpectedMainLoopException(error)) {
+          resumeBrowserAudio();
+          finishStartUi();
+          return;
+        }
+        gameStarted = false;
+        showStartButton();
+        if (statusElement) statusElement.textContent = 'Failed to start: ' + error;
+        throw error;
+      }
+    }
+
+    if (startButton) {
+      startButton.addEventListener('click', startGameFromUserGesture);
+      startButton.addEventListener('touchend', function(event) {
+        event.preventDefault();
+        startGameFromUserGesture();
+      }, { passive: false });
+    }
+
+    var Module = {
+      canvas: canvasElement,
+      setStatus: function(text) {
+        if (gameStarted) return;
+        if (statusElement && text) statusElement.textContent = text;
+      },
+      monitorRunDependencies: function(left) {
+        expectedRunDependencies = Math.max(expectedRunDependencies, left);
+        if (!progressBar) return;
+        var done = expectedRunDependencies ? (expectedRunDependencies - left) / expectedRunDependencies : 1;
+        if (progressFrame) {
+          progressFrame.classList.toggle('loading', left !== 0);
+          progressFrame.classList.toggle('complete', left === 0);
+        }
+        progressBar.style.width = Math.max(0, Math.min(100, done * 100)) + '%';
+        if (left === 0) {
+          progressBar.style.width = '100%';
+        } else if (statusElement) {
+          statusElement.textContent = 'Loading VioNature...';
+        }
+      },
+      print: function(text) {
+        console.log(text);
+      },
+      printErr: function(text) {
+        console.error(text);
+        if (!gameStarted && statusElement) statusElement.textContent = text;
+      },
+      onRuntimeInitialized: function() {
+        runtimeReady = true;
+        if (progressFrame) {
+          progressFrame.classList.remove('loading');
+          progressFrame.classList.add('complete');
+        }
+        if (progressBar) progressBar.style.width = '100%';
+        showStartButton();
+      }
+    };
+  </script>
+  {{{ SCRIPT }}}
+</body>
+</html>

@@ -35,7 +35,7 @@ This turns the game into a real-time tuning laboratory — experiment live, then
 | Key | Action |
 |-----|--------|
 | **W A S D** | Move forward / left / back / right |
-| **Mouse** | Aim (look around) |
+| **Mouse** | Aim (look around; click the canvas first in the Web build to lock the pointer) |
 | **Left Click** | Fire (hold for continuous fire) |
 | **Right Click** | Alt-mode toggle / charge / hold for drone command |
 | **Scroll Wheel** | Switch weapons / adjust nano-platform range / adjust blink distance |
@@ -52,19 +52,29 @@ This turns the game into a real-time tuning laboratory — experiment live, then
 | **X** | Toggle Flight Rig (hover flight) |
 | **C** | Toggle Skates (ultra-low friction) |
 
+### Web / Browser Build Notes
+
+- Click the game canvas once after loading to grant browser pointer lock for FPS mouse-look.
+- If you Alt-Tab, press Esc, or the browser releases pointer lock, click the canvas again to regain mouse control.
+- The Web shell automatically scales the 16:9 game view to fit the browser window or itch.io iframe. Letterboxing is expected when the embed area is not exactly 16:9.
+
 ## Weapons
 
 VioNature features **9 weapons**, each switchable between primary and alternate modes by **tapping Right Click** (< 0.22s).
 
 ### 1. Laser Rifle (LASER)
 - **Primary: Plasma Bolts** — Rapid-fire, low-damage projectiles at extreme fire rate (0.075s/shot). Sustained pressure tool.
-- **Alt: Charged Beam** — Hold RMB + LMB to charge, release to fire a piercing laser. Damage scales with charge bar.
-- HUD mode: blank (always primary)
+- **Alt: Charged Beam** — Right-click toggles to Beam mode, hold LMB to charge, release to fire a piercing laser. Damage scales with charge bar.
+- **Super Mode (Essence-powered)** — Hold both LMB + RMB simultaneously to begin charging. Consumes 1 essence per second (configurable) with screen shake and gold particle bursts. After consuming the threshold (default 5 essences), enters "Super Charged" state. Release one button to pause (progress is saved). Release both buttons to fire:
+  - **Super Charged** → Fires a **Ball Lightning** orb: rainbow-shifting sphere that flies slowly and auto-fires colored laser beams at the nearest enemy every 0.35s. On expire, creates a massive rainbow explosion (reuses rocket explosion visuals but far larger).
+  - **Partially Charged** → Fires a **Rainbow Beam**: sustained-damage beam whose width scales with charge. Duration scales with essence consumed. Player can rotate to sweep the beam.
+- HUD mode: P / L
 
 ### 2. Flamethrower (FLAME)
 - **Primary: Fireball (F)** — Medium-range projectile whose radius expands over its lifetime. Lifetime and max size are configurable (`flame_lifetime` / `flame_max_radius`).
-- **Alt: Heatwave (H)** — Close-range cone damage + heavy knockback. Can deflect enemy projectiles.
-- HUD mode: F / H
+- **Alt: Napalm Grenade (NAPALM)** — Launches a bouncing canister that tumbles and rolls on the ground. Detonates when fuse expires (configurable) or on contact with enemies / magic circle frames: AoE damage + spawns a lingering ground fire patch + ignites enemies in radius.
+- **Ignite Mechanic** — Burning enemies take damage over time (configurable DPS) with fire particles. Periodically spread flames to nearby enemies via chain-ignition (spread range and cooldown configurable). Damage persists even after leaving the fire.
+- HUD mode: F / NAPALM
 
 ### 3. Rocket Launcher (ROCKET)
 - **Primary: Rocket** — Classic explosive projectile. Rocket-jump by firing at your feet.
@@ -96,12 +106,17 @@ VioNature features **9 weapons**, each switchable between primary and alternate 
 ### 8. Nano Constructor (NANO)
 - **Primary: Nano Blade Wave (B)** — Slow-moving, extremely high-damage crescent blade (1000 DPS).
 - **Alt: Nano Platform (P)** — Deploys a standable temporary platform. Scroll wheel adjusts placement distance.
+- **Water Droplet (Ultimate Craft)** — Stand still + hold both LMB + RMB to gradually consume essence (default 10, configurable). A golden diamond frame manifests in front of the player, with progress shown via opacity and an inner glow sphere. **Crafting can be interrupted and resumed**: releasing the buttons leaves the semi-finished droplet in the world; approach within range (4m) and hold both buttons again to continue. On completion:
+  - **Flat / Hollow World maps**: Dashes straight at enemies at high speed (80 m/s), extreme contact damage (500) with pass-through, auto-reacquires targets, golden afterimage trail
+  - **Asteroid maps**: Hovers above the surface at configurable altitude, then rams enemies along the tangent plane
+  - Droplets repel each other for even battlefield distribution (configurable strength)
+  - Droplets stay in their spawn world — they never cross wormholes
 - HUD mode: B / P
 
 ### 9. Mystic Staff (STAFF) — Press 0 to select
 - **Primary: Curse Orb (C)** — Purple homing projectile that inflicts stacking DoT. Cursed enemies release soul orbs on death in a chain reaction.
 - **Alt: Arcane Shield (S)** — Deploy a spherical barrier that blocks enemies. Shatters on enemy projectile hit, releasing a purple shockwave. **Hold LMB while shield is active** to ping all Essence pickups on the map with golden pulse waves.
-- **Magic Circle** — Hold both LMB + RMB simultaneously while grounded and stationary to channel for 3 seconds. Summons a pentagram circle on the ground with a floating octahedron frame. The circle absorbs specific projectile types (plasma, fireball, rockets, shotgun pellets) and auto-fires homing purple-tinted versions at nearby enemies. Deactivated by Longinus Spear hits.
+- **Magic Circle** — Hold both LMB + RMB simultaneously while grounded and stationary to channel for 3 seconds (costs 1 essence). Summons a pentagram circle on the ground with a floating octahedron frame. The circle absorbs specific projectile types (**plasma, fireball, rocket, shotgun pellets**) and auto-fires homing purple-tinted versions at nearby enemies. **Napalm grenades** (canister or detonation) and **glass shards** also activate circles — napalm-activated circles fire bouncing napalm grenades, glass-shard-activated circles fire tracking shard clusters. Deactivated by Longinus Spear hits.
 - HUD mode: C / S / SA (shield active) / SC (shield cooldown)
 
 ## Enemies
@@ -118,7 +133,10 @@ VioNature features **9 weapons**, each switchable between primary and alternate 
 | **Boss — Geometry Lord** | Purple large cube + spikes | 1000 | Rotating homing projectile barrages, enrages below 45% HP |
 | **Boss — Slime King** | Green giant sphere | 200 | Ground movement → long/high jumps → slam shockwave. Splits into 4 offspring on death (up to 2 generations) |
 | **Boss — Star of Bethlehem** | Golden cube + hexagram | 200 (configurable) | Orbits, hovers, or sits at world center depending on map. Fires a giant tracking laser (warning beam → damaging beam). **Immunities:** not counted as an enemy, immune to AoE (explosions/shockwaves/gravity wells/heatwave/nano blades), not targeted by homing projectiles — only direct projectile impacts can damage it |
-| **Duelist** | Golden sphere | 100 | 1v1 mirror-match AI in Duel mode. Uses all 9 weapons, time-stop, blink, shield, and adapts tactics by range. Two AI tiers: random barrage and strategic counter |
+| **Boss — Throne Angel** | White eye + black pupil + three rotating rings | 900 (configurable) | High-altitude roaming boss that summons cherub flocks. Cherubs chase the player and fire pale homing shots. The boss periodically releases a no-damage repulsion pulse that pushes entities away and briefly reduces player gravity |
+| **Boss — Seraph** | White-gold burning core + six wings | 850 (configurable) | High-altitude roaming boss that fires shotgun-like clusters of holy fireballs toward the player. Impacts create white-gold fire layers that burn the player and same-world enemies |
+| **Boss — Scavenger UFO** | Low-poly saucer | 360 (configurable) | One-shot invasion available in any mode, triggered by a super ball-lightning explosion. Main BGM mutes, the UFO arrives in the front world after a delay, tractors loose Essence, escapes after collecting enough, and fires small homing airburst orbs. If defeated, it lands and can be entered with `F` as a UFO vehicle |
+| **Duelist** | Golden sphere | 100 | 1v1 mirror-match AI in Duel mode. Uses all 9 weapons, time-stop, blink, shield, and adapts tactics by range. Two AI tiers: random barrage and strategic counter. Drops Essence on death |
 | **Dummy** | Grey sphere | 10 | Tutorial mode only — stationary, no attacks, for damage testing |
 
 ## Pickups
@@ -150,6 +168,8 @@ Rainbow stella octangula pickups that appear on the map periodically, granting e
 | **square** / **square_obstacle** | Flat square arena with 8 collision blocks + 7 low platforms + 6 high platforms. Multi-tier vertical combat. |
 | **asteroid** | Spherical asteroid surface. Gravity pulls toward the core; players walk on the outer surface. Tangent velocity is conserved — great for orbital-speed strafing. |
 | **hollow_world** | Hollow sphere interior. Gravity pulls outward toward the shell. Players fight on the inner surface looking inward. |
+| **eden** | Peaceful Eden circle map with a radial height-field hill. Weapons are hidden, time is paused, and leaving the outer ring fades to white. |
+| **labyrinth** | Procedural Minotaur maze. Stone walls block players/projectiles, the maze warns before rebuilding, and the Minotaur pathfinds through corridors with straight-line charges. |
 
 ## Game Modes (switch via `game_mode` in gameplay.cfg)
 
@@ -227,17 +247,22 @@ The config file is located at `config/gameplay.cfg`. Below are the major paramet
 |-------|-------------|---------|
 | `game_mode` | Game mode | survival / tutorial / duel |
 | `boss_rush_mode` | Boss-only mode | true / false |
-| `map_type` | Map geometry | circle / square_obstacle / asteroid / hollow_world |
+| `map_type` | Map geometry | circle / square_obstacle / asteroid / hollow_world / eden / labyrinth |
 
 ### Map Geometry
 
 | Param | Description |
 |-------|-------------|
 | `circle_radius` | Circular arena radius |
+| `eden_play_radius` / `eden_map_radius` | Eden inner radius and exit radius |
+| `eden_height_scale` / `eden_height_epsilon` | Eden height-field scale and central softening term |
 | `asteroid_radius` | Asteroid sphere radius |
 | `asteroid_player_altitude` / `_enemy_altitude` | Player/enemy height above asteroid surface |
 | `hollow_world_radius` | Hollow sphere inner radius |
 | `hollow_world_player_altitude` / `_enemy_altitude` | Player/enemy distance from shell |
+| `labyrinth_width` / `labyrinth_height` / `_cell_size` | Minotaur labyrinth grid dimensions and cell size |
+| `labyrinth_shift_interval` / `_warning_time` | Maze rebuild interval and warning duration |
+| `labyrinth_minotaur_*` | Minotaur spawn, health, pursuit, and charge tuning |
 
 ### Player Movement
 
@@ -250,9 +275,9 @@ The config file is located at `config/gameplay.cfg`. Below are the major paramet
 
 ### Weapon Parameters (key sections)
 
-**Laser Rifle (5a):** `plasma_damage`, `plasma_speed`, `plasma_cooldown`, `laser_charge_damage`, `laser_beam_range`, etc.
+**Laser Rifle (5a):** `plasma_damage`, `plasma_speed`, `plasma_cooldown`, `laser_charge_damage`, `laser_beam_range`, etc. Super mode: `super_essence_interval`, `super_essence_threshold`, `super_ball_speed` / `_lifetime` / `_radius`, `super_ball_fire_interval` / `_beam_damage` / `_beam_range`, `super_ball_explosion_radius` / `_damage`, `super_rainbow_beam_base_life` / `_life_per_essence` / `_width_base` / `_width_per_essence`
 
-**Flamethrower (5b):** `flame_damage`, `flame_lifetime`, `flame_max_radius`, `heatwave_damage`, `heatwave_force`, `heatwave_range`
+**Flamethrower (5b):** `flame_damage`, `flame_lifetime`, `flame_max_radius`. Napalm: `napalm_speed`, `napalm_fuse`, `napalm_bounce_restitution`, `napalm_explosion_radius` / `_damage`, `napalm_ignite_duration` / `_dps`, `napalm_spread_radius` / `_interval`. Fire patch: `heatwave_fire_patch_lifetime` / `_radius` / `_damage` / `_height`
 
 **Rocket Launcher (5c):** `rocket_impact_damage`, `rocket_explosion_damage`, `rocket_explosion_radius`, `rocket_jump_impulse`
 
@@ -264,7 +289,7 @@ The config file is located at `config/gameplay.cfg`. Below are the major paramet
 
 **Longinus Spear (5g):** `longinus_spear_damage`, `longinus_spear_speed`, `longinus_spear_impulse`, `longinus_spear_thrust_damage`, `longinus_spear_thrust_force`, `longinus_spear_thrust_range`, `longinus_spear_thrust_impulse`, `longinus_spear_shockwave_damage`, `longinus_spear_shockwave_force`, `longinus_spear_shockwave_radius`, `longinus_spear_thrust_invuln`
 
-**Nano Constructor (5h):** `nano_blade_damage`, `nano_blade_lifetime`, `nano_blade_radius`, `nano_platform_range`, `nano_platform_lifetime`, etc.
+**Nano Constructor (5h):** `nano_blade_damage`, `nano_blade_lifetime`, `nano_blade_radius`, `nano_platform_range`, `nano_platform_lifetime`, etc. Water droplet: `water_droplet_essence_cost`, `water_droplet_speed` / `_damage` / `_lifetime` / `_radius`, `water_droplet_hover_altitude`, `water_droplet_craft_interval` / `_resume_range`, `water_droplet_turn_rate`, `water_droplet_separation_mult` / `_repulsion_strength`
 
 **Mystic Staff (5i):** `curse_orb_direct_damage`, `curse_orb_dps`, `curse_orb_max_stack_mult`, `curse_orb_speed`, `curse_orb_turn_rate`, `soul_orb_count`, `soul_orb_damage_scale`, `mystic_staff_shield_radius`, `mystic_staff_shield_cooldown`, `mystic_staff_shockwave_radius`, `magic_circle_lifetime`, `magic_circle_radius`, `magic_circle_fire_interval`, `magic_circle_fire_rate_mult`, `magic_circle_homing_turn_rate`, etc.
 
@@ -281,6 +306,23 @@ The config file is located at `config/gameplay.cfg`. Below are the major paramet
 | `slime_king_split_count` / `_max_generations` | Death split count/generations |
 | `bethlehem_spawn_time` / `_health` | Star of Bethlehem timing/HP |
 | `bethlehem_laser_duration` / `_cooldown` / `_damage` | Star of Bethlehem laser properties |
+| `throne_enabled` / `_spawn_time` / `_health` | Throne Angel enable flag, timing, and HP |
+| `throne_bgm_path` / `_volume` | Throne Angel encounter BGM path and volume |
+| `throne_summon_interval` / `_summon_count` / `_max_cherubs` | Cherub summon cadence and cap |
+| `cherub_*` | Cherub health, flocking, range, and homing-shot tuning |
+| `throne_pulse_*` / `_antigravity_*` | No-damage repulsion pulse and temporary low-gravity effect |
+| `seraph_enabled` / `_spawn_time` / `_health` / `_spawn_count` | Seraph enable flag, timing, per-boss HP, and independent boss count |
+| `seraph_bgm_path` / `_volume` | Seraph encounter BGM path and volume; Throne Angel BGM takes priority if both bosses are active |
+| `seraph_separation_*` / `_attack_stagger` | Multi-Seraph spacing behavior and staggered attack timing |
+| `seraph_fireball_*` / `seraph_fire_layer_*` | Seraph holy-fire burst and lingering fire-layer tuning |
+| `ufo_enabled` | Enables the Scavenger UFO invasion |
+| `ufo_spawn_delay` / `_health` | UFO arrival delay after trigger / HP |
+| `ufo_collect_required` / `_tractor_range` / `_tractor_strength` | Essence collection and tractor beam tuning |
+| `ufo_base_essence` | Essence preloaded into the defeated UFO vehicle, added to what the boss collected |
+| `ufo_attack_interval` / `_orb_speed` / `_orb_explosion_radius` | UFO small ball-lightning attack tuning |
+| `ufo_bgm_path` / `_volume` | UFO encounter BGM path and volume |
+| `ufo_arrival_altitude` | High-altitude entry height after hyperspace arrival |
+| `ufo_pilot_*` | UFO vehicle entry, hover, movement, independent essence pool, hyperspace jump, orb shot / cyan-laser mode, and tractor beam tuning |
 
 ### Drones (section 9)
 

@@ -1,0 +1,107 @@
+# VioNature SFX mapping
+# Place .wav files in assets/SFX/ — missing files are silently skipped.
+# One sound per row:  filename  →  trigger
+
+weapon_switch.wav           → 武器切换（数字键/滚轮切换到另一把武器）
+fire_control_mode.wav       → 武器副模式切换（右键短按；复用当前已有文件）
+
+laser_plasma.wav            → 激光枪 — 电浆连射 (LMB)
+laser_beam.wav              → 激光枪 — 蓄力光束发射 (RMB + LMB release)
+laser_super_charge.wav      → 激光枪 — 超级充能开始 (LMB+RMB hold)
+
+flamethrower_fireball.wav   → 火焰喷射器 — 火球发射 (LMB)
+flamethrower_napalm.wav     → 火焰喷射器 — 凝固汽油弹发射 (RMB toggle + LMB)
+napalm_explosion.wav        → 凝固汽油弹 — 接触/引信结束时爆燃
+
+rocket_launcher.wav         → 火箭筒 — 火箭弹发射 (LMB)
+rocket_drone.wav            → 火箭筒 — 无人机仓发射 (RMB toggle + LMB)
+rocket_explosion.wav        → 火箭弹/敌方火箭爆炸
+drone_deploy.wav            → 无人机仓 — 落地展开无人机
+
+shotgun_pellet.wav          → 霰弹枪 — 弹丸散射 (LMB)
+shotgun_glass.wav           → 霰弹枪 — 玻璃碎片发射 (RMB toggle + LMB)
+
+gravity_nailer.wav          → 引力钉枪 — 引力钉发射 (LMB)
+gravity_black_hole.wav      → 引力钉枪 — 黑洞榴弹发射 (RMB toggle + LMB)
+gravity_well_open.wav       → 引力钉/引力井 — 落点生成引力场
+black_hole_open.wav         → 黑洞榴弹 — 落点生成事件视界
+
+gauntlet_timestop.wav       → 无限手套 — 时停 (RMB toggle to TS + LMB)
+gauntlet_timestop_release.wav → 无限手套 — 解除时停（时停音效倒放）
+gauntlet_blink.wav          → 无限手套 — 闪现 (RMB toggle to B + LMB)
+gauntlet_snap.wav           → 无限手套 — 响指超级技（LMB+RMB 蓄力，松开双键后消耗 essence 并逐个检定敌人即死）
+
+spear_throw.wav             → 朗基努斯之枪 — 投掷 (LMB)
+spear_thrust.wav            → 朗基努斯之枪 — AT 推进 (RMB toggle + LMB)
+spear_impact.wav            → 朗基努斯之枪 — 扎地/过期冲击波
+spear_judgment.wav          → 朗基努斯之枪 — 裁决圣痕释放（禁果后 LMB+RMB 蓄力；缺失时回退 spear_impact.wav）
+
+nano_command.wav            → 纳米构造仪 — 主/副模式构筑指令确认滴声
+nano_blade.wav              → 纳米构造仪 — 纳米刀波实体生成
+nano_platform.wav           → 纳米构造仪 — 纳米平台实体化
+nano_water_droplet.wav      → 纳米构造仪 — 水滴铸造完成 (LMB+RMB hold 进度满)
+water_droplet_burst.wav     → 水滴 — 寿命结束释放能量
+
+mystic_curse_orb.wav        → 神秘法杖 — 诅咒法球 (LMB)
+mystic_shield.wav           → 神秘法杖 — 护盾展开 (RMB toggle + LMB)
+mystic_circle_channel.wav   → 神秘法杖 — 施法召唤魔法阵蓄力中（LMB+RMB hold 开始，取消/完成时停止）
+mystic_circle.wav           → 神秘法杖 — 魔法阵召唤完成 (LMB+RMB hold 进度满)
+
+essence.wav                 → Essence 拾取
+essence_pickup_alt.wav      → Essence 拾取备用版（如需启用可替换/重命名为 essence.wav）
+essence_consume.wav         → 消耗 Essence：玩家致命抵挡 / 纳米水滴铸造每次注入
+
+enemy_hit.wav               → 敌人受到直接命中/范围伤害（有短冷却，避免连发重叠）
+enemy_kill.wav              → 普通敌人死亡
+player_hit.wav              → 玩家死亡命中
+armor_hit.wav               → Duel 模式护甲抵挡命中
+
+magic_circle_activate.wav   → 魔法阵被可激活弹种点亮
+magic_circle_clear.wav      → 朗基努斯之枪解除普通法阵
+
+wormhole_open.wav           → 黑洞榴弹激活法阵并打开虫洞
+wormhole_travel.wav         → 玩家穿越虫洞
+wormhole_close.wav          → 朗基努斯之枪关闭虫洞并湮灭里世界
+
+boss_spawn.wav              → 几何领主/Duelist/史莱姆王/伯利恒之星登场
+boss_barrage.wav            → 几何领主 — 环形弹幕/追踪弹幕发射
+boss_phase.wav              → Boss 阶段变化（目前用于史莱姆王分裂）
+boss_death.wav              → Boss/Duelist/伯利恒之星死亡
+bethlehem_laser_warn.wav    → 伯利恒之星激光预警开始
+bethlehem_laser_fire.wav    → 伯利恒之星激光持续炙烤（按激光柱最近点持续播放）
+slime_slam.wav              → 史莱姆王/子代 — 跳跃砸地（音量随 maxHealth/体型缩放）
+
+ball_lightning_hum.wav       → 超级充能球形闪电 — 飞行期间的持续嗡鸣（按最近球体 3D 声源循环）
+ball_lightning_explosion.wav → 超级充能球形闪电 — 寿命结束/越界爆裂
+
+# Optional UFO-specific replacements. Missing files stay silent / fall back to reused sounds where coded.
+ufo_spawn.wav               → 拾荒者 UFO — 传送降临（可替换 boss_spawn.wav）
+ufo_tractor.wav             → 拾荒者 UFO — Boss 牵引 Essence / 玩家驾驶牵引光束循环声（3D 距离与方位）
+ufo_orb.wav                 → 拾荒者 UFO — 小型球状闪电发射
+ufo_escape.wav              → 拾荒者 UFO — 收集完成升空传送离去
+ufo_hyperspace_charge.wav   → 玩家驾驶 UFO — 长按 H 准备进入超空间航道时的蓄能循环声
+ark_flood_current.wav       → 诺亚方舟 — 驾驶行驶时的洪流/浪涌循环声（速度越快音量越高）
+ark_flood_surge.wav         → 诺亚方舟 — 按 Shift 加速时叠加的猛烈洪流/白浪循环声
+
+# Optional Throne Angel-specific replacements.
+throne_spawn.wav            → 座天使 — 高空降临（可替换 boss_spawn.wav）
+throne_pulse.wav            → 座天使 — 无伤斥力波 / 失重波（已接入 TriggerThronePulse）
+cherub_shot.wav             → 小天使 — 白色追踪弹幕发射
+throne_death.wav            → 座天使 — 击败消散（可替换 boss_death.wav）
+
+# Optional Seraph-specific replacements.
+seraph_spawn.wav            → 炽天使 — 高空降临（可替换 boss_spawn.wav）
+seraph_fire_burst.wav       → 炽天使 — 圣火羽刃齐射（已接入 FireSeraphBurst）
+seraph_fire_impact.wav      → 炽天使 — 圣火球落地生成圣火层（可替换 napalm_explosion.wav）
+seraph_death.wav            → 炽天使 — 击败消散（可替换 boss_death.wav）
+
+# War Rider-specific SFX.
+war_rider_spawn.wav         → 战争骑士 — 天启木马/骑士显现，低频号角与金属轰鸣（已接入 SpawnWarRider）
+war_rider_command.wav       → 战争骑士 — WAR COMMAND 强化脉冲，低音战号与战场冲击（已接入 CommandWarRiderMinions）
+war_rider_slash.wav         → 战争骑士 — 高速巨大火焰刀波发射，厚重火焰撕裂声（已接入 FireWarRiderSlash）
+
+# Optional Conquest Rider-specific replacements. MVP currently reuses existing boss/spear/curse sounds.
+conquest_rider_spawn.wav    → 征服骑士 — 白马持弓显现（当前复用 boss_spawn.wav）
+conquest_rider_arrow.wav    → 征服骑士 — 瘟疫箭发射（当前复用 spear_throw.wav）
+conquest_rider_plague.wav   → 征服骑士 — 瘟疫箭落地/瘟疫圈扩散（当前复用 mystic_curse_orb.wav）
+conquest_rider_summon.wav   → 征服骑士 — 召唤小怪（当前复用 boss_barrage.wav）

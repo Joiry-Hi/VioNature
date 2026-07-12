@@ -90,10 +90,15 @@ void Game::UpdateWeaponSwitching() {
         }
     }
 
-    if (activeWeapon_ != WeaponType::Laser && IsMouseButtonReleased(MOUSE_BUTTON_RIGHT) && rightMouseHeld_ < 0.22f) {
-        if (activeWeapon_ == WeaponType::Flamethrower) {
+    if (IsMouseButtonReleased(MOUSE_BUTTON_RIGHT) && rightMouseHeld_ < 0.22f && !suppressRightClickModeToggle_) {
+        bool modeChanged = true;
+        if (activeWeapon_ == WeaponType::Laser) {
+            laserMode_ = laserMode_ == LaserMode::Plasma ? LaserMode::Beam : LaserMode::Plasma;
+            eventText_ = laserMode_ == LaserMode::Beam ? "LASER BEAM" : "PLASMA SHOT";
+            eventTextTimer_ = 1.4f;
+        } else if (activeWeapon_ == WeaponType::Flamethrower) {
             flamethrowerMode_ = flamethrowerMode_ == FlamethrowerMode::FlameBall ? FlamethrowerMode::Heatwave : FlamethrowerMode::FlameBall;
-            eventText_ = flamethrowerMode_ == FlamethrowerMode::Heatwave ? "HEATWAVE" : "FLAME BALL";
+            eventText_ = flamethrowerMode_ == FlamethrowerMode::Heatwave ? "NAPALM" : "FLAME BALL";
             eventTextTimer_ = 1.4f;
         } else if (activeWeapon_ == WeaponType::Shotgun) {
             shotgunMode_ = shotgunMode_ == ShotgunMode::Pellet ? ShotgunMode::GlassShard : ShotgunMode::Pellet;
@@ -123,36 +128,55 @@ void Game::UpdateWeaponSwitching() {
             mysticStaffMode_ = static_cast<MysticStaffMode>((static_cast<int>(mysticStaffMode_) + 1) % 2);
             eventText_ = mysticStaffMode_ == MysticStaffMode::CurseOrb ? "CURSE ORB" : "MYSTIC SHIELD";
             eventTextTimer_ = 1.4f;
+        } else {
+            modeChanged = false;
+        }
+        if (modeChanged) {
+            PlaySfx(sfxWeaponModeSwitch_);
         }
     }
 
     if (activeWeapon_ != previousWeapon) {
+        PlaySfx(sfxWeaponSwitch_);
         chargingLaser_ = false;
         laserCharge_ = 0.0f;
+        superCharging_ = false;
+        superChargePaused_ = false;
+        superCharged_ = false;
+        superEssenceConsumed_ = 0;
+        superEssenceTimer_ = 0.0f;
+        gauntletSnapCharging_ = false;
+        gauntletSnapCharge_ = 0.0f;
+        longinusJudgmentCharging_ = false;
+        longinusJudgmentCharge_ = 0.0f;
+        suppressRightClickModeToggle_ = false;
+        waterDropletCrafting_ = false;
+        waterDropletCraftTimer_ = 0.0f;
+        waterDropletCraftTarget_ = -1;
         fireCooldown_ = std::min(fireCooldown_, 0.12f);
         if (TutorialMode()) {
             int idx = static_cast<int>(activeWeapon_);
             if (idx < 9) {
                 bool eng = config_.tutorialLanguage == "english";
                 const char* tips[] = {
-                    eng ? "Laser Rifle\nLMB rapid-fire plasma bolts  |  RMB+LMB charged piercing beam"
-                        : "外星激光枪\n左键高速连射电浆球  |  右键+左键蓄力穿透光束",
-                    eng ? "Flamethrower\nLMB expanding fireball  |  RMB heatwave cone (deflects projectiles)"
-                        : "火焰喷射器\n左键火球(半径膨胀)  |  右键切换热浪冲击波(锥形推飞弹幕)",
+                    eng ? "Laser Rifle\nLMB plasma bolts  |  RMB Beam mode  |  Hold LMB+RMB super charge (essence)"
+                        : "外星激光枪\n左键电浆连射  |  右键光束蓄力  |  同时按住左右键消耗essence超级充能",
+                    eng ? "Flamethrower\nLMB fireball (expanding)  |  RMB napalm grenade (bouncing + ignite + spread)"
+                        : "火焰喷射器\n左键火球(膨胀)  |  右键凝固汽油弹(弹跳+点燃+连锁引燃)",
                     eng ? "Rocket Launcher\nLMB rocket (rocket-jump)  |  RMB drone canister  |  Hold RMB for command overlay"
                         : "火箭筒\n左键火箭(火箭跳)  |  右键切换无人机仓  |  长按右键指挥界面",
                     eng ? "Shotgun\nLMB pellet spread (recoil dash)  |  RMB glass shard cloud (persistent damage)"
                         : "霰弹枪\n左键散射弹丸(后坐力位移)  |  右键切换玻璃碎片尘云(持续伤害)",
                     eng ? "Gravity Nailer\nLMB gravity well (pulls enemies)  |  RMB black hole grenade (event horizon)"
                         : "引力钉枪\n左键引力钉牵引力场  |  右键切换黑洞榴弹(事件视界秒杀)",
-                    eng ? "Infinity Gauntlet\nRMB toggles: TimeStop(TS)/Blink(B)  |  Scroll wheel adjusts blink distance"
-                        : "无限手套\n右键切换:时停(TS)/闪现(B)  |  闪现时滚轮调距离",
+                    eng ? "Infinity Gauntlet\nRMB toggles: TimeStop(TS)/Blink(B)  |  Hold LMB+RMB then release both to SNAP (essence)"
+                        : "无限手套\n右键切换:时停(TS)/闪现(B)  |  同时按住左右键蓄力，松开双键响指(消耗essence)",
                     eng ? "Longinus Spear\nLMB thrown spear (piercing+recoil)  |  RMB AT thrust (cone+invuln frames)"
                         : "朗基努斯之枪\n左键投掷穿透+反冲位移  |  右键切换AT推进(锥形+无敌帧)",
-                    eng ? "Nano Constructor\nLMB nano blade wave  |  RMB nano platform (standable)  |  Scroll adjusts range"
-                        : "纳米构造仪\n左键纳米刀波(类帧伤)  |  右键切换纳米平台(可站立) 滚轮调距离",
-                    eng ? "Mystic Staff\nLMB curse orb (homing+DoT)  |  RMB shield  |  Stand still+hold LMB+RMB to summon circle"
-                        : "神秘法杖\n左键诅咒法球(追踪+DoT) | 右键切换护盾(S) | 站定时长按左右键召唤法阵",
+                    eng ? "Nano Constructor\nLMB nano blade  |  RMB platform  |  Stand+hold LMB+RMB craft water droplet (essence)"
+                        : "纳米构造仪\n左键纳米刀波  |  右键平台  |  站定+同时按住左右键铸造水滴(消耗essence)",
+                    eng ? "Mystic Staff\nLMB curse orb (homing+DoT)  |  RMB shield  |  Stand+hold LMB+RMB summon circle (1 essence)"
+                        : "神秘法杖\n左键诅咒法球(追踪+DoT)  |  右键护盾  |  站定+同时长按左右键召唤法阵(1 essence)",
                 };
                 ShowTutorialTip(tips[idx]);
                 tutorialHintTimer_ = 0.3f;
@@ -161,7 +185,125 @@ void Game::UpdateWeaponSwitching() {
     }
 }
 void Game::UpdateShooting(float dt) {
-    fireCooldown_ = std::max(0.0f, fireCooldown_ - dt);
+    famineFireRateDebuffTimer_ = std::max(0.0f, famineFireRateDebuffTimer_ - dt);
+    float cooldownRecovery = famineFireRateDebuffTimer_ > 0.0f ? config_.famineRiderFireRateDebuffMult : 1.0f;
+    fireCooldown_ = std::max(0.0f, fireCooldown_ - dt * cooldownRecovery);
+    if (!IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
+        suppressRightClickModeToggle_ = false;
+    }
+    if (IsEdenMap() && edenForbiddenFruit_.claimed && activeWeapon_ == WeaponType::MysticStaff) {
+        if (mysticStaffChanneling_) {
+            StopSfx(sfxMysticCircleChannel_);
+            mysticStaffChanneling_ = false;
+            mysticStaffChannelProgress_ = 0.0f;
+        }
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
+            eventText_ = "STAFF SUPPRESSED";
+            eventTextTimer_ = 1.0f;
+        }
+        return;
+    }
+
+    // ── Laser super mode (essence-powered): hold both LMB+RMB ──
+    if (activeWeapon_ == WeaponType::Laser) {
+        bool lmb = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+        bool rmb = IsMouseButtonDown(MOUSE_BUTTON_RIGHT);
+        bool bothHeld = lmb && rmb;
+        bool fireSuper = false;
+
+        // Start charging
+        if (bothHeld && !superCharging_ && !superChargePaused_ && essence_ > 0
+            && state_ == State::Playing) {
+            superCharging_ = true;
+            superChargePaused_ = false;
+            superCharged_ = false;
+            superEssenceConsumed_ = 0;
+            superEssenceTimer_ = 0.0f;
+            chargingLaser_ = false;
+            laserCharge_ = 0.0f;
+            PlaySfx(sfxLaserSuperCharge_);
+            eventText_ = "SUPER CHARGE";
+            eventTextTimer_ = 0.8f;
+        }
+
+        // Charging: consume essence periodically
+        if (superCharging_ && bothHeld) {
+            superEssenceTimer_ += dt;
+            if (superEssenceTimer_ >= config_.superEssenceInterval && essence_ > 0) {
+                superEssenceTimer_ -= config_.superEssenceInterval;
+                essence_--;
+                superEssenceConsumed_++;
+                // Rising pitch charge sound per essence tier
+                if (sfxLaserSuperChargeAlias_[0].frameCount > 0) {
+                    float pitch = 0.8f + superEssenceConsumed_ * 0.15f;
+                    Sound& alias = sfxLaserSuperChargeAlias_[sfxLaserSuperChargeAliasIdx_];
+                    sfxLaserSuperChargeAliasIdx_ = (sfxLaserSuperChargeAliasIdx_ + 1) % 4;
+                    SetSoundVolume(alias, std::clamp(config_.sfxVolume, 0.0f, 1.0f));
+                    SetSoundPan(alias, 0.5f);
+                    SetSoundPitch(alias, pitch);
+                    PlaySound(alias);
+                }
+                cameraShake_ = std::min(1.0f, cameraShake_ + 0.3f);
+                Vector3 playerPos = camera_.position;
+                SpawnHitBurst(playerPos, Color{255, 215, 60, 255}, 20);
+                if (superEssenceConsumed_ >= config_.superEssenceThreshold) {
+                    superCharged_ = true;
+                    eventText_ = "SUPER CHARGED!";
+                    eventTextTimer_ = 1.4f;
+                    cameraShake_ = std::min(1.0f, cameraShake_ + 0.6f);
+                    SpawnHitBurst(playerPos, Color{255, 140, 255, 255}, 40);
+                }
+            }
+            // If essence runs out mid-charge, force fire
+            if (essence_ <= 0 && !superCharged_) {
+                superCharging_ = false;
+                superChargePaused_ = false;
+                fireSuper = true;
+            }
+        }
+
+        // Pause: one button released
+        if (superCharging_ && !bothHeld && (lmb || rmb)) {
+            superCharging_ = false;
+            superChargePaused_ = true;
+            eventText_ = "PAUSED";
+            eventTextTimer_ = 0.6f;
+        }
+
+        // Resume: both pressed again while paused
+        if (superChargePaused_ && bothHeld && essence_ > 0 && !superCharged_) {
+            superCharging_ = true;
+            superChargePaused_ = false;
+            eventText_ = "CHARGING";
+            eventTextTimer_ = 0.5f;
+        }
+
+        // Both released → fire
+        if ((superCharging_ || superChargePaused_) && !lmb && !rmb) {
+            fireSuper = true;
+        }
+
+        if (fireSuper) {
+            if (superCharged_) {
+                FireBallLightning();
+            } else if (superEssenceConsumed_ > 0) {
+                float ratio = static_cast<float>(superEssenceConsumed_) / static_cast<float>(config_.superEssenceThreshold);
+                FireSuperRainbowBeam(std::min(ratio, 0.99f));
+            }
+            superCharging_ = false;
+            superChargePaused_ = false;
+            superCharged_ = false;
+            superEssenceConsumed_ = 0;
+            superEssenceTimer_ = 0.0f;
+            fireCooldown_ = std::max(fireCooldown_, 0.5f);
+            return;
+        }
+
+        // Block normal fire while super charging/paused
+        if (superCharging_ || superChargePaused_) {
+            return;
+        }
+    }
 
     if (fireControlActive_) {
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
@@ -176,28 +318,177 @@ void Game::UpdateShooting(float dt) {
     }
 
     if (activeWeapon_ == WeaponType::InfinityGauntlet) {
+        bool lmb = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+        bool rmb = IsMouseButtonDown(MOUSE_BUTTON_RIGHT);
+        bool bothHeld = lmb && rmb;
+
+        if (bothHeld && !gauntletSnapCharging_ && state_ == State::Playing) {
+            suppressRightClickModeToggle_ = true;
+            if (essence_ >= config_.gauntletSnapEssenceCost) {
+                gauntletSnapCharging_ = true;
+                gauntletSnapCharge_ = 0.0f;
+                eventText_ = "SNAP CHARGE";
+                eventTextTimer_ = 0.7f;
+                PlaySfx(sfxGauntletTimeStop_);
+            } else {
+                eventText_ = "NOT ENOUGH ESSENCE";
+                eventTextTimer_ = 0.9f;
+            }
+        }
+
+        if (gauntletSnapCharging_) {
+            suppressRightClickModeToggle_ = true;
+            if (bothHeld && essence_ >= config_.gauntletSnapEssenceCost) {
+                float previousCharge = gauntletSnapCharge_;
+                gauntletSnapCharge_ = std::min(1.0f, gauntletSnapCharge_ + dt / config_.gauntletSnapChargeTime);
+                if (previousCharge < 1.0f && gauntletSnapCharge_ >= 1.0f) {
+                    eventText_ = "SNAP READY";
+                    eventTextTimer_ = 0.8f;
+                    cameraShake_ = std::min(1.0f, cameraShake_ + 0.45f);
+                }
+                cameraShake_ = std::min(0.65f, cameraShake_ + dt * (0.18f + gauntletSnapCharge_ * 0.35f));
+                Vector3 up = PlayerUp();
+                Vector3 right = PlayerRight();
+                Vector3 fwd = PlayerForward();
+                int sparks = 3 + static_cast<int>(gauntletSnapCharge_ * 8.0f);
+                for (int i = 0; i < sparks; ++i) {
+                    float angle = RandomFloat(0.0f, 6.2831853f);
+                    float radius = RandomFloat(0.2f, 0.75f + gauntletSnapCharge_ * 0.5f);
+                    Vector3 offset = Vector3Add(Vector3Scale(right, std::cos(angle) * radius),
+                                                Vector3Scale(up, std::sin(angle) * radius * 0.6f));
+                    Vector3 pos = Vector3Add(WeaponMuzzlePosition(), offset);
+                    particles_.push_back(Particle{
+                        pos,
+                        Vector3Add(Vector3Scale(fwd, RandomFloat(1.5f, 4.0f)), Vector3Scale(up, RandomFloat(0.4f, 2.2f))),
+                        Color{255, static_cast<unsigned char>(190 + static_cast<int>(gauntletSnapCharge_ * 50.0f)), 80, 230},
+                        RandomFloat(0.18f, 0.42f), RandomFloat(0.18f, 0.42f),
+                        RandomFloat(0.035f, 0.09f)
+                    });
+                }
+            } else if (!lmb && !rmb) {
+                if (essence_ >= config_.gauntletSnapEssenceCost && gauntletSnapCharge_ >= 1.0f) {
+                    PerformGauntletSnap();
+                } else if (gauntletSnapCharge_ < 1.0f) {
+                    eventText_ = "SNAP CANCELLED";
+                    eventTextTimer_ = 0.9f;
+                } else {
+                    eventText_ = "SNAP FAILED";
+                    eventTextTimer_ = 1.0f;
+                }
+                gauntletSnapCharging_ = false;
+                gauntletSnapCharge_ = 0.0f;
+                fireCooldown_ = std::max(fireCooldown_, 0.6f);
+            } else if (!bothHeld) {
+                eventText_ = "SNAP HELD";
+                eventTextTimer_ = 0.4f;
+            }
+            return;
+        }
+
+        if (bothHeld) {
+            return;
+        }
         if (gauntletMode_ == GauntletMode::TimeStop) {
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && config_.timeStopEnabled) {
                 ToggleTimeStop();
             }
         } else {
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && config_.blinkEnabled) {
+                PlaySfx(sfxGauntletBlink_);
                 Blink();
             }
         }
         return;
     }
 
-    bool laserChord = activeWeapon_ == WeaponType::Laser && IsMouseButtonDown(MOUSE_BUTTON_RIGHT);
-    if (laserChord && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+    if (activeWeapon_ == WeaponType::LonginusSpear) {
+        bool lmb = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+        bool rmb = IsMouseButtonDown(MOUSE_BUTTON_RIGHT);
+        bool bothHeld = lmb && rmb;
+
+        if (bothHeld && !longinusJudgmentCharging_ && state_ == State::Playing) {
+            suppressRightClickModeToggle_ = true;
+            if (!config_.heavenFalls) {
+                eventText_ = "STIGMA LOCKED";
+                eventTextTimer_ = 0.8f;
+                return;
+            }
+            if (essence_ >= config_.longinusJudgmentEssenceCost) {
+                longinusJudgmentCharging_ = true;
+                longinusJudgmentCharge_ = 0.0f;
+                eventText_ = "JUDGMENT CHARGE";
+                eventTextTimer_ = 0.8f;
+                PlaySfx(sfxSpearThrust_);
+            } else {
+                eventText_ = "NOT ENOUGH ESSENCE";
+                eventTextTimer_ = 0.9f;
+                return;
+            }
+        }
+
+        if (longinusJudgmentCharging_) {
+            suppressRightClickModeToggle_ = true;
+            if (bothHeld && essence_ >= config_.longinusJudgmentEssenceCost) {
+                float previousCharge = longinusJudgmentCharge_;
+                longinusJudgmentCharge_ = std::min(1.0f, longinusJudgmentCharge_ + dt / config_.longinusJudgmentChargeTime);
+                if (previousCharge < 1.0f && longinusJudgmentCharge_ >= 1.0f) {
+                    eventText_ = "STIGMA READY";
+                    eventTextTimer_ = 0.85f;
+                    cameraShake_ = std::min(1.0f, cameraShake_ + 0.45f);
+                }
+                cameraShake_ = std::min(0.75f, cameraShake_ + dt * (0.18f + longinusJudgmentCharge_ * 0.35f));
+                Vector3 up = PlayerUp();
+                Vector3 right = PlayerRight();
+                Vector3 fwd = PlayerForward();
+                Vector3 muzzle = WeaponMuzzlePosition();
+                int sparks = 5 + static_cast<int>(longinusJudgmentCharge_ * 14.0f);
+                for (int i = 0; i < sparks; ++i) {
+                    float angle = RandomFloat(0.0f, 6.2831853f);
+                    float radius = RandomFloat(0.18f, 0.55f + longinusJudgmentCharge_ * 0.85f);
+                    Vector3 offset = Vector3Add(Vector3Scale(right, std::cos(angle) * radius),
+                                                Vector3Scale(up, std::sin(angle) * radius));
+                    particles_.push_back(Particle{
+                        Vector3Add(muzzle, offset),
+                        Vector3Add(Vector3Scale(fwd, RandomFloat(1.0f, 4.5f)), Vector3Scale(up, RandomFloat(0.5f, 2.8f))),
+                        Color{255, static_cast<unsigned char>(205 + static_cast<int>(longinusJudgmentCharge_ * 45.0f)), 72, 230},
+                        RandomFloat(0.18f, 0.42f), RandomFloat(0.18f, 0.42f),
+                        RandomFloat(0.035f, 0.085f)
+                    });
+                }
+            } else if (!lmb && !rmb) {
+                if (essence_ >= config_.longinusJudgmentEssenceCost && longinusJudgmentCharge_ >= 1.0f) {
+                    essence_ -= config_.longinusJudgmentEssenceCost;
+                    FireLonginusJudgmentStigma(PlayerForward());
+                    fireCooldown_ = std::max(fireCooldown_, 0.9f);
+                } else {
+                    eventText_ = longinusJudgmentCharge_ < 1.0f ? "STIGMA CANCELLED" : "STIGMA FAILED";
+                    eventTextTimer_ = 0.9f;
+                    fireCooldown_ = std::max(fireCooldown_, 0.25f);
+                }
+                longinusJudgmentCharging_ = false;
+                longinusJudgmentCharge_ = 0.0f;
+            } else if (!bothHeld) {
+                eventText_ = "STIGMA HELD";
+                eventTextTimer_ = 0.4f;
+            }
+            return;
+        }
+
+        if (bothHeld) {
+            return;
+        }
+    }
+
+    if (activeWeapon_ == WeaponType::Laser && laserMode_ == LaserMode::Beam && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
         chargingLaser_ = true;
         laserCharge_ = 0.0f;
     }
     if (chargingLaser_) {
-        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && laserChord) {
+        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && laserMode_ == LaserMode::Beam && activeWeapon_ == WeaponType::Laser) {
             laserCharge_ = std::min(1.0f, laserCharge_ + dt * config_.laserChargeRate);
             cameraShake_ = std::min(1.0f, cameraShake_ + dt * 0.25f);
         } else {
+            PlaySfx(sfxLaserBeam_);
             FireLaser(laserCharge_);
             chargingLaser_ = false;
             laserCharge_ = 0.0f;
@@ -214,6 +505,7 @@ void Game::UpdateShooting(float dt) {
     if (magicCircleChord && !mysticStaffChanneling_ && grounded_ && playerStationary) {
         mysticStaffChanneling_ = true;
         mysticStaffChannelProgress_ = 0.0f;
+        PlaySfx(sfxMysticCircleChannel_);
         eventText_ = "CHANNELING...";
         eventTextTimer_ = 0.5f;
     }
@@ -243,8 +535,10 @@ void Game::UpdateShooting(float dt) {
             }
         } else {
             if (mysticStaffChannelProgress_ >= 1.0f) {
+                StopSfx(sfxMysticCircleChannel_);
                 CompleteMagicCircleChannel();
             } else {
+                StopSfx(sfxMysticCircleChannel_);
                 eventText_ = "CANCELLED";
                 eventTextTimer_ = 1.0f;
             }
@@ -254,7 +548,119 @@ void Game::UpdateShooting(float dt) {
         return;
     }
 
-    if (laserChord || !IsMouseButtonDown(MOUSE_BUTTON_LEFT) || fireCooldown_ > 0.0f) {
+    // ── Water Droplet crafting (Nano Constructor) ──
+    if (activeWeapon_ == WeaponType::NanoConstructor) {
+        bool nanoBothHeld = IsMouseButtonDown(MOUSE_BUTTON_LEFT) && IsMouseButtonDown(MOUSE_BUTTON_RIGHT);
+        bool playerStationary = Vector3Length(playerVelocity_) < 1.5f;
+
+        if (nanoBothHeld && !waterDropletCrafting_ && grounded_ && playerStationary && essence_ > 0
+            && state_ == State::Playing) {
+            waterDropletCraftTarget_ = -1;
+            float bestDist = config_.waterDropletResumeRange;
+            for (int ci = 0; ci < (int)waterDropletCrafts_.size(); ++ci) {
+                if (waterDropletCrafts_[ci].world != playerWorld_) continue;
+                if (waterDropletCrafts_[ci].progress >= 1.0f) continue;
+                float d = Vector3Distance(camera_.position, waterDropletCrafts_[ci].position);
+                if (d < bestDist) {
+                    bestDist = d;
+                    waterDropletCraftTarget_ = ci;
+                }
+            }
+            waterDropletCrafting_ = true;
+            waterDropletCraftTimer_ = 0.0f;
+            eventText_ = (waterDropletCraftTarget_ >= 0) ? "RESUMING..." : "CRAFTING...";
+            eventTextTimer_ = 0.5f;
+        }
+
+        if (waterDropletCrafting_) {
+            if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && IsMouseButtonDown(MOUSE_BUTTON_RIGHT)
+                && grounded_ && playerStationary && essence_ > 0) {
+                waterDropletCraftTimer_ += dt;
+                if (waterDropletCraftTimer_ >= config_.waterDropletCraftInterval) {
+                    waterDropletCraftTimer_ -= config_.waterDropletCraftInterval;
+                    essence_--;
+                    PlaySfx(sfxNanoPlatform_);
+
+                    WaterDropletCraft* craft = nullptr;
+                    if (waterDropletCraftTarget_ >= 0 && waterDropletCraftTarget_ < (int)waterDropletCrafts_.size()) {
+                        craft = &waterDropletCrafts_[waterDropletCraftTarget_];
+                    } else {
+                        Vector3 fwd = PlayerForward();
+                        Vector3 spawnPos = Vector3Add(camera_.position, Vector3Scale(fwd, 2.5f));
+                        // Raise center so diamond bottom sits on surface (diamond height = radius * 5)
+                        float diamondHalfHeight = config_.waterDropletRadius * 2.5f;
+                        if (IsSphericalMap()) {
+                            spawnPos = SphericalSurfacePoint(spawnPos, diamondHalfHeight / 2, playerWorld_);
+                        } else {
+                            spawnPos.y = FlatGroundYForWorld(playerWorld_) + diamondHalfHeight / 2;
+                        }
+                        waterDropletCrafts_.push_back({spawnPos, 0.0f, 0, playerWorld_});
+                        waterDropletCraftTarget_ = (int)waterDropletCrafts_.size() - 1;
+                        craft = &waterDropletCrafts_.back();
+                    }
+
+                    craft->essenceSpent++;
+                    craft->progress = (float)craft->essenceSpent / (float)config_.waterDropletEssenceCost;
+
+                    cameraShake_ = std::min(1.0f, cameraShake_ + 0.25f);
+                    SpawnHitBurst(craft->position, Color{255, 215, 60, 255}, 12);
+
+                    // Rainbow glow particles rising from craft site
+                    for (int rp = 0; rp < 18; ++rp) {
+                        float angle = (float)rp / 18.0f * 6.2831853f + craft->progress * 4.0f;
+                        float hue = std::fmod(craft->progress * 360.0f + angle * 57.0f, 360.0f);
+                        float dist = 0.5f + (float)(rp % 3) * 0.4f;
+                        Vector3 offset = Vector3{
+                            std::cos(angle) * dist,
+                            0.0f,
+                            std::sin(angle) * dist
+                        };
+                        Vector3 particlePos = Vector3Add(craft->position, offset);
+                        if (IsSphericalMap()) {
+                            Vector3 up = SphericalUpAt(craft->position, craft->world);
+                            Vector3 right = Vector3Normalize(Vector3CrossProduct(up, Vector3{0.0f, 1.0f, 0.0f}));
+                            if (Vector3Length(right) < 0.01f) right = Vector3{1.0f, 0.0f, 0.0f};
+                            Vector3 fwd = Vector3Normalize(Vector3CrossProduct(right, up));
+                            particlePos = Vector3Add(craft->position,
+                                Vector3Add(Vector3Scale(right, offset.x), Vector3Scale(fwd, offset.z)));
+                        }
+                        particles_.push_back(Particle{
+                            particlePos,
+                            Vector3{RandomFloat(-1.5f, 1.5f), RandomFloat(2.5f, 6.0f), RandomFloat(-1.5f, 1.5f)},
+                            ColorFromHSV(hue, 0.85f, 1.0f),
+                            RandomFloat(0.2f, 0.5f), RandomFloat(0.2f, 0.5f),
+                            RandomFloat(0.04f, 0.1f)
+                        });
+                    }
+
+                    if (craft->progress >= 1.0f) {
+                        PlaySfx(sfxNanoWaterDroplet_);
+                        SpawnWaterDroplet(craft->position, playerWorld_);
+                        SpawnShockwave(craft->position, 3.0f, Color{255, 220, 80, 255});
+                        SpawnHitBurst(craft->position, Color{255, 240, 120, 255}, 45);
+                        cameraShake_ = std::min(1.0f, cameraShake_ + 0.8f);
+                        eventText_ = "WATER DROPLET";
+                        eventTextTimer_ = 2.5f;
+
+                        waterDropletCrafts_[waterDropletCraftTarget_] = waterDropletCrafts_.back();
+                        waterDropletCrafts_.pop_back();
+                        waterDropletCrafting_ = false;
+                        waterDropletCraftTarget_ = -1;
+                        fireCooldown_ = std::max(fireCooldown_, 0.5f);
+                        return;
+                    }
+                }
+            } else {
+                waterDropletCrafting_ = false;
+                waterDropletCraftTarget_ = -1;
+                eventText_ = "PAUSED";
+                eventTextTimer_ = 0.6f;
+            }
+            return;
+        }
+    }
+
+    if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT) || fireCooldown_ > 0.0f) {
         return;
     }
 
@@ -263,34 +669,40 @@ void Game::UpdateShooting(float dt) {
     Vector3 up = PlayerUp();
 
     if (activeWeapon_ == WeaponType::Laser) {
+        PlaySfxLaserPlasma();
         FireProjectile(ProjectileKind::LaserShot, forward, config_.plasmaSpeed, config_.plasmaDamage, config_.plasmaLifetime, config_.plasmaRadius, config_.plasmaRadius, Color{255, 240, 185, 255});
         fireCooldown_ = config_.plasmaCooldown;
         cameraShake_ = std::min(1.0f, cameraShake_ + 0.15f);
     } else if (activeWeapon_ == WeaponType::Flamethrower) {
         if (flamethrowerMode_ == FlamethrowerMode::Heatwave) {
-            FireHeatwave(forward);
-            fireCooldown_ = 0.16f;
-            cameraShake_ = std::min(1.0f, cameraShake_ + 0.16f);
+            PlaySfx(sfxFlamethrowerNapalm_);
+            FireNapalmGrenade();
+            fireCooldown_ = 0.85f;
+            cameraShake_ = std::min(1.0f, cameraShake_ + 0.25f);
         } else {
             float side = RandomFloat(-0.05f, 0.05f);
             float lift = RandomFloat(-0.035f, 0.035f);
             Vector3 direction = Vector3Normalize(Vector3Add(forward, Vector3Add(Vector3Scale(right, side), Vector3Scale(up, lift))));
+            PlaySfxFlamethrowerFireball();
             FireProjectile(ProjectileKind::Flame, direction, RandomFloat(19.0f, 23.0f), config_.flameDamage, config_.flameLifetime, 0.12f, config_.flameMaxRadius, Color{255, 112, 28, 235});
             fireCooldown_ = 0.045f;
             cameraShake_ = std::min(1.0f, cameraShake_ + 0.045f);
         }
     } else if (activeWeapon_ == WeaponType::RocketLauncher) {
         if (rocketLauncherMode_ == RocketLauncherMode::Drone) {
+            PlaySfx(sfxRocketDrone_);
             FireDroneCanister();
             fireCooldown_ = 1.8f;
             cameraShake_ = std::min(1.0f, cameraShake_ + 0.25f);
         } else {
+            PlaySfx(sfxRocketLauncher_);
             FireProjectile(ProjectileKind::Rocket, forward, 34.0f, config_.rocketImpactDamage, 2.8f, 0.34f, 0.34f, Color{230, 235, 210, 255});
             fireCooldown_ = 0.82f;
             cameraShake_ = std::min(1.0f, cameraShake_ + 0.45f);
         }
     } else if (activeWeapon_ == WeaponType::Shotgun) {
         if (shotgunMode_ == ShotgunMode::GlassShard) {
+            PlaySfx(sfxShotgunGlass_);
             for (int i = 0; i < config_.shotgunShardCount; ++i) {
                 float side = RandomFloat(-0.09f, 0.09f);
                 float lift = RandomFloat(-0.055f, 0.055f);
@@ -304,6 +716,7 @@ void Game::UpdateShooting(float dt) {
                 float side = RandomFloat(-0.18f, 0.18f);
                 float lift = RandomFloat(-0.12f, 0.12f);
                 Vector3 direction = Vector3Normalize(Vector3Add(forward, Vector3Add(Vector3Scale(right, side), Vector3Scale(up, lift))));
+                PlaySfx(sfxShotgunPellet_);
                 FireProjectile(ProjectileKind::Pellet, direction, RandomFloat(48.0f, 58.0f), config_.shotgunPelletDamage, 0.62f, 0.11f, 0.11f, Color{255, 220, 150, 255});
             }
             ApplyShotgunRecoil(forward);
@@ -312,20 +725,24 @@ void Game::UpdateShooting(float dt) {
         cameraShake_ = std::min(1.0f, cameraShake_ + 0.42f);
     } else if (activeWeapon_ == WeaponType::GravityNailer) {
         if (gravityNailerMode_ == GravityNailerMode::BlackHole) {
+            PlaySfx(sfxGravityBlackHole_);
             FireProjectile(ProjectileKind::BlackHoleGrenade, forward, 26.0f, config_.blackHoleGrenadeDamage, 1.65f, 0.28f, 0.28f, Color{90, 55, 165, 255});
             fireCooldown_ = 1.15f;
             cameraShake_ = std::min(1.0f, cameraShake_ + 0.34f);
         } else {
+            PlaySfx(sfxGravityNailer_);
             FireProjectile(ProjectileKind::GravityNail, forward, 76.0f, config_.gravityNailDamage, 1.1f, 0.15f, 0.15f, Color{165, 195, 255, 255});
             fireCooldown_ = 0.72f;
             cameraShake_ = std::min(1.0f, cameraShake_ + 0.28f);
         }
     } else if (activeWeapon_ == WeaponType::LonginusSpear) {
         if (longinusSpearMode_ == LonginusSpearMode::Thrust) {
+            PlaySfx(sfxSpearThrust_);
             FireSpearThrust(forward);
             fireCooldown_ = 0.68f;
             cameraShake_ = std::min(1.0f, cameraShake_ + 0.58f);
         } else {
+            PlaySfx(sfxSpearThrow_);
             FireProjectile(ProjectileKind::Lance, forward, config_.longinusSpearSpeed, config_.longinusSpearDamage, 1.15f, 0.28f, 0.28f, Color{255, 160, 50, 255});
             ApplySpearRecoil(forward);
             fireCooldown_ = 0.86f;
@@ -333,21 +750,25 @@ void Game::UpdateShooting(float dt) {
         }
     } else if (activeWeapon_ == WeaponType::NanoConstructor) {
         if (nanoConstructorMode_ == NanoConstructorMode::NanoPlatform) {
+            PlaySfx(sfxNanoCommand_);
             FireNanoPlatform(forward);
             fireCooldown_ = 0.82f;
             cameraShake_ = std::min(1.0f, cameraShake_ + 0.18f);
         } else {
+            PlaySfx(sfxNanoCommand_);
             FireNanoBlade(forward);
             fireCooldown_ = 0.78f;
             cameraShake_ = std::min(1.0f, cameraShake_ + 0.38f);
         }
     } else if (activeWeapon_ == WeaponType::MysticStaff) {
         if (mysticStaffMode_ == MysticStaffMode::CurseOrb) {
+            PlaySfx(sfxMysticCurseOrb_);
             FireCurseOrb(forward);
             fireCooldown_ = config_.curseOrbCooldown;
             cameraShake_ = std::min(1.0f, cameraShake_ + 0.22f);
         } else if (mysticStaffMode_ == MysticStaffMode::Shield) {
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                PlaySfx(sfxMysticShield_);
                 DeployMysticStaffShield();
                 fireCooldown_ = 0.25f;
             }
@@ -412,12 +833,40 @@ void Game::FireLaser(float charge) {
         Color{120, 220, 255, 255}
     });
 
+    if (ScavengerUfoDamageable()
+        && DistancePointToSegment(scavengerUfo_.position, start, end) <= beamRadius + 2.6f) {
+        DamageScavengerUfo(damage, scavengerUfo_.position, Color{150, 235, 255, 255});
+    }
+    if (throneAngel_.active
+        && playerWorld_ == throneAngel_.world
+        && DistancePointToSegment(throneAngel_.position, start, end) <= beamRadius + 4.2f) {
+        DamageThroneAngel(damage, throneAngel_.position, Color{150, 235, 255, 255});
+    }
+    for (const SeraphBoss& seraph : seraphs_) {
+        if (seraph.active
+            && playerWorld_ == seraph.world
+            && DistancePointToSegment(seraph.position, start, end) <= beamRadius + 3.6f) {
+            DamageSeraph(damage, seraph.position, Color{255, 230, 150, 255});
+        }
+    }
+    if (warRider_.active
+        && playerWorld_ == warRider_.world
+        && DistancePointToSegment(warRider_.position, start, end) <= beamRadius + 2.5f) {
+        DamageWarRider(damage, warRider_.position, Color{255, 130, 80, 255});
+    }
+    if (conquestRider_.active
+        && playerWorld_ == conquestRider_.world
+        && DistancePointToSegment(conquestRider_.position, start, end) <= beamRadius + 2.5f) {
+        DamageConquestRider(damage, conquestRider_.position, Color{185, 255, 95, 255});
+    }
+
     for (size_t i = 0; i < enemies_.size();) {
         Vector3 enemyPosition = BodyPosition(enemies_[i].body);
         float hitDistance = beamRadius + enemies_[i].radius * 0.85f;
         if (DistancePointToSegment(enemyPosition, start, end) <= hitDistance) {
             enemies_[i].health -= damage;
             totalDamageDealt_ += damage;
+            PlayEnemyHitSfx(enemyPosition);
             SpawnHitBurst(enemyPosition, Color{150, 235, 255, 255}, 18 + static_cast<int>(normalizedCharge * 10.0f));
             if (enemies_[i].health <= 0.0f) {
                 score_ += enemies_[i].scoreValue;
@@ -444,6 +893,7 @@ void Game::FireLaser(float charge) {
         circle.fireRateMult = config_.magicCircleFireRateMult;
         circle.homingTurnRate = config_.magicCircleHomingTurnRate;
         circle.fireCooldown = 0.0f;
+        PlaySfxAt(sfxMagicCircleActivate_, octaCenter, 70.0f, 0.9f);
         SpawnShockwave(octaCenter, circle.radius * 1.8f, MagicCircleTint(circle));
         SpawnHitBurst(octaCenter, MagicCircleTint(circle), 30);
         eventText_ = MagicCircleKindName(circle);
@@ -470,6 +920,7 @@ void Game::FireEnemyShot(Vector3 position, Vector3 direction, int world) {
         projectileConfig);
 
     projectiles_.push_back(Projectile{body, ProjectileKind::EnemyShot, 3.0f, 3.0f, config_.enemyShotDamage, 0.2f, 0.2f, Color{105, 255, 220, 255}, 0, intendedVelocity, ProjectileOwner::Enemy, timeStopped_, {}, 0.0f, false, world});
+    PlaySfxAt(sfxLaserPlasma_, position, 54.0f, 0.48f);
 }
 void Game::FireHomingShot(Vector3 position, Vector3 direction, float speed, float turnRate, float life, float damage, Color color, ProjectileOwner owner, int world) {
     Vector3 intendedVelocity = Vector3Scale(direction, speed);
@@ -486,6 +937,7 @@ void Game::FireHomingShot(Vector3 position, Vector3 direction, float speed, floa
     Projectile proj{body, ProjectileKind::HomingShot, life, life, damage, 0.22f, 0.22f, color, 0, intendedVelocity, owner, timeStopped_, {}, 0.0f, false, owner == ProjectileOwner::Player ? playerWorld_ : world};
     proj.turnRate = turnRate;
     projectiles_.push_back(proj);
+    PlaySfxAt(sfxMysticCurseOrb_, position, 100.0f, 0.9f);
 }
 void Game::FireCurseOrb(Vector3 direction) {
     Vector3 spawn = WeaponMuzzlePosition();
@@ -561,6 +1013,7 @@ void Game::FireHeatwave(Vector3 direction) {
         float falloff = 1.0f - distance / range;
         enemy.health -= config_.heatwaveDamage * (0.35f + falloff * 0.65f);
         totalDamageDealt_ += config_.heatwaveDamage * (0.35f + falloff * 0.65f);
+        PlayEnemyHitSfx(enemyPosition);
         if (enemy.type == EnemyType::Dummy || enemy.type == EnemyType::DummyBoss) {
             RecordDummyDamage(enemy, config_.heatwaveDamage * (0.35f + falloff * 0.65f));
         }
@@ -603,7 +1056,57 @@ void Game::FireHeatwave(Vector3 direction) {
         0.95f,
         Color{255, 130, 65, 255}
     });
+
+    // Spawn a lingering fire patch on the ground
+    if (config_.heatwaveFirePatchLifetime > 0.0f) {
+        Vector3 patchPos = Vector3Add(origin, Vector3Scale(forward, range * 0.7f));
+        Vector3 patchUp;
+        if (IsSphericalMap()) {
+            patchPos = SphericalSurfacePoint(patchPos, SphericalPlayerAltitude(), playerWorld_);
+            patchUp = SphericalUpAt(patchPos, playerWorld_);
+        } else {
+            patchPos.y = FlatGroundYForWorld(playerWorld_);
+            patchUp = FlatUpForWorld(playerWorld_);
+        }
+        firePatches_.push_back(FirePatch{
+            patchPos,
+            patchUp,
+            config_.heatwaveFirePatchLifetime,
+            config_.heatwaveFirePatchLifetime,
+            config_.heatwaveFirePatchRadius,
+            config_.heatwaveFirePatchDamage,
+            playerWorld_,
+            JPH::BodyID(),
+            false, true,
+            Color{255, 140, 30, 255},
+            Color{255, 200, 60, 255},
+            Color{255, 120, 20, 200}
+        });
+    }
 }
+
+void Game::FireNapalmGrenade() {
+    Vector3 forward = PlayerForward();
+    Vector3 spawn = WeaponMuzzlePosition();
+    Vector3 velocity = Vector3Scale(forward, config_.napalmSpeed);
+    // Slight upward toss
+    velocity.y += 5.0f;
+    if (IsSphericalMap()) {
+        Vector3 up = SphericalUpAt(spawn, playerWorld_);
+        velocity = Vector3Add(velocity, Vector3Scale(up, 5.0f));
+    }
+
+    napalmGrenades_.push_back(NapalmGrenade{
+        spawn,
+        velocity,
+        config_.napalmFuse,
+        config_.napalmFuse,
+        0,
+        playerWorld_,
+        JPH::BodyID()  // player-fired, no self-damage concern
+    });
+}
+
 void Game::FireNanoBlade(Vector3 direction) {
     Vector3 forward = Vector3Normalize(direction);
     Vector3 planeNormal = PlayerRight();
@@ -631,6 +1134,31 @@ void Game::FireNanoBlade(Vector3 direction) {
     SpawnHitBurst(WeaponMuzzlePosition(), Color{255, 225, 140, 255}, 8);
     eventText_ = "NANO EDGE";
     eventTextTimer_ = 0.85f;
+}
+void Game::FireLonginusJudgmentStigma(Vector3 direction) {
+    Vector3 forward = SafeNormalize(direction, PlayerForward());
+    Vector3 right = SafeNormalize(PlayerRight(), Vector3{1.0f, 0.0f, 0.0f});
+    Vector3 up = SafeNormalize(PlayerUp(), Vector3{0.0f, 1.0f, 0.0f});
+    Vector3 start = Vector3Add(WeaponMuzzlePosition(), Vector3Scale(forward, 1.6f));
+    Vector3 end = Vector3Add(start, Vector3Scale(forward, config_.longinusJudgmentLength));
+    judgmentStigmas_.push_back(JudgmentStigma{
+        start,
+        end,
+        forward,
+        right,
+        up,
+        config_.longinusJudgmentLifetime,
+        config_.longinusJudgmentLifetime,
+        config_.longinusJudgmentRadius,
+        config_.longinusJudgmentDps,
+        playerWorld_
+    });
+    PlaySfx(sfxSpearJudgment_.frameCount > 0 ? sfxSpearJudgment_ : sfxSpearImpact_);
+    SpawnHitBurst(start, Color{255, 226, 96, 255}, 36);
+    SpawnShockwave(start, std::max(2.0f, config_.longinusJudgmentRadius * 1.2f), Color{255, 220, 90, 255});
+    cameraShake_ = std::min(1.0f, cameraShake_ + 0.8f);
+    eventText_ = "JUDGMENT STIGMA";
+    eventTextTimer_ = 1.4f;
 }
 void Game::FireNanoPlatform(Vector3 direction) {
     NanoPlatform platform = MakeNanoPlatformTarget(direction);
@@ -667,6 +1195,7 @@ void Game::FireSpearThrust(Vector3 direction) {
         float falloff = 1.0f - std::clamp(distance / std::max(0.001f, range), 0.0f, 1.0f);
         enemy.health -= config_.longinusSpearThrustDamage * (0.35f + falloff * 0.65f);
         totalDamageDealt_ += config_.longinusSpearThrustDamage * (0.35f + falloff * 0.65f);
+        PlayEnemyHitSfx(enemyPosition);
         if (enemy.type == EnemyType::Dummy || enemy.type == EnemyType::DummyBoss) {
             RecordDummyDamage(enemy, config_.longinusSpearThrustDamage * (0.35f + falloff * 0.65f));
         }
@@ -822,6 +1351,14 @@ void Game::SpawnMysticStaffShockwave(Vector3 position) {
     cameraShake_ = std::min(1.0f, cameraShake_ + 0.55f);
 }
 void Game::CompleteMagicCircleChannel() {
+    if (essence_ <= 0) {
+        StopSfx(sfxMysticCircleChannel_);
+        eventText_ = "NEED ESSENCE";
+        eventTextTimer_ = 1.0f;
+        return;
+    }
+    essence_--;
+
     Vector3 forward = PlayerForward();
     if (IsSphericalMap()) {
         forward = ProjectOnSphericalTangent(forward, SphericalUpAt(camera_.position, playerWorld_));
@@ -846,6 +1383,7 @@ void Game::CompleteMagicCircleChannel() {
     circle.world = playerWorld_;
 
     magicCircles_.push_back(circle);
+    PlaySfxAt(sfxMysticCircle_, spawnPos, 70.0f, 1.0f);
     SpawnShockwave(spawnPos, circle.radius * 1.5f, Color{200, 150, 255, 255});
     SpawnHitBurst(spawnPos, Color{220, 180, 255, 255}, 30);
     eventText_ = "MAGIC CIRCLE";
@@ -877,6 +1415,9 @@ const char* Game::WeaponName() const {
     }
 }
 const char* Game::WeaponModeName() const {
+    if (activeWeapon_ == WeaponType::Laser) {
+        return laserMode_ == LaserMode::Beam ? "L" : "P";
+    }
     if (activeWeapon_ == WeaponType::Flamethrower) {
         return flamethrowerMode_ == FlamethrowerMode::Heatwave ? "H" : "F";
     }

@@ -4,11 +4,30 @@
 #include <algorithm>
 #include <cmath>
 
+#ifdef PLATFORM_WEB
+extern "C" float ConsumeWebMouseDeltaX();
+extern "C" float ConsumeWebMouseDeltaY();
+#endif
+
 void Game::UpdatePlayer(float dt) {
     Vector3 previousPosition = camera_.position;
     UpdateMovement(dt);
 
-    if (IsSphericalMap()) {
+    if (IsEdenMap()) {
+        ResolveMapCollision(previousPosition);
+    } else if (IsSphericalMap()) {
+        ResolveMapCollision(previousPosition);
+    } else if (IsLabyrinthMap()) {
+        float limitX = static_cast<float>(std::max(1, labyrinthWidth_ - 1)) * config_.labyrinthCellSize * 0.5f - playerRadius_;
+        float limitZ = static_cast<float>(std::max(1, labyrinthHeight_ - 1)) * config_.labyrinthCellSize * 0.5f - playerRadius_;
+        if (camera_.position.x < -limitX || camera_.position.x > limitX) {
+            camera_.position.x = std::clamp(camera_.position.x, -limitX, limitX);
+            playerVelocity_.x = 0.0f;
+        }
+        if (camera_.position.z < -limitZ || camera_.position.z > limitZ) {
+            camera_.position.z = std::clamp(camera_.position.z, -limitZ, limitZ);
+            playerVelocity_.z = 0.0f;
+        }
         ResolveMapCollision(previousPosition);
     } else if (IsSquareMap()) {
         float maxCoord = squareHalfExtent_ - playerRadius_;
@@ -79,7 +98,11 @@ void Game::UpdatePlayer(float dt) {
     camera_.target = Vector3Add(camera_.position, PlayerForward());
 }
 void Game::UpdateLook(float dt) {
+#ifdef PLATFORM_WEB
+    Vector2 delta = {ConsumeWebMouseDeltaX(), ConsumeWebMouseDeltaY()};
+#else
     Vector2 delta = GetMouseDelta();
+#endif
     if (IsSphericalMap()) {
         Vector3 up = SphericalUpAt(camera_.position, playerWorld_);
         asteroidReferenceForward_ = ProjectOnSphericalTangent(asteroidReferenceForward_, up);
@@ -134,6 +157,7 @@ void Game::UpdateFreeCamera(float dt) {
 void Game::UpdateMovement(float dt) {
     constexpr float kCoyoteTime = 0.11f;
     constexpr float kJumpBufferTime = 0.14f;
+    float plagueMoveMult = playerPlagueTimer_ > 0.0f ? config_.conquestRiderPlagueMoveSpeedMult : 1.0f;
 
     bool wasGrounded = grounded_;
     if (wasGrounded) {
@@ -145,6 +169,55 @@ void Game::UpdateMovement(float dt) {
         jumpBufferTimer_ = kJumpBufferTime;
     } else {
         jumpBufferTimer_ = std::max(0.0f, jumpBufferTimer_ - dt);
+    }
+
+    if (IsEdenMap()) {
+        Vector3 forward = PlayerForward();
+        forward.y = 0.0f;
+        forward = SafeNormalize(forward, Vector3{0.0f, 0.0f, -1.0f});
+        Vector3 right = SafeNormalize(Vector3CrossProduct(forward, Vector3{0.0f, 1.0f, 0.0f}), Vector3{1.0f, 0.0f, 0.0f});
+        Vector3 wishDirection = Vector3Zero();
+        if (IsKeyDown(KEY_W)) wishDirection = Vector3Add(wishDirection, forward);
+        if (IsKeyDown(KEY_S)) wishDirection = Vector3Subtract(wishDirection, forward);
+        if (IsKeyDown(KEY_D)) wishDirection = Vector3Add(wishDirection, right);
+        if (IsKeyDown(KEY_A)) wishDirection = Vector3Subtract(wishDirection, right);
+        if (Vector3Length(wishDirection) > 0.001f) wishDirection = Vector3Normalize(wishDirection);
+
+        bool running = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
+        float speed = (running ? config_.runSpeed : config_.walkSpeed) * plagueMoveMult;
+        Vector3 horizontalVelocity{playerVelocity_.x, 0.0f, playerVelocity_.z};
+        Vector3 targetVelocity = Vector3Scale(wishDirection, speed);
+        float blend = std::clamp((grounded_ ? config_.groundAcceleration : config_.airAcceleration) * dt, 0.0f, 1.0f);
+        horizontalVelocity = Vector3Add(horizontalVelocity, Vector3Scale(Vector3Subtract(targetVelocity, horizontalVelocity), blend));
+        playerVelocity_.x = horizontalVelocity.x;
+        playerVelocity_.z = horizontalVelocity.z;
+
+        if (jumpBufferTimer_ > 0.0f && coyoteTimer_ > 0.0f) {
+            playerVelocity_.y = config_.jumpSpeed;
+            grounded_ = false;
+            coyoteTimer_ = 0.0f;
+            jumpBufferTimer_ = 0.0f;
+        }
+        playerVelocity_.y -= CurrentGravity() * dt;
+        camera_.position = Vector3Add(camera_.position, Vector3Scale(playerVelocity_, dt));
+        bool insideEdenGround = !edenForbiddenFruit_.claimed
+            || DistanceXZ(camera_.position, Vector3Zero()) <= EdenCombatBoundaryRadius();
+        float floorY = EdenGroundYAt(camera_.position) + playerHeight_;
+        if (insideEdenGround && camera_.position.y <= floorY && playerVelocity_.y <= 0.0f) {
+            camera_.position.y = floorY;
+            playerVelocity_.y = 0.0f;
+            grounded_ = true;
+            coyoteTimer_ = kCoyoteTime;
+        } else {
+            grounded_ = false;
+        }
+        float horizontalSpeed = Vector3Length(horizontalVelocity);
+        footstepBob_ += horizontalSpeed * dt * (running ? 1.5f : 1.0f);
+        if (grounded_ && horizontalSpeed > 0.5f) {
+            camera_.position.y += std::sin(footstepBob_ * 7.0f) * 0.025f;
+        }
+        camera_.up = Vector3{0.0f, 1.0f, 0.0f};
+        return;
     }
 
     if (IsSphericalMap()) {
@@ -178,7 +251,9 @@ void Game::UpdateMovement(float dt) {
         }
 
         bool running = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
-        float speed = (running ? config_.runSpeed : config_.walkSpeed) * (skatesEnabled_ ? config_.skatesMaxSpeedBonus : 1.0f);
+        float speed = (running ? config_.runSpeed : config_.walkSpeed)
+            * (skatesEnabled_ ? config_.skatesMaxSpeedBonus : 1.0f)
+            * plagueMoveMult;
         Vector3 radialVelocity = Vector3Scale(up, Vector3DotProduct(playerVelocity_, up));
         Vector3 tangentVelocity = ProjectOnSphericalTangent(playerVelocity_, up);
         Vector3 targetVelocity = Vector3Scale(wishDirection, speed);
@@ -280,7 +355,9 @@ void Game::UpdateMovement(float dt) {
     }
 
     bool running = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
-    float speed = (running ? config_.runSpeed : config_.walkSpeed) * (skatesEnabled_ ? config_.skatesMaxSpeedBonus : 1.0f);
+    float speed = (running ? config_.runSpeed : config_.walkSpeed)
+        * (skatesEnabled_ ? config_.skatesMaxSpeedBonus : 1.0f)
+        * plagueMoveMult;
     Vector3 targetVelocity = Vector3Scale(wishDirection, speed);
     targetVelocity.y = playerVelocity_.y;
 
@@ -348,10 +425,12 @@ void Game::UpdateMovement(float dt) {
 }
 void Game::ToggleTimeStop() {
     if (timeStopped_) {
+        PlaySfx(sfxGauntletTimeStopRelease_);
         RestoreDynamicObjects();
         timeStopped_ = false;
         eventText_ = "TIME FLOWS";
     } else {
+        PlaySfx(sfxGauntletTimeStop_);
         timeStopped_ = true;
         FreezeDynamicObjects();
         eventText_ = "TIME STOP";
@@ -474,6 +553,47 @@ void Game::Blink() {
     eventTextTimer_ = 1.4f;
     cameraShake_ = std::min(1.0f, cameraShake_ + 0.35f);
 }
+
+void Game::PerformGauntletSnap() {
+    if (essence_ < config_.gauntletSnapEssenceCost) {
+        eventText_ = "NOT ENOUGH ESSENCE";
+        eventTextTimer_ = 1.0f;
+        return;
+    }
+
+    essence_ -= config_.gauntletSnapEssenceCost;
+    PlaySfx(sfxGauntletSnap_);
+    cameraShake_ = 1.0f;
+    damageFlash_ = std::max(damageFlash_, 0.55f);
+
+    Vector3 origin = WeaponMuzzlePosition();
+    SpawnShockwave(origin, 10.0f, Color{255, 190, 80, 255});
+    SpawnShockwave(camera_.position, 18.0f, Color{170, 90, 255, 255});
+    SpawnHitBurst(origin, Color{255, 215, 120, 255}, 90);
+
+    int tested = 0;
+    int dusted = 0;
+    for (int i = static_cast<int>(enemies_.size()) - 1; i >= 0; --i) {
+        Enemy& enemy = enemies_[i];
+        ++tested;
+        Vector3 position = BodyPosition(enemy.body);
+        if (RandomFloat(0.0f, 1.0f) < config_.gauntletSnapKillChance) {
+            SpawnShockwave(position, enemy.radius * 2.4f + 1.2f, Color{255, 190, 90, 230});
+            SpawnHitBurst(position, Color{255, 210, 120, 255}, 42);
+            SpawnHitBurst(position, Color{120, 70, 180, 210}, 24);
+            score_ += enemy.scoreValue;
+            enemy.health = 0.0f;
+            DestroyEnemy(static_cast<size_t>(i));
+            ++dusted;
+        } else {
+            SpawnHitBurst(position, Color{110, 80, 160, 180}, 8);
+        }
+    }
+
+    eventText_ = TextFormat("SNAP %d/%d", dusted, tested);
+    eventTextTimer_ = 2.4f;
+}
+
 void Game::BlinkDuelist(Enemy& enemy, Vector3 awayFrom) {
     Vector3 position = BodyPosition(enemy.body);
     Vector3 direction = Vector3Length(awayFrom) > 0.001f ? Vector3Normalize(awayFrom) : Vector3{1.0f, 0.0f, 0.0f};
@@ -570,6 +690,11 @@ void Game::ApplyPlayerHit(Vector3 position, Color color, const char* text) {
     if (config_.invincible || state_ != State::Playing) {
         return;
     }
+    if (edenArk_.piloted) {
+        SpawnHitBurst(edenArk_.position, Color{255, 224, 140, 255}, 12);
+        cameraShake_ = std::min(1.0f, cameraShake_ + 0.12f);
+        return;
+    }
 
     if (longinusSpearThrustInvulnTimer_ > 0.0f) {
         return;
@@ -584,6 +709,7 @@ void Game::ApplyPlayerHit(Vector3 position, Color color, const char* text) {
     }
 
     if (DuelMode() && duelArmor_ > 0) {
+        PlaySfx(sfxArmorHit_);
         duelArmor_ -= 1;
         duelArmorInvulnTimer_ = config_.duelArmorHitInvuln;
         cameraShake_ = std::min(1.0f, cameraShake_ + 0.65f);
@@ -596,8 +722,11 @@ void Game::ApplyPlayerHit(Vector3 position, Color color, const char* text) {
     }
 
     if (essence_ > 0) {
+        PlaySfx(sfxEssenceConsume_);
         essence_--;
-        essenceInvulnTimer_ = config_.essenceHitInvuln;
+        essenceInvulnTimer_ = (IsEdenMap() && edenForbiddenFruit_.claimed)
+            ? config_.edenApocalypseHitInvuln
+            : config_.essenceHitInvuln;
         cameraShake_ = std::min(1.0f, cameraShake_ + 0.7f);
         damageFlash_ = 1.0f;
         SpawnHitBurst(position, Color{255, 200, 60, 255}, 30);
@@ -636,6 +765,7 @@ void Game::ApplyPlayerHit(Vector3 position, Color color, const char* text) {
     }
 
     state_ = State::Dead;
+    PlaySfx(sfxPlayerHit_);
     cameraShake_ = 1.0f;
     damageFlash_ = 1.0f;
     SpawnHitBurst(position, color, 28);
@@ -689,6 +819,20 @@ Vector3 Game::WeaponMuzzlePosition() const {
     }
     return muzzle;
 }
+float Game::EdenPlayerGravityScale() const {
+    if (!IsEdenMap()) return 1.0f;
+    if (edenForbiddenFruit_.claimed) return 1.0f;
+    float r = DistanceXZ(camera_.position, Vector3Zero());
+    if (r >= config_.edenPlayRadius) return 1.0f;
+    float gravityRadius = config_.edenCenterGravityRadius > 0.0f
+        ? config_.edenCenterGravityRadius
+        : config_.edenPlayRadius;
+    float t = std::clamp(r / std::max(0.1f, gravityRadius), 0.0f, 1.0f);
+    t = t * t * (3.0f - 2.0f * t);
+    return config_.edenCenterGravityMinScale
+        + (1.0f - config_.edenCenterGravityMinScale) * t;
+}
 float Game::CurrentGravity() const {
-    return config_.gravity * gravityScale_;
+    float antigravityScale = playerAntigravityTimer_ > 0.0f ? config_.throneAntigravityScale : 1.0f;
+    return config_.gravity * gravityScale_ * antigravityScale * EdenPlayerGravityScale();
 }
